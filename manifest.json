@@ -1,7 +1,7 @@
 {
   "name": "Fútbol Táctico",
   "short_name": "Fútbol Táctico",
-  "description": "Fútbol por turnos tipo tablero, con base de jugadores, torneo y Modo Carrera.",
+  "description": "Fútbol por turnos tipo tablero, con Modo Carrera, divisiones, formaciones y más.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
