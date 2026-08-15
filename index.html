@@ -391,6 +391,7 @@
     <p class="hint" id="careerJornada"></p>
     <p class="hint" id="careerBudget" style="font-size:16px; font-weight:bold; color:var(--gold);"></p>
     <div class="card" id="careerFinancialAlert" hidden></div>
+    <div class="card" id="careerOffersCard" hidden></div>
     <div class="card" id="careerSeasonSummary" hidden></div>
     <div class="card" id="careerMatchSummary" hidden></div>
     <div class="btn-row">
@@ -409,7 +410,10 @@
       <button class="mode-btn small" id="btnGoFacilities">Instalaciones</button>
       <button class="mode-btn small" id="btnGoAllFacilities">Instalaciones (todos los clubes)</button>
     </div>
+    <button class="mode-btn small" id="btnGoFriendly">Organizar amistoso</button>
     <div class="card"><b class="card-title">PARTIDOS DE LA JORNADA</b><div id="careerFixtureList"></div></div>
+    <p class="hint" id="advanceWeekHint"></p>
+    <button class="mode-btn primary" id="btnAdvanceWeek">Seguir ▶</button>
     <div class="btn-row">
       <button class="mode-btn small" id="btnSwitchCareer">Cambiar de carrera</button>
       <button class="mode-btn small" id="btnExitCareer">Salir al menú</button>
@@ -462,6 +466,14 @@
     <div class="division-tabs" id="allFacilitiesDivisionTabs"></div>
     <div id="allFacilitiesList"></div>
     <button class="mode-btn" id="btnBackAllFacilities">« Volver</button>
+  </div>
+
+  <div class="screen" id="careerFriendlyScreen" hidden>
+    <h2>Organizar amistoso</h2>
+    <p class="hint">Elige rival. No afecta a la clasificación ni al calendario, pero tus jugadores sí ganan experiencia.</p>
+    <div class="division-tabs" id="friendlyDivisionTabs"></div>
+    <div id="careerFriendlyList"></div>
+    <button class="mode-btn" id="btnBackFriendly">« Volver</button>
   </div>
 
   <div class="screen" id="careerFacilitiesScreen" hidden>
@@ -805,7 +817,7 @@
 
   // ---------- Navegación de pantallas ----------
   function showScreen(name){
-    ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen','careerFacilitiesScreen','careerAllFacilitiesScreen','careerLineupScreen','gameScreen'].forEach(id=>{
+    ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen','careerFacilitiesScreen','careerAllFacilitiesScreen','careerFriendlyScreen','careerLineupScreen','gameScreen'].forEach(id=>{
       document.getElementById(id).hidden = (id !== name);
     });
     document.getElementById('scoreboard').hidden = (name !== 'gameScreen');
@@ -818,6 +830,7 @@
     if(name==='careerMarketScreen') renderCareerMarketScreen();
     if(name==='careerStaffScreen') renderCareerStaffScreen();
     if(name==='careerAllFacilitiesScreen') renderAllFacilitiesScreen();
+    if(name==='careerFriendlyScreen') renderCareerFriendlyScreen();
     if(name==='careerFacilitiesScreen') renderCareerFacilitiesScreen();
     if(name==='careerHistoryScreen') renderCareerHistory();
     if(name==='careerLineupScreen') renderLineupScreen();
@@ -845,13 +858,20 @@
   document.getElementById('btnBackStaff').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnGoAllFacilities').addEventListener('click', ()=>showScreen('careerAllFacilitiesScreen'));
   document.getElementById('btnBackAllFacilities').addEventListener('click', ()=>showScreen('careerScreen'));
+  document.getElementById('btnGoFriendly').addEventListener('click', ()=>showScreen('careerFriendlyScreen'));
+  document.getElementById('btnBackFriendly').addEventListener('click', ()=>showScreen('careerScreen'));
+  document.getElementById('btnAdvanceWeek').addEventListener('click', advanceWeek);
   document.getElementById('btnGoFacilities').addEventListener('click', ()=>showScreen('careerFacilitiesScreen'));
   document.getElementById('btnBackFacilities').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnBackStandings').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnBackRoster').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnEditDefaultLineup').addEventListener('click', openDefaultLineupEditor);
   document.getElementById('btnBackHistory').addEventListener('click', ()=>showScreen('careerScreen'));
-  document.getElementById('btnCancelLineup').addEventListener('click', ()=>showScreen(lineupMode==='default' ? 'careerRosterScreen' : 'careerScreen'));
+  document.getElementById('btnCancelLineup').addEventListener('click', ()=>{
+    if(lineupMode==='default') showScreen('careerRosterScreen');
+    else if(lineupMode==='friendly') showScreen('careerFriendlyScreen');
+    else showScreen('careerScreen');
+  });
   document.getElementById('btnClearLineup').addEventListener('click', ()=>{
     const userTeam = getLineupUserTeam();
     if(!userTeam) return;
@@ -1203,9 +1223,10 @@
     const newCareer = {
       id:uid(), clubName, teams, players:allPlayers,
       fixtures: buildSeasonFixtures(teams),
-      currentJornada:1, season:1, seasonSummary:null,
+      currentJornada:1, season:1, week:1, seasonSummary:null,
       youthPlayers: generateYouthSquad(5, userFacilities.youth), youthReviewPending:false,
       scoutingPool: generateScoutingPool(clubReputation(teams[0])), staff:[], staffCandidates: generateStaffCandidates(5), financialAlert:null,
+      pendingOffers:[],
     };
     careersList.push(newCareer);
     career = newCareer;
@@ -1290,7 +1311,6 @@
     const f = career.fixtures.find(x=>x.id===fixtureId);
     if(!f || f.played) return;
     simulateAndRecord(f);
-    maybeAdvanceJornada();
     persistCareers();
     renderCareerScreen();
   }
@@ -1407,6 +1427,60 @@
     }
   }
 
+  function userFixtureThisJornada(){
+    const div = userDivision();
+    return career.fixtures.find(f=> f.jornada===career.currentJornada && f.division===div);
+  }
+
+  function processWeeklyEvents(){
+    const userTeam = career.teams.find(t=>t.isUser);
+    const others = career.teams.filter(t=>!t.isUser);
+    if(!career.pendingOffers) career.pendingOffers=[];
+    userTeam.slots.forEach(pid=>{
+      const p = career.players.find(x=>x.id===pid);
+      if(!p) return;
+      if(career.pendingOffers.some(o=>o.playerId===pid)) return; // ya tiene una oferta esperando respuesta
+      const chance = p.transferListed ? 0.35 : 0.03;
+      if(Math.random() < chance){
+        const value = calcMarketValue(p);
+        const amount = Math.round(value * (0.7 + Math.random()*0.5));
+        const buyer = others[randInt(0, others.length-1)];
+        career.pendingOffers.push({ id:uid(), playerId:pid, playerName:p.name, amount, buyerName:buyer.name, week:career.week });
+      }
+    });
+  }
+
+  function advanceWeek(){
+    if(!career) return;
+    const uf = userFixtureThisJornada();
+    if(uf && !uf.played){
+      return; // el botón debe estar deshabilitado en este caso; no se hace nada
+    }
+    ensureJornadaSimulated();
+    career.week = (career.week||1) + 1;
+    processWeeklyEvents();
+    maybeAdvanceJornada();
+    persistCareers();
+    renderCareerScreen();
+  }
+  function respondToOffer(offerId, accept){
+    const offer = career.pendingOffers.find(o=>o.id===offerId);
+    if(!offer) return;
+    if(accept){
+      const userTeam = career.teams.find(t=>t.isUser);
+      const p = career.players.find(x=>x.id===offer.playerId);
+      if(p){
+        userTeam.slots = userTeam.slots.filter(id=>id!==offer.playerId);
+        userTeam.lineup = null;
+        userTeam.budget = (userTeam.budget||0) + offer.amount;
+        career.players = career.players.filter(x=>x.id!==offer.playerId);
+      }
+    }
+    career.pendingOffers = career.pendingOffers.filter(o=>o.id!==offerId);
+    persistCareers();
+    renderCareerScreen();
+  }
+
   // ---------- Selección de carrera (hasta 3 guardadas) ----------
   let pendingDeleteCareerId = null;
   let pendingDiscardPid = null;
@@ -1460,6 +1534,11 @@
           delete c.transferMarket;
           persistCareers();
         }
+        if(c.week===undefined){
+          c.week = (c.season-1)*(TEAMS_PER_DIVISION-1) + c.currentJornada;
+          persistCareers();
+        }
+        if(!c.pendingOffers){ c.pendingOffers = []; persistCareers(); }
         career=c; showScreen('careerScreen');
       });
       const delBtn=document.createElement('button'); delBtn.className='icon-btn danger';
@@ -1503,10 +1582,9 @@
 
   function renderCareerScreen(){
     if(!career) return;
-    ensureJornadaSimulated();
     document.getElementById('careerTitle').innerHTML = teamBadgeHTML(career.teams[userTeamIdx()]) + escapeHtml(career.clubName);
     const maxJ = TEAMS_PER_DIVISION - 1;
-    document.getElementById('careerJornada').textContent = `Temporada ${career.season} · División ${userDivision()} · Jornada ${career.currentJornada} de ${maxJ}`;
+    document.getElementById('careerJornada').textContent = `Semana ${career.week||1} · Temporada ${career.season} · División ${userDivision()} · Jornada ${career.currentJornada} de ${maxJ}`;
     const userTeam = career.teams[userTeamIdx()];
     const budgetEl = document.getElementById('careerBudget');
     budgetEl.textContent = `💰 ${formatMoney(userTeam.budget||0)} · ⭐ Reputación ${clubReputation(userTeam)}/100`;
@@ -1577,7 +1655,41 @@
     } else {
       matchSummaryEl.hidden = true;
     }
+
+    const offersEl = document.getElementById('careerOffersCard');
+    if(career.pendingOffers && career.pendingOffers.length){
+      let lines = [`<b class="card-title">OFERTAS RECIBIDAS</b>`];
+      offersEl.innerHTML = lines.join('');
+      career.pendingOffers.forEach(o=>{
+        const row=document.createElement('div');
+        row.style.cssText='margin-top:8px; padding-top:8px; border-top:1px solid #234;';
+        row.innerHTML = `<div><b>${escapeHtml(o.buyerName)}</b> ofrece <b style="color:var(--gold);">${formatMoney(o.amount)}</b> por ${escapeHtml(o.playerName)}</div>`;
+        const btnRow=document.createElement('div'); btnRow.className='btn-row'; btnRow.style.marginTop='6px';
+        const acceptBtn=document.createElement('button'); acceptBtn.className='mode-btn small primary'; acceptBtn.textContent='Aceptar';
+        acceptBtn.addEventListener('click', ()=>respondToOffer(o.id, true));
+        const rejectBtn=document.createElement('button'); rejectBtn.className='mode-btn small'; rejectBtn.textContent='Rechazar';
+        rejectBtn.addEventListener('click', ()=>respondToOffer(o.id, false));
+        btnRow.appendChild(acceptBtn); btnRow.appendChild(rejectBtn);
+        row.appendChild(btnRow);
+        offersEl.appendChild(row);
+      });
+      offersEl.hidden = false;
+    } else {
+      offersEl.hidden = true;
+    }
+
     renderCareerFixtures();
+
+    const uf = userFixtureThisJornada();
+    const advanceBtn = document.getElementById('btnAdvanceWeek');
+    const advanceHint = document.getElementById('advanceWeekHint');
+    if(uf && !uf.played){
+      advanceBtn.disabled = true;
+      advanceHint.textContent = 'Juega o simula tu partido de esta jornada antes de continuar.';
+    } else {
+      advanceBtn.disabled = false;
+      advanceHint.textContent = 'Tu jornada está resuelta. Pulsa Seguir para pasar a la siguiente semana.';
+    }
   }
 
   function attrBarColor(v){
@@ -1643,30 +1755,23 @@
       const p = career.players.find(x=>x.id===pid);
       if(!p) return;
       const card = renderPlayerCard(p, {editableNumber:true});
-      const price = calcMarketValue(p);
-      const sellPrice = Math.round(price*0.8);
-      const isPending = pendingSellPid===pid;
+      const isListed = !!p.transferListed;
       const btnRow=document.createElement('div'); btnRow.className='btn-row'; btnRow.style.marginTop='6px';
-      const sellBtn=document.createElement('button'); sellBtn.className='mode-btn small';
-      sellBtn.textContent = isPending ? `¿Seguro? Vender por ${formatMoney(sellPrice)}` : `Vender (${formatMoney(sellPrice)})`;
-      if(userTeam.slots.length<=MIN_SQUAD_SIZE) sellBtn.disabled=true;
-      sellBtn.addEventListener('click', ()=>{
-        if(!isPending){ pendingSellPid=pid; renderCareerRoster(); return; }
-        userTeam.slots = userTeam.slots.filter(id=>id!==pid);
-        userTeam.lineup = null;
-        userTeam.budget = (userTeam.budget||0) + sellPrice;
-        career.players = career.players.filter(x=>x.id!==pid);
-        pendingSellPid = null;
+      const listBtn=document.createElement('button');
+      listBtn.className = isListed ? 'mode-btn small primary' : 'mode-btn small';
+      listBtn.textContent = isListed ? 'Transferible (quitar)' : 'Poner como transferible';
+      listBtn.addEventListener('click', ()=>{
+        p.transferListed = !isListed;
         persistCareers();
         renderCareerRoster();
       });
-      btnRow.appendChild(sellBtn);
-      if(isPending){
-        const cancelBtn=document.createElement('button'); cancelBtn.className='mode-btn small'; cancelBtn.textContent='Cancelar';
-        cancelBtn.addEventListener('click', ()=>{ pendingSellPid=null; renderCareerRoster(); });
-        btnRow.appendChild(cancelBtn);
-      }
+      btnRow.appendChild(listBtn);
       card.appendChild(btnRow);
+      if(isListed){
+        const note=document.createElement('p'); note.className='hint';
+        note.textContent = 'En la lista de transferibles: es más probable que lleguen ofertas por él al pulsar "Seguir".';
+        card.appendChild(note);
+      }
       el.appendChild(card);
     });
   }
@@ -2016,6 +2121,46 @@
       el.appendChild(card);
     });
   }
+
+  let viewingFriendlyDivision = null;
+  function renderCareerFriendlyScreen(){
+    if(viewingFriendlyDivision===null) viewingFriendlyDivision = userDivision();
+    const tabsEl = document.getElementById('friendlyDivisionTabs');
+    tabsEl.innerHTML='';
+    for(let d=1; d<=DIVISIONS; d++){
+      const btn=document.createElement('button'); btn.textContent='Div '+d;
+      if(d===viewingFriendlyDivision) btn.classList.add('active');
+      btn.addEventListener('click', ()=>{ viewingFriendlyDivision=d; renderCareerFriendlyScreen(); });
+      tabsEl.appendChild(btn);
+    }
+    const el = document.getElementById('careerFriendlyList');
+    el.innerHTML='';
+    career.teams.forEach((t,idx)=>{
+      if(t.isUser || t.division!==viewingFriendlyDivision) return;
+      const row=document.createElement('div'); row.className='fixture-item';
+      const teamsSpan=document.createElement('div'); teamsSpan.className='fixture-teams';
+      teamsSpan.innerHTML = `${teamBadgeHTML(t)}${escapeHtml(t.name)}`;
+      row.appendChild(teamsSpan);
+      const btn=document.createElement('button'); btn.className='icon-btn'; btn.textContent='Jugar amistoso';
+      btn.addEventListener('click', ()=>openFriendlyLineupScreen(idx));
+      row.appendChild(btn);
+      el.appendChild(row);
+    });
+  }
+  function openFriendlyLineupScreen(oppIdx){
+    const userTeam = career.teams.find(t=>t.isUser);
+    lineupMode = 'friendly';
+    friendlyOpponentIdx = oppIdx;
+    lineupFixtureId = null;
+    chosenKit = 'primary';
+    activeSlotIdx = null;
+    const validPrev = userTeam.lineup && userTeam.lineup.length===6 && userTeam.lineup.every(id=>{
+      const p = career.players.find(x=>x.id===id);
+      return p && userTeam.slots.includes(id) && !(p.injuryMatchesLeft>0);
+    });
+    pendingLineup = validPrev ? [...userTeam.lineup] : autoPickLineup(userTeam.slots, userTeam.formation);
+    showScreen('careerLineupScreen');
+  }
   function renderCareerFacilitiesScreen(){
     const userTeam = career.teams.find(t=>t.isUser);
     if(!userTeam.facilities) userTeam.facilities = {youth:1, training:1};
@@ -2165,11 +2310,12 @@
   let lineupFixtureId = null;
   let pendingLineup = null;
   let chosenKit = 'primary';
-  let lineupMode = 'match'; // 'match' (antes de un partido) | 'default' (fijar titulares desde la Plantilla)
+  let lineupMode = 'match'; // 'match' (antes de un partido) | 'default' (fijar titulares) | 'friendly' (amistoso)
   let activeSlotIdx = null; // puesto del campo actualmente seleccionado para asignar jugador
+  let friendlyOpponentIdx = null;
 
   function getLineupUserTeam(){
-    if(lineupMode==='default') return career.teams.find(t=>t.isUser);
+    if(lineupMode==='default' || lineupMode==='friendly') return career.teams.find(t=>t.isUser);
     const f = career.fixtures.find(x=>x.id===lineupFixtureId);
     if(!f) return null;
     const userIdx = isUserTeam(f.homeIdx) ? f.homeIdx : f.awayIdx;
@@ -2205,6 +2351,20 @@
       document.getElementById('lineupTitle').textContent = 'Titulares por defecto';
       kitCard.hidden = true;
       confirmBtn.textContent = 'Guardar titulares';
+    } else if(lineupMode==='friendly'){
+      userTeam = career.teams.find(t=>t.isUser);
+      const oppTeam = career.teams[friendlyOpponentIdx];
+      document.getElementById('lineupTitle').innerHTML = `Amistoso vs ${teamBadgeHTML(oppTeam)}${escapeHtml(oppTeam.name)}`;
+      kitCard.hidden = false;
+      confirmBtn.textContent = 'Jugar amistoso';
+
+      const kitPrimaryBtn=document.getElementById('kitPrimaryBtn'), kitSecondaryBtn=document.getElementById('kitSecondaryBtn');
+      kitPrimaryBtn.style.background = userTeam.kitPrimary;
+      kitPrimaryBtn.style.color = textColorFor(userTeam.kitPrimary);
+      kitSecondaryBtn.style.background = userTeam.kitSecondary;
+      kitSecondaryBtn.style.color = textColorFor(userTeam.kitSecondary);
+      kitPrimaryBtn.style.outline = chosenKit==='primary' ? '3px solid var(--gold)' : 'none';
+      kitSecondaryBtn.style.outline = chosenKit==='secondary' ? '3px solid var(--gold)' : 'none';
     } else {
       const f = career.fixtures.find(x=>x.id===lineupFixtureId);
       if(!f) return;
@@ -2305,6 +2465,21 @@
       userTeam.lineup = [...pendingLineup];
       persistCareers();
       showScreen('careerRosterScreen');
+      return;
+    }
+    if(lineupMode==='friendly'){
+      const userTeam = career.teams.find(t=>t.isUser);
+      const oppTeam = career.teams[friendlyOpponentIdx];
+      userTeam.lineup = [...pendingLineup];
+      persistCareers();
+      const oppLineup = autoPickLineup(oppTeam.slots, oppTeam.formation);
+      const userColor = chosenKit==='primary' ? userTeam.kitPrimary : userTeam.kitSecondary;
+      let oppColor = oppTeam.kitPrimary;
+      if(hexDistance(oppColor, userColor) < 90) oppColor = oppTeam.kitSecondary;
+      matchNames = {A:userTeam.name, B:oppTeam.name};
+      matchContext = {type:'career_friendly', opponentIdx:friendlyOpponentIdx};
+      matchKitColors = {A:userColor, B:oppColor};
+      startMatch('ai', rosterFromCareerTeam(userTeam, pendingLineup), rosterFromCareerTeam(oppTeam, oppLineup), userTeam.formation, oppTeam.formation);
       return;
     }
     const f = career.fixtures.find(x=>x.id===lineupFixtureId);
@@ -3075,10 +3250,15 @@
         const oppTeamRef = career.teams[matchContext.userIsHome ? f.awayIdx : f.homeIdx];
         const summaryUser = awardXPForPids(matchParticipants.A, matchStats, trainingBoostFor(userTeamRef));
         awardXPForPids(matchParticipants.B, matchStats, trainingBoostFor(oppTeamRef));
-        maybeAdvanceJornada();
         career.lastMatchSummary = { opponent: matchNames.B, entries: summaryUser };
         persistCareers();
       }
+      matchContext=null; showScreen('careerScreen');
+    } else if(matchContext && matchContext.type==='career_friendly'){
+      const userTeamRef = career.teams.find(t=>t.isUser);
+      const oppTeamRef = career.teams[matchContext.opponentIdx];
+      awardXPForPids(matchParticipants.A, matchStats, trainingBoostFor(userTeamRef));
+      awardXPForPids(matchParticipants.B, matchStats, trainingBoostFor(oppTeamRef));
       matchContext=null; showScreen('careerScreen');
     } else {
       showScreen('menuScreen');
