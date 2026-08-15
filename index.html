@@ -957,19 +957,17 @@
     }
     return team.facilities.stadium;
   }
-  function facilityUpgradeCost(currentLevel, divisionLevel){
+  function facilityUpgradeCost(currentLevel){
     if(currentLevel>=5) return null;
-    const base = 15000;
-    const divF = divisionFactor(divisionLevel||5);
-    const levelMultiplier = Math.pow(1.8, currentLevel-1);
-    return Math.round(base * divF * levelMultiplier);
-  }
-  function standUpgradeCost(currentLevel, divisionLevel){
-    if(currentLevel>=5) return null;
-    const base = 50000;
-    const divF = divisionFactor(divisionLevel||5);
+    const base = 20000;
     const levelMultiplier = Math.pow(2.2, currentLevel-1);
-    return Math.round(base * divF * levelMultiplier);
+    return Math.round(base * levelMultiplier);
+  }
+  function standUpgradeCost(currentLevel){
+    if(currentLevel>=5) return null;
+    const base = 60000;
+    const levelMultiplier = Math.pow(2.6, currentLevel-1);
+    return Math.round(base * levelMultiplier);
   }
   function trainingBoostFor(team){
     const lvl = (team && team.facilities && team.facilities.training) || 1;
@@ -1751,7 +1749,7 @@
     Object.keys(FACILITY_TYPES).forEach(key=>{
       const info = FACILITY_TYPES[key];
       const level = userTeam.facilities[key] || 1;
-      const cost = facilityUpgradeCost(level, userTeam.division);
+      const cost = facilityUpgradeCost(level);
       const card=document.createElement('div'); card.className='card'; card.style.marginBottom='10px';
       const title=document.createElement('b'); title.className='card-title'; title.textContent = `${info.label} — Nivel ${level}/5`;
       card.appendChild(title);
@@ -1804,7 +1802,7 @@
     standsEl.innerHTML = '';
     STAND_KEYS.forEach(k=>{
       const level = stadium[k]||1;
-      const cost = standUpgradeCost(level, userTeam.division);
+      const cost = standUpgradeCost(level);
       const card=document.createElement('div'); card.className='card stand-card';
       const title=document.createElement('b'); title.className='card-title';
       title.textContent = `${STAND_LABELS[k]} — Nivel ${level}/5 (${standSeats(level, userTeam.division).toLocaleString('es-ES')} asientos)`;
