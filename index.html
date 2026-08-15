@@ -966,9 +966,9 @@
   }
   function standUpgradeCost(currentLevel, divisionLevel){
     if(currentLevel>=5) return null;
-    const base = 6000;
+    const base = 50000;
     const divF = divisionFactor(divisionLevel||5);
-    const levelMultiplier = Math.pow(1.7, currentLevel-1);
+    const levelMultiplier = Math.pow(2.2, currentLevel-1);
     return Math.round(base * divF * levelMultiplier);
   }
   function trainingBoostFor(team){
