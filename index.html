@@ -413,7 +413,7 @@
       <b class="card-title">FORMACIÓN</b>
       <select id="formationSelect" style="width:100%; padding:8px; border-radius:6px; border:1px solid #2f5c46; background:#0e2118; color:var(--chalk); font-size:13px;"></select>
     </div>
-    <p class="hint">Toca una posición del campo para elegir o cambiar jugador. Cualquier jugador puede ocupar cualquier puesto: su posición oculta solo afecta a su progresión.</p>
+    <p class="hint">Toca una posición del campo para elegir o cambiar jugador. Cualquier jugador puede ocupar cualquier puesto: su posición oculta solo afecta a su progresión. Al elegir, verás los atributos en <span style="color:#2ecc71;">verde</span> (clave), <span style="color:#f4d03f;">amarillo</span> (secundario) o gris (no influye) para ese puesto.</p>
     <div class="lineup-pitch-wrap" id="lineupPitchWrap"></div>
     <div class="card"><div id="lineupCandidates"></div></div>
     <div class="btn-row">
@@ -638,6 +638,12 @@
     MF: { high:['pass'],        mid:['dribble','speed','defense'], low:['goalkeeping','shot','strength'] },
     FW: { high:['shot'],        mid:['speed','dribble','strength'],low:['goalkeeping','pass','defense'] },
   };
+  function tierColorForAttr(role, attrKey){
+    const tiers = POSITION_TIERS[role] || POSITION_TIERS.MF;
+    if(tiers.high.includes(attrKey)) return '#2ecc71';
+    if(tiers.mid.includes(attrKey)) return '#f4d03f';
+    return '#7f8c8d';
+  }
   function divisionParams(level){
     const table = {
       1:{high:[70,90], mid:[45,68], low:[10,30]},
@@ -1516,7 +1522,7 @@
         any=true;
         const row=document.createElement('div'); row.className='lineup-candidate';
         const info=document.createElement('div'); info.className='lc-info';
-        const attrLine = ATTRS.map(a=>`<span style="color:${attrBarColor(p[a.key])};">${a.short}${p[a.key]}</span>`).join(' ');
+        const attrLine = ATTRS.map(a=>`<span style="color:${tierColorForAttr(roles[idx], a.key)};">${a.short}${p[a.key]}</span>`).join(' ');
         info.innerHTML = `<b>#${p.squadNumber||'-'} ${escapeHtml(p.name)}, ${p.age}a</b><span>${attrLine}</span>`;
         const pickBtn=document.createElement('button'); pickBtn.className='icon-btn'; pickBtn.textContent='Elegir';
         row.appendChild(info); row.appendChild(pickBtn);
