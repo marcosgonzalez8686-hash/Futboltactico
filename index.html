@@ -360,6 +360,8 @@
   <div class="screen" id="careerScreen" hidden>
     <h2 id="careerTitle">Mi club</h2>
     <p class="hint" id="careerJornada"></p>
+    <p class="hint" id="careerBudget" style="font-size:16px; font-weight:bold; color:var(--gold);"></p>
+    <div class="card" id="careerFinancialAlert" hidden></div>
     <div class="card" id="careerSeasonSummary" hidden></div>
     <div class="card" id="careerMatchSummary" hidden></div>
     <div class="btn-row">
@@ -370,6 +372,7 @@
       <button class="mode-btn small" id="btnGoHistory">Historial del club</button>
       <button class="mode-btn small" id="btnGoYouth">Cantera</button>
     </div>
+    <button class="mode-btn small" id="btnGoMarket">Mercado de fichajes</button>
     <div class="card"><b class="card-title">PARTIDOS DE LA JORNADA</b><div id="careerFixtureList"></div></div>
     <div class="btn-row">
       <button class="mode-btn small" id="btnSwitchCareer">Cambiar de carrera</button>
@@ -398,6 +401,13 @@
     <div class="card"><div id="careerYouthList"></div></div>
     <button class="mode-btn primary" id="btnConfirmYouth" hidden>Confirmar y continuar</button>
     <button class="mode-btn" id="btnBackYouth">« Volver</button>
+  </div>
+
+  <div class="screen" id="careerMarketScreen" hidden>
+    <h2>Mercado de fichajes</h2>
+    <p class="hint" id="marketHint"></p>
+    <div class="card"><div id="careerMarketList"></div></div>
+    <button class="mode-btn" id="btnBackMarket">« Volver</button>
   </div>
 
   <div class="screen" id="careerHistoryScreen" hidden>
@@ -730,7 +740,7 @@
 
   // ---------- Navegación de pantallas ----------
   function showScreen(name){
-    ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerYouthScreen','careerLineupScreen','gameScreen'].forEach(id=>{
+    ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerYouthScreen','careerMarketScreen','careerLineupScreen','gameScreen'].forEach(id=>{
       document.getElementById(id).hidden = (id !== name);
     });
     document.getElementById('scoreboard').hidden = (name !== 'gameScreen');
@@ -740,6 +750,7 @@
     if(name==='careerStandingsScreen'){ viewingDivision = userDivision(); renderDivisionStandingsScreen(); }
     if(name==='careerRosterScreen') renderCareerRoster();
     if(name==='careerYouthScreen') renderCareerYouthScreen();
+    if(name==='careerMarketScreen') renderCareerMarketScreen();
     if(name==='careerHistoryScreen') renderCareerHistory();
     if(name==='careerLineupScreen') renderLineupScreen();
   }
@@ -760,6 +771,8 @@
   document.getElementById('btnGoHistory').addEventListener('click', ()=>showScreen('careerHistoryScreen'));
   document.getElementById('btnGoYouth').addEventListener('click', ()=>showScreen('careerYouthScreen'));
   document.getElementById('btnBackYouth').addEventListener('click', ()=>showScreen('careerScreen'));
+  document.getElementById('btnGoMarket').addEventListener('click', ()=>showScreen('careerMarketScreen'));
+  document.getElementById('btnBackMarket').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnBackStandings').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnBackRoster').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnEditDefaultLineup').addEventListener('click', openDefaultLineupEditor);
@@ -873,6 +886,90 @@
   }
   function generateYouthSquad(divisionLevel){ return SQUAD_TARGETS.slice(0,YOUTH_SQUAD_SIZE).map(role=>generateYouthPlayer(role, divisionLevel)); }
 
+  // ---------- Economía ----------
+  function divisionFactor(level){
+    const table = {1:10, 2:6, 3:3, 4:1.5, 5:1};
+    return table[level] || table[5];
+  }
+  function divisionEconomyRates(level){
+    const f = divisionFactor(level);
+    return {
+      initialBudget: Math.round(80000 * f),
+      tv: Math.round(800 * f),
+      gate: Math.round(500 * f),
+      prizeBase: Math.round(4000 * f),
+    };
+  }
+  function calcWage(p){
+    const overall = overallRating(p);
+    const base = overall * 15;
+    const ageFactor = clamp(1 - Math.abs(p.age-27)*0.02, 0.5, 1.15);
+    return Math.max(50, Math.round(base * ageFactor));
+  }
+  function calcMarketValue(p){
+    const overall = overallRating(p);
+    const growth = p.hiddenGrowth!==undefined ? p.hiddenGrowth : 50;
+    const ageFactor = p.age<=23 ? 1.3 : (p.age<=28 ? 1.1 : (p.age<=31 ? 0.85 : (p.age<=34 ? 0.5 : 0.25)));
+    const growthFactor = 0.7 + (growth/99)*0.6;
+    return Math.max(500, Math.round(Math.pow(overall,2.5) * 3 * ageFactor * growthFactor));
+  }
+  function formatMoney(n){
+    return Math.round(n).toLocaleString('es-ES') + ' €';
+  }
+  function calcTeamWageBill(team){
+    let total = 0;
+    team.slots.forEach(pid=>{ const p=career.players.find(x=>x.id===pid); if(p) total += calcWage(p); });
+    if(team.isUser && career.youthPlayers){
+      total += career.youthPlayers.length * Math.round(50 * divisionFactor(team.division));
+    }
+    return total;
+  }
+  function generateTransferMarket(count){
+    const n = count || 18;
+    const out = [];
+    for(let i=0;i<n;i++){
+      const role = SQUAD_TARGETS[randInt(0, SQUAD_TARGETS.length-1)];
+      const div = randInt(1, DIVISIONS);
+      out.push(generateRandomPlayer(role, div));
+    }
+    return out;
+  }
+  function processEconomyForJornada(jornada){
+    const jf = career.fixtures.filter(f=>f.jornada===jornada);
+    jf.forEach(f=>{
+      const home = career.teams[f.homeIdx], away = career.teams[f.awayIdx];
+      const homeRates = divisionEconomyRates(home.division), awayRates = divisionEconomyRates(away.division);
+      home.budget = (home.budget||0) + homeRates.tv + homeRates.gate;
+      away.budget = (away.budget||0) + awayRates.tv;
+    });
+    career.teams.forEach(team=>{
+      team.budget = (team.budget||0) - calcTeamWageBill(team);
+    });
+  }
+  function awardSeasonPrizesForDivision(division, standings){
+    const rates = divisionEconomyRates(division);
+    standings.forEach((s,i)=>{
+      const team = career.teams[s.idx];
+      const prize = Math.round(rates.prizeBase * (1 - (i/standings.length)*0.8));
+      team.budget = (team.budget||0) + prize;
+    });
+  }
+  function enforceBudgetDiscipline(){
+    const team = career.teams.find(t=>t.isUser);
+    if(!team || team.budget>=0) return null;
+    if(team.slots.length<=MIN_SQUAD_SIZE) return null;
+    const candidates = team.slots.map(pid=>career.players.find(p=>p.id===pid)).filter(Boolean);
+    if(!candidates.length) return null;
+    candidates.sort((a,b)=> calcMarketValue(b)-calcMarketValue(a));
+    const toSell = candidates[0];
+    const price = Math.round(calcMarketValue(toSell)*0.8);
+    team.budget += price;
+    team.slots = team.slots.filter(id=>id!==toSell.id);
+    team.lineup = null;
+    career.players = career.players.filter(p=>p.id!==toSell.id);
+    return {name:toSell.name, price};
+  }
+
   function createCareer(clubName, kitPrimary, kitSecondary, logo){
     const usedNames = new Set([clubName]);
     const teams=[];
@@ -881,12 +978,12 @@
     // División 5 (la más baja): el club del usuario + 15 rivales
     const userSquad = generateSquad(5);
     allPlayers.push(...userSquad);
-    teams.push({id:uid(), name:clubName, isUser:true, division:5, slots:userSquad.map(p=>p.id), lineup:null, kitPrimary, kitSecondary, logo, formation:DEFAULT_FORMATION});
+    teams.push({id:uid(), name:clubName, isUser:true, division:5, slots:userSquad.map(p=>p.id), lineup:null, kitPrimary, kitSecondary, logo, formation:DEFAULT_FORMATION, budget:divisionEconomyRates(5).initialBudget});
     for(let i=0;i<TEAMS_PER_DIVISION-1;i++){
       const squad=generateSquad(5);
       allPlayers.push(...squad);
       const [p1,p2]=randomKitPair();
-      teams.push({id:uid(), name:generateClubName(usedNames), isUser:false, division:5, slots:squad.map(p=>p.id), lineup:null, kitPrimary:p1, kitSecondary:p2, logo:LOGO_EMOJIS[randInt(0,LOGO_EMOJIS.length-1)], formation:pickRandomFormationKey()});
+      teams.push({id:uid(), name:generateClubName(usedNames), isUser:false, division:5, slots:squad.map(p=>p.id), lineup:null, kitPrimary:p1, kitSecondary:p2, logo:LOGO_EMOJIS[randInt(0,LOGO_EMOJIS.length-1)], formation:pickRandomFormationKey(), budget:divisionEconomyRates(5).initialBudget});
     }
     // Divisiones 1 a 4: todo rivales, nivel más alto cuanto menor el número de división
     for(let div=1; div<=4; div++){
@@ -894,7 +991,7 @@
         const squad=generateSquad(div);
         allPlayers.push(...squad);
         const [p1,p2]=randomKitPair();
-        teams.push({id:uid(), name:generateClubName(usedNames), isUser:false, division:div, slots:squad.map(p=>p.id), lineup:null, kitPrimary:p1, kitSecondary:p2, logo:LOGO_EMOJIS[randInt(0,LOGO_EMOJIS.length-1)], formation:pickRandomFormationKey()});
+        teams.push({id:uid(), name:generateClubName(usedNames), isUser:false, division:div, slots:squad.map(p=>p.id), lineup:null, kitPrimary:p1, kitSecondary:p2, logo:LOGO_EMOJIS[randInt(0,LOGO_EMOJIS.length-1)], formation:pickRandomFormationKey(), budget:divisionEconomyRates(div).initialBudget});
       }
     }
 
@@ -903,6 +1000,7 @@
       fixtures: buildSeasonFixtures(teams),
       currentJornada:1, season:1, seasonSummary:null,
       youthPlayers: generateYouthSquad(5), youthReviewPending:false,
+      transferMarket: generateTransferMarket(18), financialAlert:null,
     };
     careersList.push(newCareer);
     career = newCareer;
@@ -1021,10 +1119,11 @@
   }
 
   function processEndOfSeason(){
-    // 1. Ascensos y descensos (calculados antes de tocar nada)
+    // 1. Ascensos y descensos (calculados antes de tocar nada) + premios de temporada
     const moves = []; // {idx, to}
     for(let div=1; div<=DIVISIONS; div++){
       const st = computeStandingsForDivision(div);
+      awardSeasonPrizesForDivision(div, st);
       if(div>1) st.slice(0,PROMOTED_PER_DIV).forEach(s=> moves.push({idx:s.idx, to:div-1}));
       if(div<DIVISIONS) st.slice(-RELEGATED_PER_DIV).forEach(s=> moves.push({idx:s.idx, to:div+1}));
     }
@@ -1056,6 +1155,7 @@
     career.season++;
     career.currentJornada = 1;
     career.fixtures = buildSeasonFixtures(career.teams);
+    career.transferMarket = generateTransferMarket(18);
     career.seasonSummary = {
       season: career.season-1,
       divisionBefore, divisionAfter,
@@ -1086,6 +1186,11 @@
     if(jf.length && jf.every(f=>f.played)){
       trainYouthPlayers();
       progressInjuries();
+      processEconomyForJornada(career.currentJornada);
+      const forcedSale = enforceBudgetDiscipline();
+      if(forcedSale){
+        career.financialAlert = `Números rojos: se ha vendido a ${forcedSale.name} por ${formatMoney(forcedSale.price)} para cuadrar las cuentas.`;
+      }
       const maxJ = TEAMS_PER_DIVISION - 1;
       if(career.currentJornada < maxJ){ career.currentJornada++; }
       else { processEndOfSeason(); }
@@ -1120,6 +1225,15 @@
         }
         if(c.teams.some(t=>!t.formation)){
           c.teams.forEach(t=>{ if(!t.formation) t.formation = t.isUser ? DEFAULT_FORMATION : pickRandomFormationKey(); });
+          persistCareers();
+        }
+        if(c.teams.some(t=>t.budget===undefined)){
+          c.teams.forEach(t=>{ if(t.budget===undefined) t.budget = divisionEconomyRates(t.division).initialBudget; });
+          persistCareers();
+        }
+        if(!c.transferMarket){
+          c.transferMarket = generateTransferMarket(18);
+          if(c.financialAlert===undefined) c.financialAlert = null;
           persistCareers();
         }
         career=c; showScreen('careerScreen');
@@ -1169,6 +1283,22 @@
     document.getElementById('careerTitle').innerHTML = teamBadgeHTML(career.teams[userTeamIdx()]) + escapeHtml(career.clubName);
     const maxJ = TEAMS_PER_DIVISION - 1;
     document.getElementById('careerJornada').textContent = `Temporada ${career.season} · División ${userDivision()} · Jornada ${career.currentJornada} de ${maxJ}`;
+    const userTeam = career.teams[userTeamIdx()];
+    const budgetEl = document.getElementById('careerBudget');
+    budgetEl.textContent = `💰 ${formatMoney(userTeam.budget||0)}`;
+    budgetEl.style.color = (userTeam.budget||0) < 0 ? '#e74c3c' : 'var(--gold)';
+
+    const alertEl = document.getElementById('careerFinancialAlert');
+    if(career.financialAlert){
+      alertEl.innerHTML = `<b class="card-title">AVISO FINANCIERO</b><div>${escapeHtml(career.financialAlert)}</div>`;
+      alertEl.hidden = false;
+      const closeAlertBtn=document.createElement('button');
+      closeAlertBtn.className='mode-btn small'; closeAlertBtn.textContent='Cerrar'; closeAlertBtn.style.marginTop='8px';
+      closeAlertBtn.addEventListener('click', ()=>{ career.financialAlert=null; persistCareers(); renderCareerScreen(); });
+      alertEl.appendChild(closeAlertBtn);
+    } else {
+      alertEl.hidden = true;
+    }
 
     const summaryEl = document.getElementById('careerSeasonSummary');
     if(career.seasonSummary){
@@ -1280,6 +1410,7 @@
     });
     return card;
   }
+  let pendingSellPid = null;
   function renderCareerRoster(){
     const el = document.getElementById('careerRosterList');
     el.innerHTML='';
@@ -1287,7 +1418,32 @@
     userTeam.slots.forEach(pid=>{
       const p = career.players.find(x=>x.id===pid);
       if(!p) return;
-      el.appendChild(renderPlayerCard(p, {editableNumber:true}));
+      const card = renderPlayerCard(p, {editableNumber:true});
+      const price = calcMarketValue(p);
+      const sellPrice = Math.round(price*0.8);
+      const isPending = pendingSellPid===pid;
+      const btnRow=document.createElement('div'); btnRow.className='btn-row'; btnRow.style.marginTop='6px';
+      const sellBtn=document.createElement('button'); sellBtn.className='mode-btn small';
+      sellBtn.textContent = isPending ? `¿Seguro? Vender por ${formatMoney(sellPrice)}` : `Vender (${formatMoney(sellPrice)})`;
+      if(userTeam.slots.length<=MIN_SQUAD_SIZE) sellBtn.disabled=true;
+      sellBtn.addEventListener('click', ()=>{
+        if(!isPending){ pendingSellPid=pid; renderCareerRoster(); return; }
+        userTeam.slots = userTeam.slots.filter(id=>id!==pid);
+        userTeam.lineup = null;
+        userTeam.budget = (userTeam.budget||0) + sellPrice;
+        career.players = career.players.filter(x=>x.id!==pid);
+        pendingSellPid = null;
+        persistCareers();
+        renderCareerRoster();
+      });
+      btnRow.appendChild(sellBtn);
+      if(isPending){
+        const cancelBtn=document.createElement('button'); cancelBtn.className='mode-btn small'; cancelBtn.textContent='Cancelar';
+        cancelBtn.addEventListener('click', ()=>{ pendingSellPid=null; renderCareerRoster(); });
+        btnRow.appendChild(cancelBtn);
+      }
+      card.appendChild(btnRow);
+      el.appendChild(card);
     });
   }
   const MIN_SQUAD_SIZE = 6;
@@ -1369,6 +1525,26 @@
         btnRow.appendChild(promoteBtn); btnRow.appendChild(discardBtn);
         card.appendChild(btnRow);
       }
+      const sellRow=document.createElement('div'); sellRow.className='btn-row'; sellRow.style.marginTop='6px';
+      const sellPrice = Math.round(calcMarketValue(p)*0.8);
+      const isSellPending = pendingSellPid===p.id;
+      const sellBtn=document.createElement('button'); sellBtn.className='mode-btn small';
+      sellBtn.textContent = isSellPending ? `¿Seguro? Vender por ${formatMoney(sellPrice)}` : `Vender (${formatMoney(sellPrice)})`;
+      sellBtn.addEventListener('click', ()=>{
+        if(!isSellPending){ pendingSellPid=p.id; renderCareerYouthScreen(); return; }
+        career.youthPlayers = career.youthPlayers.filter(x=>x.id!==p.id);
+        userTeam.budget = (userTeam.budget||0) + sellPrice;
+        pendingSellPid = null;
+        persistCareers();
+        renderCareerYouthScreen();
+      });
+      sellRow.appendChild(sellBtn);
+      if(isSellPending){
+        const cancelSellBtn=document.createElement('button'); cancelSellBtn.className='mode-btn small'; cancelSellBtn.textContent='Cancelar';
+        cancelSellBtn.addEventListener('click', ()=>{ pendingSellPid=null; renderCareerYouthScreen(); });
+        sellRow.appendChild(cancelSellBtn);
+      }
+      card.appendChild(sellRow);
       el.appendChild(card);
     });
   }
@@ -1379,6 +1555,40 @@
     persistCareers();
     showScreen('careerScreen');
   });
+
+  function renderCareerMarketScreen(){
+    const userTeam = career.teams.find(t=>t.isUser);
+    const hintEl = document.getElementById('marketHint');
+    const el = document.getElementById('careerMarketList');
+    el.innerHTML='';
+    const blocked = (userTeam.budget||0) < 0;
+    hintEl.innerHTML = `Presupuesto: <b style="color:${blocked?'#e74c3c':'var(--gold)'};">${formatMoney(userTeam.budget||0)}</b> · Plantilla: ${userTeam.slots.length}/${MAX_SQUAD_SIZE}` +
+      (blocked ? '<br><span style="color:#e74c3c;">Números rojos: no puedes fichar hasta equilibrar las cuentas.</span>' : '');
+    if(!career.transferMarket || !career.transferMarket.length){
+      const p=document.createElement('p'); p.className='hint'; p.textContent='No hay jugadores disponibles en el mercado ahora mismo. Se renueva cada temporada.';
+      el.appendChild(p);
+      return;
+    }
+    career.transferMarket.forEach(p=>{
+      const card = renderPlayerCard(p);
+      const price = calcMarketValue(p);
+      const btnRow=document.createElement('div'); btnRow.className='btn-row'; btnRow.style.marginTop='6px';
+      const buyBtn=document.createElement('button'); buyBtn.className='mode-btn small primary';
+      buyBtn.textContent = `Fichar (${formatMoney(price)})`;
+      if(blocked || (userTeam.budget||0) < price || userTeam.slots.length >= MAX_SQUAD_SIZE) buyBtn.disabled = true;
+      buyBtn.addEventListener('click', ()=>{
+        userTeam.budget = (userTeam.budget||0) - price;
+        userTeam.slots.push(p.id);
+        career.players.push(p);
+        career.transferMarket = career.transferMarket.filter(x=>x.id!==p.id);
+        persistCareers();
+        renderCareerMarketScreen();
+      });
+      btnRow.appendChild(buyBtn);
+      card.appendChild(btnRow);
+      el.appendChild(card);
+    });
+  }
   function renderCareerHistory(){
     const el = document.getElementById('careerHistoryList');
     el.innerHTML='';
