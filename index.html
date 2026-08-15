@@ -401,8 +401,14 @@
       <button class="mode-btn small" id="btnGoHistory">Historial del club</button>
       <button class="mode-btn small" id="btnGoYouth">Cantera</button>
     </div>
-    <button class="mode-btn small" id="btnGoMarket">Mercado de fichajes</button>
-    <button class="mode-btn small" id="btnGoFacilities">Instalaciones</button>
+    <div class="btn-row">
+      <button class="mode-btn small" id="btnGoMarket">Ojeo</button>
+      <button class="mode-btn small" id="btnGoStaff">Personal</button>
+    </div>
+    <div class="btn-row">
+      <button class="mode-btn small" id="btnGoFacilities">Instalaciones</button>
+      <button class="mode-btn small" id="btnGoAllFacilities">Instalaciones (todos los clubes)</button>
+    </div>
     <div class="card"><b class="card-title">PARTIDOS DE LA JORNADA</b><div id="careerFixtureList"></div></div>
     <div class="btn-row">
       <button class="mode-btn small" id="btnSwitchCareer">Cambiar de carrera</button>
@@ -434,10 +440,28 @@
   </div>
 
   <div class="screen" id="careerMarketScreen" hidden>
-    <h2>Mercado de fichajes</h2>
+    <h2>Ojeo</h2>
     <p class="hint" id="marketHint"></p>
+    <p class="hint">Tus ojeadores van descubriendo prospectos poco a poco. Cuanta más gente asignes y más tiempo pase, más se conocerá de cada uno.</p>
     <div class="card"><div id="careerMarketList"></div></div>
     <button class="mode-btn" id="btnBackMarket">« Volver</button>
+  </div>
+
+  <div class="screen" id="careerStaffScreen" hidden>
+    <h2>Personal</h2>
+    <p class="hint" id="staffHint"></p>
+    <b class="card-title">TUS OJEADORES</b>
+    <div class="card"><div id="staffList"></div></div>
+    <b class="card-title">CANDIDATOS DISPONIBLES</b>
+    <div class="card"><div id="staffCandidatesList"></div></div>
+    <button class="mode-btn" id="btnBackStaff">« Volver</button>
+  </div>
+
+  <div class="screen" id="careerAllFacilitiesScreen" hidden>
+    <h2>Instalaciones de los clubes</h2>
+    <div class="division-tabs" id="allFacilitiesDivisionTabs"></div>
+    <div id="allFacilitiesList"></div>
+    <button class="mode-btn" id="btnBackAllFacilities">« Volver</button>
   </div>
 
   <div class="screen" id="careerFacilitiesScreen" hidden>
@@ -781,7 +805,7 @@
 
   // ---------- Navegación de pantallas ----------
   function showScreen(name){
-    ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerYouthScreen','careerMarketScreen','careerFacilitiesScreen','careerLineupScreen','gameScreen'].forEach(id=>{
+    ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen','careerFacilitiesScreen','careerAllFacilitiesScreen','careerLineupScreen','gameScreen'].forEach(id=>{
       document.getElementById(id).hidden = (id !== name);
     });
     document.getElementById('scoreboard').hidden = (name !== 'gameScreen');
@@ -792,6 +816,8 @@
     if(name==='careerRosterScreen') renderCareerRoster();
     if(name==='careerYouthScreen') renderCareerYouthScreen();
     if(name==='careerMarketScreen') renderCareerMarketScreen();
+    if(name==='careerStaffScreen') renderCareerStaffScreen();
+    if(name==='careerAllFacilitiesScreen') renderAllFacilitiesScreen();
     if(name==='careerFacilitiesScreen') renderCareerFacilitiesScreen();
     if(name==='careerHistoryScreen') renderCareerHistory();
     if(name==='careerLineupScreen') renderLineupScreen();
@@ -815,6 +841,10 @@
   document.getElementById('btnBackYouth').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnGoMarket').addEventListener('click', ()=>showScreen('careerMarketScreen'));
   document.getElementById('btnBackMarket').addEventListener('click', ()=>showScreen('careerScreen'));
+  document.getElementById('btnGoStaff').addEventListener('click', ()=>showScreen('careerStaffScreen'));
+  document.getElementById('btnBackStaff').addEventListener('click', ()=>showScreen('careerScreen'));
+  document.getElementById('btnGoAllFacilities').addEventListener('click', ()=>showScreen('careerAllFacilitiesScreen'));
+  document.getElementById('btnBackAllFacilities').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnGoFacilities').addEventListener('click', ()=>showScreen('careerFacilitiesScreen'));
   document.getElementById('btnBackFacilities').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnBackStandings').addEventListener('click', ()=>showScreen('careerScreen'));
@@ -1037,23 +1067,72 @@
     if(team.isUser && career.youthPlayers){
       total += career.youthPlayers.length * Math.round(50 * divisionFactor(team.division));
     }
+    if(team.isUser){
+      total += calcStaffWageBill();
+    }
     return total;
   }
-  function generateTransferMarket(count, clubRep){
-    const n = count || 18;
+  function generateProspectPlayer(clubRep){
     const rep = clubRep===undefined ? 50 : clubRep;
-    const out = [];
-    for(let i=0;i<n;i++){
-      const role = SQUAD_TARGETS[randInt(0, SQUAD_TARGETS.length-1)];
-      let div;
-      if(rep>=85) div = randInt(1,2);
-      else if(rep>=65) div = randInt(1,3);
-      else if(rep>=45) div = randInt(2,4);
-      else if(rep>=25) div = randInt(3,5);
-      else div = Math.random()<0.85 ? randInt(4,5) : randInt(2,3); // rara joya inalcanzable
-      out.push(generateRandomPlayer(role, div));
+    const role = SQUAD_TARGETS[randInt(0, SQUAD_TARGETS.length-1)];
+    let div;
+    if(rep>=85) div = randInt(1,2);
+    else if(rep>=65) div = randInt(1,3);
+    else if(rep>=45) div = randInt(2,4);
+    else if(rep>=25) div = randInt(3,5);
+    else div = Math.random()<0.85 ? randInt(4,5) : randInt(2,3); // rara joya inalcanzable
+    return generateRandomPlayer(role, div);
+  }
+  const SCOUTING_POOL_SIZE = 10;
+  const SCOUT_LIMIT = 3;
+  function makeScoutingEntry(clubRep){
+    return { id:uid(), player: generateProspectPlayer(clubRep), progress:0, assignedScoutId:null };
+  }
+  function generateScoutingPool(clubRep){
+    return Array.from({length:SCOUTING_POOL_SIZE}, ()=> makeScoutingEntry(clubRep));
+  }
+  function generateScoutCandidate(){
+    const skill = randInt(20,90);
+    const wage = Math.round(80 + skill*4);
+    return { id:uid(), name:randomName(), skill, wage, age:randInt(28,60) };
+  }
+  function generateStaffCandidates(count){
+    return Array.from({length:count||5}, ()=> generateScoutCandidate());
+  }
+  function scoutProgressIncrement(scout){
+    if(!scout) return 0;
+    return Math.round(8 + scout.skill*0.15); // skill20≈11/jornada, skill90≈21.5/jornada
+  }
+  function scoutingFogLevel(progress){
+    if(progress>=90) return 'full';
+    if(progress>=60) return 'high';
+    if(progress>=25) return 'low';
+    return 'none';
+  }
+  function scoutingNoiseFor(progress){
+    const lvl = scoutingFogLevel(progress);
+    return {full:0, high:6, low:16, none:99}[lvl];
+  }
+  function progressScouting(){
+    if(!career || !career.scoutingPool) return;
+    career.scoutingPool.forEach(entry=>{
+      if(!entry.assignedScoutId) return;
+      const scout = career.staff.find(s=>s.id===entry.assignedScoutId);
+      if(!scout) { entry.assignedScoutId=null; return; }
+      entry.progress = clamp(entry.progress + scoutProgressIncrement(scout), 0, 100);
+    });
+  }
+  function refillScoutingPool(){
+    if(!career) return;
+    const userTeam = career.teams.find(t=>t.isUser);
+    const rep = clubReputation(userTeam);
+    while(career.scoutingPool.length < SCOUTING_POOL_SIZE){
+      career.scoutingPool.push(makeScoutingEntry(rep));
     }
-    return out;
+  }
+  function calcStaffWageBill(){
+    if(!career || !career.staff) return 0;
+    return career.staff.reduce((s,st)=>s+ (st.wage||0), 0);
   }
   function processEconomyForJornada(jornada){
     const jf = career.fixtures.filter(f=>f.jornada===jornada);
@@ -1126,7 +1205,7 @@
       fixtures: buildSeasonFixtures(teams),
       currentJornada:1, season:1, seasonSummary:null,
       youthPlayers: generateYouthSquad(5, userFacilities.youth), youthReviewPending:false,
-      transferMarket: generateTransferMarket(18, clubReputation(teams[0])), financialAlert:null,
+      scoutingPool: generateScoutingPool(clubReputation(teams[0])), staff:[], staffCandidates: generateStaffCandidates(5), financialAlert:null,
     };
     careersList.push(newCareer);
     career = newCareer;
@@ -1282,7 +1361,7 @@
     career.season++;
     career.currentJornada = 1;
     career.fixtures = buildSeasonFixtures(career.teams);
-    career.transferMarket = generateTransferMarket(18, clubReputation(career.teams[uIdx]));
+    refillScoutingPool();
     career.seasonSummary = {
       season: career.season-1,
       divisionBefore, divisionAfter,
@@ -1315,6 +1394,8 @@
     if(jf.length && jf.every(f=>f.played)){
       trainYouthPlayers();
       progressInjuries();
+      progressScouting();
+      refillScoutingPool();
       processEconomyForJornada(career.currentJornada);
       const forcedSale = enforceBudgetDiscipline();
       if(forcedSale){
@@ -1370,10 +1451,13 @@
           persistCareers();
         }
         c.teams.forEach(t=>{ if(t.facilities) normalizeStadium(t); });
-        if(!c.transferMarket){
+        if(c.financialAlert===undefined){ c.financialAlert = null; persistCareers(); }
+        if(!c.staff) c.staff = [];
+        if(!c.staffCandidates) c.staffCandidates = generateStaffCandidates(5);
+        if(!c.scoutingPool){
           const uT = c.teams.find(t=>t.isUser);
-          c.transferMarket = generateTransferMarket(18, clubReputation(uT));
-          if(c.financialAlert===undefined) c.financialAlert = null;
+          c.scoutingPool = generateScoutingPool(clubReputation(uT));
+          delete c.transferMarket;
           persistCareers();
         }
         career=c; showScreen('careerScreen');
@@ -1697,44 +1781,238 @@
     showScreen('careerScreen');
   });
 
+  function qualitativeLabel(v){
+    if(v>=75) return {text:'Alto', color:'#2ecc71'};
+    if(v>=50) return {text:'Medio-alto', color:'#f4d03f'};
+    if(v>=25) return {text:'Medio-bajo', color:'#e8871e'};
+    return {text:'Bajo', color:'#c0392b'};
+  }
+  function renderScoutingCard(entry){
+    const p = entry.player;
+    const card = document.createElement('div'); card.className='player-card';
+    const head = document.createElement('div'); head.className='player-card-head';
+    const identified = entry.progress > 0;
+    const posLabels = {GK:'Portero', DF:'Defensa', MF:'Centrocampista', FW:'Delantero'};
+    head.innerHTML = identified
+      ? `<b>${escapeHtml(p.name)} <span style="font-weight:normal;color:#9fd4b8;font-size:11px;">(${posLabels[p.hiddenPos]||'?'})</span></b><span>${p.age} años</span>`
+      : `<b>Prospecto sin identificar</b><span>???</span>`;
+    card.appendChild(head);
+
+    const barWrap=document.createElement('div'); barWrap.style.cssText='margin:2px 0 10px;';
+    barWrap.innerHTML = `<div style="font-size:10.5px;color:#9fd4b8;margin-bottom:2px;">Informe de ojeo: ${entry.progress}%</div>
+      <div class="attr-bar-track"><div class="attr-bar-fill" style="width:${entry.progress}%;background:var(--gold);"></div></div>`;
+    card.appendChild(barWrap);
+
+    const fog = scoutingFogLevel(entry.progress);
+    if(fog==='none'){
+      const p2=document.createElement('p'); p2.className='hint'; p2.textContent='Todavía no hay datos sobre sus cualidades. Necesita más tiempo de ojeo.';
+      card.appendChild(p2);
+    } else if(fog==='low'){
+      ATTRS.forEach(a=>{
+        const q = qualitativeLabel(p[a.key]);
+        const row=document.createElement('div'); row.style.cssText='display:flex;justify-content:space-between;font-size:12px;padding:2px 0;';
+        row.innerHTML = `<span style="color:#9fd4b8;">${a.label}</span><span style="color:${q.color};font-weight:bold;">${q.text}</span>`;
+        card.appendChild(row);
+      });
+    } else if(fog==='high'){
+      const noise = scoutingNoiseFor(entry.progress);
+      ATTRS.forEach(a=>{
+        const v=p[a.key];
+        const row=document.createElement('div'); row.style.cssText='display:flex;justify-content:space-between;font-size:12px;padding:2px 0;';
+        row.innerHTML = `<span style="color:#9fd4b8;">${a.label}</span><span style="color:var(--chalk);font-weight:bold;">${clamp(v-noise,1,99)}-${clamp(v+noise,1,99)}</span>`;
+        card.appendChild(row);
+      });
+    } else {
+      ATTRS.forEach(a=>{
+        const v=p[a.key];
+        const row=document.createElement('div'); row.className='attr-bar-row';
+        const label=document.createElement('div'); label.className='abr-label'; label.textContent=a.short;
+        const track=document.createElement('div'); track.className='attr-bar-track';
+        const fill=document.createElement('div'); fill.className='attr-bar-fill';
+        fill.style.width=v+'%'; fill.style.background=attrBarColor(v);
+        track.appendChild(fill);
+        const val=document.createElement('div'); val.className='abr-val'; val.textContent=v;
+        row.appendChild(label); row.appendChild(track); row.appendChild(val);
+        card.appendChild(row);
+      });
+    }
+    return card;
+  }
+  function assignScoutToEntry(entryId, scoutId){
+    career.scoutingPool.forEach(e=>{ if(e.assignedScoutId===scoutId) e.assignedScoutId=null; });
+    const entry = career.scoutingPool.find(e=>e.id===entryId);
+    if(entry) entry.assignedScoutId = scoutId || null;
+    persistCareers();
+    renderCareerMarketScreen();
+  }
+  function signProspect(entryId){
+    const entry = career.scoutingPool.find(e=>e.id===entryId);
+    if(!entry) return;
+    const userTeam = career.teams.find(t=>t.isUser);
+    const p = entry.player;
+    const price = calcMarketValue(p);
+    if((userTeam.budget||0) < price) return;
+    if(userTeam.slots.length >= MAX_SQUAD_SIZE) return;
+    if(!canSignPlayer(userTeam, p)) return;
+    userTeam.budget -= price;
+    userTeam.slots.push(p.id);
+    career.players.push(p);
+    career.scoutingPool = career.scoutingPool.filter(e=>e.id!==entryId);
+    refillScoutingPool();
+    persistCareers();
+    renderCareerMarketScreen();
+  }
   function renderCareerMarketScreen(){
     const userTeam = career.teams.find(t=>t.isUser);
+    refillScoutingPool();
     const hintEl = document.getElementById('marketHint');
     const el = document.getElementById('careerMarketList');
     el.innerHTML='';
     const blocked = (userTeam.budget||0) < 0;
     const rep = clubReputation(userTeam);
-    hintEl.innerHTML = `Presupuesto: <b style="color:${blocked?'#e74c3c':'var(--gold)'};">${formatMoney(userTeam.budget||0)}</b> · Plantilla: ${userTeam.slots.length}/${MAX_SQUAD_SIZE} · Reputación del club: <b>${rep}/100</b>` +
+    hintEl.innerHTML = `Presupuesto: <b style="color:${blocked?'#e74c3c':'var(--gold)'};">${formatMoney(userTeam.budget||0)}</b> · Plantilla: ${userTeam.slots.length}/${MAX_SQUAD_SIZE} · Reputación: <b>${rep}/100</b>` +
       (blocked ? '<br><span style="color:#e74c3c;">Números rojos: no puedes fichar hasta equilibrar las cuentas.</span>' : '');
-    if(!career.transferMarket || !career.transferMarket.length){
-      const p=document.createElement('p'); p.className='hint'; p.textContent='No hay jugadores disponibles en el mercado ahora mismo. Se renueva cada temporada.';
-      el.appendChild(p);
-      return;
-    }
-    career.transferMarket.forEach(p=>{
-      const card = renderPlayerCard(p);
-      const price = calcMarketValue(p);
+
+    career.scoutingPool.forEach(entry=>{
+      const card = renderScoutingCard(entry);
+
+      const assignRow=document.createElement('div'); assignRow.className='slot-row';
+      const label=document.createElement('label'); label.textContent='Ojeador';
+      const select=document.createElement('select');
+      const optNone=document.createElement('option'); optNone.value=''; optNone.textContent='— Sin asignar —';
+      if(!entry.assignedScoutId) optNone.selected=true;
+      select.appendChild(optNone);
+      career.staff.forEach(s=>{
+        const opt=document.createElement('option'); opt.value=s.id;
+        opt.textContent = `${s.name} (habilidad ${s.skill})`;
+        if(entry.assignedScoutId===s.id) opt.selected=true;
+        select.appendChild(opt);
+      });
+      if(!career.staff.length){ optNone.textContent='— Sin ojeadores contratados —'; }
+      select.addEventListener('change', ()=> assignScoutToEntry(entry.id, select.value||null));
+      assignRow.appendChild(label); assignRow.appendChild(select);
+      card.appendChild(assignRow);
+
+      const p = entry.player;
+      const truePrice = calcMarketValue(p);
+      const fog = scoutingFogLevel(entry.progress);
+      const priceLine=document.createElement('div'); priceLine.style.cssText='font-size:12px;margin-top:6px;color:#9fd4b8;';
+      if(fog==='none'){
+        priceLine.textContent = 'Precio: desconocido';
+      } else if(fog==='full'){
+        priceLine.innerHTML = `Precio: <b style="color:var(--gold);">${formatMoney(truePrice)}</b>`;
+      } else {
+        priceLine.innerHTML = `Precio estimado: <b style="color:var(--gold);">${formatMoney(truePrice*0.7)} - ${formatMoney(truePrice*1.3)}</b>`;
+      }
+      card.appendChild(priceLine);
+
+      const canOffer = entry.progress>=60;
       const willingToSign = canSignPlayer(userTeam, p);
       const btnRow=document.createElement('div'); btnRow.className='btn-row'; btnRow.style.marginTop='6px';
       const buyBtn=document.createElement('button'); buyBtn.className='mode-btn small primary';
-      buyBtn.textContent = `Fichar (${formatMoney(price)})`;
-      if(blocked || (userTeam.budget||0) < price || userTeam.slots.length >= MAX_SQUAD_SIZE || !willingToSign) buyBtn.disabled = true;
-      buyBtn.addEventListener('click', ()=>{
-        userTeam.budget = (userTeam.budget||0) - price;
-        userTeam.slots.push(p.id);
-        career.players.push(p);
-        career.transferMarket = career.transferMarket.filter(x=>x.id!==p.id);
-        persistCareers();
-        renderCareerMarketScreen();
-      });
+      buyBtn.textContent = canOffer ? `Fichar (${formatMoney(truePrice)})` : 'Necesita más ojeo';
+      if(!canOffer || blocked || (userTeam.budget||0)<truePrice || userTeam.slots.length>=MAX_SQUAD_SIZE || !willingToSign) buyBtn.disabled=true;
+      buyBtn.addEventListener('click', ()=> signProspect(entry.id));
       btnRow.appendChild(buyBtn);
       card.appendChild(btnRow);
-      if(!willingToSign){
-        const warn=document.createElement('p'); warn.className='hint';
-        warn.style.color='#e74c3c';
-        warn.textContent = 'No está interesado en un club de tu reputación.';
+      if(canOffer && !willingToSign){
+        const warn=document.createElement('p'); warn.className='hint'; warn.style.color='#e74c3c';
+        warn.textContent='No está interesado en un club de tu reputación.';
         card.appendChild(warn);
       }
+      el.appendChild(card);
+    });
+  }
+
+  // ---------- Personal (ojeadores) ----------
+  let pendingFireScoutId = null;
+  function hireScout(candidateId){
+    if(career.staff.length >= SCOUT_LIMIT) return;
+    const idx = career.staffCandidates.findIndex(c=>c.id===candidateId);
+    if(idx<0) return;
+    const candidate = career.staffCandidates[idx];
+    career.staff.push(candidate);
+    career.staffCandidates.splice(idx,1);
+    career.staffCandidates.push(generateScoutCandidate());
+    persistCareers();
+    renderCareerStaffScreen();
+  }
+  function renderCareerStaffScreen(){
+    const userTeam = career.teams.find(t=>t.isUser);
+    document.getElementById('staffHint').innerHTML =
+      `Presupuesto: <b style="color:var(--gold);">${formatMoney(userTeam.budget||0)}</b> · Ojeadores: ${career.staff.length}/${SCOUT_LIMIT} (su salario se paga cada jornada)`;
+    const listEl=document.getElementById('staffList');
+    listEl.innerHTML='';
+    if(!career.staff.length){
+      const p=document.createElement('p'); p.className='hint'; p.textContent='No tienes ojeadores contratados todavía.';
+      listEl.appendChild(p);
+    }
+    career.staff.forEach(s=>{
+      const row=document.createElement('div'); row.className='player-item';
+      const busy = career.scoutingPool.some(e=>e.assignedScoutId===s.id);
+      row.innerHTML = `<div class="player-info"><b>${escapeHtml(s.name)}</b><span>Habilidad ${s.skill} · Salario ${formatMoney(s.wage)}/jornada · ${busy?'Investigando':'Disponible'}</span></div>`;
+      const actions=document.createElement('div'); actions.className='player-actions';
+      const isPending = pendingFireScoutId===s.id;
+      const fireBtn=document.createElement('button'); fireBtn.className='icon-btn danger';
+      fireBtn.textContent = isPending ? '¿Seguro?' : 'Despedir';
+      fireBtn.addEventListener('click', ()=>{
+        if(!isPending){ pendingFireScoutId=s.id; renderCareerStaffScreen(); return; }
+        career.scoutingPool.forEach(e=>{ if(e.assignedScoutId===s.id) e.assignedScoutId=null; });
+        career.staff = career.staff.filter(x=>x.id!==s.id);
+        pendingFireScoutId = null;
+        persistCareers();
+        renderCareerStaffScreen();
+      });
+      actions.appendChild(fireBtn);
+      if(isPending){
+        const cancelBtn=document.createElement('button'); cancelBtn.className='icon-btn'; cancelBtn.textContent='Cancelar';
+        cancelBtn.addEventListener('click', ()=>{ pendingFireScoutId=null; renderCareerStaffScreen(); });
+        actions.appendChild(cancelBtn);
+      }
+      row.appendChild(actions);
+      listEl.appendChild(row);
+    });
+
+    const candEl=document.getElementById('staffCandidatesList');
+    candEl.innerHTML='';
+    career.staffCandidates.forEach(c=>{
+      const row=document.createElement('div'); row.className='player-item';
+      row.innerHTML = `<div class="player-info"><b>${escapeHtml(c.name)}</b><span>Habilidad ${c.skill} · Salario ${formatMoney(c.wage)}/jornada</span></div>`;
+      const hireBtn=document.createElement('button'); hireBtn.className='icon-btn'; hireBtn.textContent='Contratar';
+      if(career.staff.length>=SCOUT_LIMIT) hireBtn.disabled=true;
+      hireBtn.addEventListener('click', ()=>hireScout(c.id));
+      row.appendChild(hireBtn);
+      candEl.appendChild(row);
+    });
+  }
+
+  // ---------- Instalaciones de todos los clubes ----------
+  let viewingFacilitiesDivision = null;
+  function renderAllFacilitiesScreen(){
+    if(viewingFacilitiesDivision===null) viewingFacilitiesDivision = userDivision();
+    const tabsEl = document.getElementById('allFacilitiesDivisionTabs');
+    tabsEl.innerHTML='';
+    for(let d=1; d<=DIVISIONS; d++){
+      const btn=document.createElement('button'); btn.textContent='Div '+d;
+      if(d===viewingFacilitiesDivision) btn.classList.add('active');
+      btn.addEventListener('click', ()=>{ viewingFacilitiesDivision=d; renderAllFacilitiesScreen(); });
+      tabsEl.appendChild(btn);
+    }
+    const el = document.getElementById('allFacilitiesList');
+    el.innerHTML='';
+    career.teams.filter(t=>t.division===viewingFacilitiesDivision).forEach(t=>{
+      if(!t.facilities) t.facilities = {youth:1, training:1, stadium:{north:1,south:1,east:1,west:1}};
+      normalizeStadium(t);
+      const card=document.createElement('div'); card.className='card'; card.style.marginBottom='8px';
+      const title=document.createElement('b'); title.className='card-title';
+      title.innerHTML = `${t.isUser?'★ ':''}${teamBadgeHTML(t)}${escapeHtml(t.name)}`;
+      card.appendChild(title);
+      const cap = totalStadiumCapacity(t);
+      const line=document.createElement('div'); line.style.cssText='font-size:12.5px; margin-top:4px; line-height:1.7;';
+      line.innerHTML = `Juveniles: ${'★'.repeat(t.facilities.youth)}${'☆'.repeat(5-t.facilities.youth)}<br>
+        Entrenamiento: ${'★'.repeat(t.facilities.training)}${'☆'.repeat(5-t.facilities.training)}<br>
+        Estadio: ${cap.toLocaleString('es-ES')} asientos`;
+      card.appendChild(line);
       el.appendChild(card);
     });
   }
