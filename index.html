@@ -131,6 +131,12 @@
   }
   .lineup-marker.empty{ background:rgba(255,255,255,.12); color:var(--chalk); border:2px dashed rgba(255,255,255,.5); }
   .lineup-marker.active{ outline:3px solid #fff; z-index:2; transform:translate(-50%,-50%) scale(1.15); }
+  .lineup-marker-label{
+    position:absolute; transform:translate(-50%,0); pointer-events:none;
+    font-size:10px; font-weight:bold; color:#fff; white-space:nowrap;
+    text-shadow:0 1px 3px rgba(0,0,0,.9), 0 0 4px rgba(0,0,0,.9);
+    max-width:26%; overflow:hidden; text-overflow:ellipsis;
+  }
   .lineup-candidate{
     display:flex; justify-content:space-between; align-items:center; gap:8px;
     padding:9px 0; border-bottom:1px solid #234; cursor:pointer;
@@ -415,6 +421,7 @@
     </div>
     <p class="hint">Toca una posición del campo para elegir o cambiar jugador. Cualquier jugador puede ocupar cualquier puesto: su posición oculta solo afecta a su progresión. Al elegir, verás los atributos en <span style="color:#2ecc71;">verde</span> (clave), <span style="color:#f4d03f;">amarillo</span> (secundario) o gris (no influye) para ese puesto.</p>
     <div class="lineup-pitch-wrap" id="lineupPitchWrap"></div>
+    <button class="mode-btn small" id="btnClearLineup" style="margin-bottom:10px;">Vaciar alineación</button>
     <div class="card"><div id="lineupCandidates"></div></div>
     <div class="btn-row">
       <button class="mode-btn small" id="btnCancelLineup">Cancelar</button>
@@ -758,6 +765,14 @@
   document.getElementById('btnEditDefaultLineup').addEventListener('click', openDefaultLineupEditor);
   document.getElementById('btnBackHistory').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnCancelLineup').addEventListener('click', ()=>showScreen(lineupMode==='default' ? 'careerRosterScreen' : 'careerScreen'));
+  document.getElementById('btnClearLineup').addEventListener('click', ()=>{
+    const userTeam = getLineupUserTeam();
+    if(!userTeam) return;
+    const roles = slotRolesForFormation(userTeam.formation);
+    pendingLineup = roles.map(()=>null);
+    activeSlotIdx = null;
+    renderLineupScreen();
+  });
   document.getElementById('btnConfirmLineup').addEventListener('click', confirmLineupAndPlay);
   document.getElementById('formationSelect').addEventListener('change', (e)=>{
     let userTeam;
@@ -1424,6 +1439,13 @@
   let lineupMode = 'match'; // 'match' (antes de un partido) | 'default' (fijar titulares desde la Plantilla)
   let activeSlotIdx = null; // puesto del campo actualmente seleccionado para asignar jugador
 
+  function getLineupUserTeam(){
+    if(lineupMode==='default') return career.teams.find(t=>t.isUser);
+    const f = career.fixtures.find(x=>x.id===lineupFixtureId);
+    if(!f) return null;
+    const userIdx = isUserTeam(f.homeIdx) ? f.homeIdx : f.awayIdx;
+    return career.teams[userIdx];
+  }
   function openLineupScreen(fixtureId){
     const f = career.fixtures.find(x=>x.id===fixtureId);
     const userIdx = isUserTeam(f.homeIdx) ? f.homeIdx : f.awayIdx;
@@ -1492,16 +1514,29 @@
     layout.forEach((slot, idx)=>{
       const pid = pendingLineup[idx];
       const p = pid ? career.players.find(x=>x.id===pid) : null;
+      const colPct = (slot.col/13)*100;
+      const rowPct = (slot.row/8)*100;
       const marker = document.createElement('div');
       marker.className = 'lineup-marker' + (!p ? ' empty' : '') + (activeSlotIdx===idx ? ' active' : '');
-      marker.style.left = ((slot.col/13)*100) + '%';
-      marker.style.top = ((slot.row/8)*100) + '%';
+      marker.style.left = colPct + '%';
+      marker.style.top = rowPct + '%';
       marker.textContent = p ? (p.squadNumber ? String(p.squadNumber) : roles[idx][0]) : roles[idx][0];
       marker.title = p ? `${p.name} (${roleShortLabel(roles[idx], idx, roles)})` : roleShortLabel(roles[idx], idx, roles);
       marker.addEventListener('click', ()=>{ activeSlotIdx = (activeSlotIdx===idx ? null : idx); renderLineupScreen(); });
       pitchEl.appendChild(marker);
+      if(p){
+        const surname = p.name.trim().split(' ').slice(-1)[0];
+        const label = document.createElement('div');
+        label.className = 'lineup-marker-label';
+        label.style.left = colPct + '%';
+        label.style.top = (slot.row > 4 ? rowPct - 11 : rowPct + 9) + '%';
+        label.textContent = surname;
+        pitchEl.appendChild(label);
+      }
     });
 
+    const hasEmpty = pendingLineup.slice(0, roles.length).some(id=>!id);
+    confirmBtn.disabled = hasEmpty;
     const candEl = document.getElementById('lineupCandidates');
     candEl.innerHTML = '';
     if(activeSlotIdx===null || activeSlotIdx>=roles.length){
