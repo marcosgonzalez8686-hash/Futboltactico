@@ -373,6 +373,7 @@
       <button class="mode-btn small" id="btnGoYouth">Cantera</button>
     </div>
     <button class="mode-btn small" id="btnGoMarket">Mercado de fichajes</button>
+    <button class="mode-btn small" id="btnGoFacilities">Instalaciones</button>
     <div class="card"><b class="card-title">PARTIDOS DE LA JORNADA</b><div id="careerFixtureList"></div></div>
     <div class="btn-row">
       <button class="mode-btn small" id="btnSwitchCareer">Cambiar de carrera</button>
@@ -408,6 +409,13 @@
     <p class="hint" id="marketHint"></p>
     <div class="card"><div id="careerMarketList"></div></div>
     <button class="mode-btn" id="btnBackMarket">« Volver</button>
+  </div>
+
+  <div class="screen" id="careerFacilitiesScreen" hidden>
+    <h2>Instalaciones del club</h2>
+    <p class="hint" id="facilitiesHint"></p>
+    <div id="careerFacilitiesList"></div>
+    <button class="mode-btn" id="btnBackFacilities">« Volver</button>
   </div>
 
   <div class="screen" id="careerHistoryScreen" hidden>
@@ -740,7 +748,7 @@
 
   // ---------- Navegación de pantallas ----------
   function showScreen(name){
-    ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerYouthScreen','careerMarketScreen','careerLineupScreen','gameScreen'].forEach(id=>{
+    ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerYouthScreen','careerMarketScreen','careerFacilitiesScreen','careerLineupScreen','gameScreen'].forEach(id=>{
       document.getElementById(id).hidden = (id !== name);
     });
     document.getElementById('scoreboard').hidden = (name !== 'gameScreen');
@@ -751,6 +759,7 @@
     if(name==='careerRosterScreen') renderCareerRoster();
     if(name==='careerYouthScreen') renderCareerYouthScreen();
     if(name==='careerMarketScreen') renderCareerMarketScreen();
+    if(name==='careerFacilitiesScreen') renderCareerFacilitiesScreen();
     if(name==='careerHistoryScreen') renderCareerHistory();
     if(name==='careerLineupScreen') renderLineupScreen();
   }
@@ -773,6 +782,8 @@
   document.getElementById('btnBackYouth').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnGoMarket').addEventListener('click', ()=>showScreen('careerMarketScreen'));
   document.getElementById('btnBackMarket').addEventListener('click', ()=>showScreen('careerScreen'));
+  document.getElementById('btnGoFacilities').addEventListener('click', ()=>showScreen('careerFacilitiesScreen'));
+  document.getElementById('btnBackFacilities').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnBackStandings').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnBackRoster').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnEditDefaultLineup').addEventListener('click', openDefaultLineupEditor);
@@ -878,13 +889,53 @@
 
   const MAX_SQUAD_SIZE = 15;
   const YOUTH_SQUAD_SIZE = 10;
-  function generateYouthPlayer(targetPos, divisionLevel){
+  function generateYouthPlayer(targetPos, divisionLevel, facilityLevel){
     const p = generateRandomPlayer(targetPos, Math.min(DIVISIONS, (divisionLevel||5)+1));
     p.age = randInt(15,17);
-    p.hiddenGrowth = Math.round((randInt(30,99)+randInt(30,99))/2); // canteranos: potencial garantizado decente
+    const fLevel = facilityLevel || 1;
+    const attrBoost = (fLevel-1) * 2; // hasta +8 en nivel 5
+    if(attrBoost>0){ ATTRS.forEach(a=>{ p[a.key] = clamp(p[a.key] + randInt(0, attrBoost), 1, 99); }); }
+    const growthBoost = (fLevel-1) * 5; // hasta +20 de potencial en nivel 5
+    p.hiddenGrowth = clamp(Math.round((randInt(30,99)+randInt(30,99))/2) + growthBoost, 1, 99);
     return p;
   }
-  function generateYouthSquad(divisionLevel){ return SQUAD_TARGETS.slice(0,YOUTH_SQUAD_SIZE).map(role=>generateYouthPlayer(role, divisionLevel)); }
+  function generateYouthSquad(divisionLevel, facilityLevel){ return SQUAD_TARGETS.slice(0,YOUTH_SQUAD_SIZE).map(role=>generateYouthPlayer(role, divisionLevel, facilityLevel)); }
+
+  // ---------- Instalaciones ----------
+  const FACILITY_TYPES = {
+    youth:    {label:'Instalaciones juveniles', desc:'Mejora los atributos base y el potencial oculto de los canteranos que se generan.'},
+    training: {label:'Instalaciones de entrenamiento', desc:'Aumenta la velocidad a la que tus jugadores y canteranos ganan experiencia.'},
+    stadium:  {label:'Estadio', desc:'Aumenta los ingresos de taquilla en tus partidos como local.'},
+  };
+  function initialFacilityLevel(divisionLevel){
+    const table = {1:4, 2:3, 3:2, 4:1, 5:1};
+    return table[divisionLevel] || 1;
+  }
+  function facilityUpgradeCost(currentLevel, divisionLevel){
+    if(currentLevel>=5) return null;
+    const base = 15000;
+    const divF = divisionFactor(divisionLevel||5);
+    const levelMultiplier = Math.pow(1.8, currentLevel-1);
+    return Math.round(base * divF * levelMultiplier);
+  }
+  function trainingBoostFor(team){
+    const lvl = (team && team.facilities && team.facilities.training) || 1;
+    return 1 + (lvl-1)*0.12; // nivel1=1x .. nivel5=1.48x
+  }
+  function stadiumBoostFor(team){
+    const lvl = (team && team.facilities && team.facilities.stadium) || 1;
+    return 1 + (lvl-1)*0.25; // nivel1=1x .. nivel5=2x
+  }
+
+  // ---------- Reputación ----------
+  function clubReputation(team){
+    const divRep = {1:95, 2:75, 3:55, 4:35, 5:15}[team.division] || 15;
+    const fac = team.facilities || {youth:1,training:1,stadium:1};
+    const facBonus = ((fac.youth+fac.training+fac.stadium)/3 - 1) * 3;
+    return clamp(Math.round(divRep + facBonus), 1, 100);
+  }
+  function playerReputation(p){ return clamp(overallRating(p), 1, 100); }
+  function canSignPlayer(team, p){ return playerReputation(p) <= clubReputation(team) + 15; }
 
   // ---------- Economía ----------
   function divisionFactor(level){
@@ -924,12 +975,18 @@
     }
     return total;
   }
-  function generateTransferMarket(count){
+  function generateTransferMarket(count, clubRep){
     const n = count || 18;
+    const rep = clubRep===undefined ? 50 : clubRep;
     const out = [];
     for(let i=0;i<n;i++){
       const role = SQUAD_TARGETS[randInt(0, SQUAD_TARGETS.length-1)];
-      const div = randInt(1, DIVISIONS);
+      let div;
+      if(rep>=85) div = randInt(1,2);
+      else if(rep>=65) div = randInt(1,3);
+      else if(rep>=45) div = randInt(2,4);
+      else if(rep>=25) div = randInt(3,5);
+      else div = Math.random()<0.85 ? randInt(4,5) : randInt(2,3); // rara joya inalcanzable
       out.push(generateRandomPlayer(role, div));
     }
     return out;
@@ -939,7 +996,7 @@
     jf.forEach(f=>{
       const home = career.teams[f.homeIdx], away = career.teams[f.awayIdx];
       const homeRates = divisionEconomyRates(home.division), awayRates = divisionEconomyRates(away.division);
-      home.budget = (home.budget||0) + homeRates.tv + homeRates.gate;
+      home.budget = (home.budget||0) + homeRates.tv + Math.round(homeRates.gate * stadiumBoostFor(home));
       away.budget = (away.budget||0) + awayRates.tv;
     });
     career.teams.forEach(team=>{
@@ -976,14 +1033,16 @@
     let allPlayers=[];
 
     // División 5 (la más baja): el club del usuario + 15 rivales
+    const userFacilities = {youth:initialFacilityLevel(5), training:initialFacilityLevel(5), stadium:initialFacilityLevel(5)};
     const userSquad = generateSquad(5);
     allPlayers.push(...userSquad);
-    teams.push({id:uid(), name:clubName, isUser:true, division:5, slots:userSquad.map(p=>p.id), lineup:null, kitPrimary, kitSecondary, logo, formation:DEFAULT_FORMATION, budget:divisionEconomyRates(5).initialBudget});
+    teams.push({id:uid(), name:clubName, isUser:true, division:5, slots:userSquad.map(p=>p.id), lineup:null, kitPrimary, kitSecondary, logo, formation:DEFAULT_FORMATION, budget:divisionEconomyRates(5).initialBudget, facilities:userFacilities});
     for(let i=0;i<TEAMS_PER_DIVISION-1;i++){
       const squad=generateSquad(5);
       allPlayers.push(...squad);
       const [p1,p2]=randomKitPair();
-      teams.push({id:uid(), name:generateClubName(usedNames), isUser:false, division:5, slots:squad.map(p=>p.id), lineup:null, kitPrimary:p1, kitSecondary:p2, logo:LOGO_EMOJIS[randInt(0,LOGO_EMOJIS.length-1)], formation:pickRandomFormationKey(), budget:divisionEconomyRates(5).initialBudget});
+      const fac = {youth:initialFacilityLevel(5), training:initialFacilityLevel(5), stadium:initialFacilityLevel(5)};
+      teams.push({id:uid(), name:generateClubName(usedNames), isUser:false, division:5, slots:squad.map(p=>p.id), lineup:null, kitPrimary:p1, kitSecondary:p2, logo:LOGO_EMOJIS[randInt(0,LOGO_EMOJIS.length-1)], formation:pickRandomFormationKey(), budget:divisionEconomyRates(5).initialBudget, facilities:fac});
     }
     // Divisiones 1 a 4: todo rivales, nivel más alto cuanto menor el número de división
     for(let div=1; div<=4; div++){
@@ -991,7 +1050,8 @@
         const squad=generateSquad(div);
         allPlayers.push(...squad);
         const [p1,p2]=randomKitPair();
-        teams.push({id:uid(), name:generateClubName(usedNames), isUser:false, division:div, slots:squad.map(p=>p.id), lineup:null, kitPrimary:p1, kitSecondary:p2, logo:LOGO_EMOJIS[randInt(0,LOGO_EMOJIS.length-1)], formation:pickRandomFormationKey(), budget:divisionEconomyRates(div).initialBudget});
+        const fac = {youth:initialFacilityLevel(div), training:initialFacilityLevel(div), stadium:initialFacilityLevel(div)};
+        teams.push({id:uid(), name:generateClubName(usedNames), isUser:false, division:div, slots:squad.map(p=>p.id), lineup:null, kitPrimary:p1, kitSecondary:p2, logo:LOGO_EMOJIS[randInt(0,LOGO_EMOJIS.length-1)], formation:pickRandomFormationKey(), budget:divisionEconomyRates(div).initialBudget, facilities:fac});
       }
     }
 
@@ -999,8 +1059,8 @@
       id:uid(), clubName, teams, players:allPlayers,
       fixtures: buildSeasonFixtures(teams),
       currentJornada:1, season:1, seasonSummary:null,
-      youthPlayers: generateYouthSquad(5), youthReviewPending:false,
-      transferMarket: generateTransferMarket(18), financialAlert:null,
+      youthPlayers: generateYouthSquad(5, userFacilities.youth), youthReviewPending:false,
+      transferMarket: generateTransferMarket(18, clubReputation(teams[0])), financialAlert:null,
     };
     careersList.push(newCareer);
     career = newCareer;
@@ -1038,7 +1098,8 @@
     const age = player.age || 22;
     return clamp(1.5 - (age-19)*0.06, 0.15, 1.5); // jóvenes progresan más rápido, veteranos casi no mejoran
   }
-  function awardXPForPids(pids, goalsMap){
+  function awardXPForPids(pids, goalsMap, trainingMultiplier){
+    const mult = trainingMultiplier || 1;
     const summary=[];
     pids.forEach(pid=>{
       if(!pid) return;
@@ -1046,7 +1107,7 @@
       if(!player) return;
       const before = {}; ATTRS.forEach(a=>{ before[a.key]=player[a.key]; });
       const base = 15 + 5*((goalsMap && goalsMap[pid]) || 0);
-      const xp = Math.round(base * growthFactorFor(player) * ageFactorFor(player));
+      const xp = Math.round(base * growthFactorFor(player) * ageFactorFor(player) * mult);
       player.hiddenExp += xp;
       while(player.hiddenExp >= 100){ player.hiddenExp -= 100; levelUpAttribute(player); }
       const changes = ATTRS.filter(a=> player[a.key]!==before[a.key]).map(a=>({short:a.short, before:before[a.key], after:player[a.key]}));
@@ -1077,8 +1138,8 @@
     f.scoreHome = Math.max(0, Math.round(expHome + (Math.random()-0.5)*2));
     f.scoreAway = Math.max(0, Math.round(expAway + (Math.random()-0.5)*2));
     f.played = true;
-    awardXPForPids(homeLineup, {});
-    awardXPForPids(awayLineup, {});
+    awardXPForPids(homeLineup, {}, trainingBoostFor(home));
+    awardXPForPids(awayLineup, {}, trainingBoostFor(away));
   }
   function simulateUserFixture(fixtureId){
     const f = career.fixtures.find(x=>x.id===fixtureId);
@@ -1155,7 +1216,7 @@
     career.season++;
     career.currentJornada = 1;
     career.fixtures = buildSeasonFixtures(career.teams);
-    career.transferMarket = generateTransferMarket(18);
+    career.transferMarket = generateTransferMarket(18, clubReputation(career.teams[uIdx]));
     career.seasonSummary = {
       season: career.season-1,
       divisionBefore, divisionAfter,
@@ -1169,8 +1230,10 @@
 
   function trainYouthPlayers(){
     if(!career || !career.youthPlayers) return;
+    const userTeam = career.teams.find(t=>t.isUser);
+    const mult = trainingBoostFor(userTeam);
     career.youthPlayers.forEach(p=>{
-      const xp = Math.round(8 * growthFactorFor(p) * ageFactorFor(p));
+      const xp = Math.round(8 * growthFactorFor(p) * ageFactorFor(p) * mult);
       p.hiddenExp = (p.hiddenExp||0) + xp;
       while(p.hiddenExp >= 100){ p.hiddenExp -= 100; levelUpAttribute(p); }
     });
@@ -1231,8 +1294,13 @@
           c.teams.forEach(t=>{ if(t.budget===undefined) t.budget = divisionEconomyRates(t.division).initialBudget; });
           persistCareers();
         }
+        if(c.teams.some(t=>!t.facilities)){
+          c.teams.forEach(t=>{ if(!t.facilities) t.facilities = {youth:initialFacilityLevel(t.division), training:initialFacilityLevel(t.division), stadium:initialFacilityLevel(t.division)}; });
+          persistCareers();
+        }
         if(!c.transferMarket){
-          c.transferMarket = generateTransferMarket(18);
+          const uT = c.teams.find(t=>t.isUser);
+          c.transferMarket = generateTransferMarket(18, clubReputation(uT));
           if(c.financialAlert===undefined) c.financialAlert = null;
           persistCareers();
         }
@@ -1285,7 +1353,7 @@
     document.getElementById('careerJornada').textContent = `Temporada ${career.season} · División ${userDivision()} · Jornada ${career.currentJornada} de ${maxJ}`;
     const userTeam = career.teams[userTeamIdx()];
     const budgetEl = document.getElementById('careerBudget');
-    budgetEl.textContent = `💰 ${formatMoney(userTeam.budget||0)}`;
+    budgetEl.textContent = `💰 ${formatMoney(userTeam.budget||0)} · ⭐ Reputación ${clubReputation(userTeam)}/100`;
     budgetEl.style.color = (userTeam.budget||0) < 0 ? '#e74c3c' : 'var(--gold)';
 
     const alertEl = document.getElementById('careerFinancialAlert');
@@ -1549,7 +1617,8 @@
     });
   }
   document.getElementById('btnConfirmYouth').addEventListener('click', ()=>{
-    career.youthPlayers = generateYouthSquad(userDivision());
+    const userTeam = career.teams.find(t=>t.isUser);
+    career.youthPlayers = generateYouthSquad(userDivision(), userTeam.facilities.youth);
     career.youthReviewPending = false;
     career.seasonSummary = null;
     persistCareers();
@@ -1562,7 +1631,8 @@
     const el = document.getElementById('careerMarketList');
     el.innerHTML='';
     const blocked = (userTeam.budget||0) < 0;
-    hintEl.innerHTML = `Presupuesto: <b style="color:${blocked?'#e74c3c':'var(--gold)'};">${formatMoney(userTeam.budget||0)}</b> · Plantilla: ${userTeam.slots.length}/${MAX_SQUAD_SIZE}` +
+    const rep = clubReputation(userTeam);
+    hintEl.innerHTML = `Presupuesto: <b style="color:${blocked?'#e74c3c':'var(--gold)'};">${formatMoney(userTeam.budget||0)}</b> · Plantilla: ${userTeam.slots.length}/${MAX_SQUAD_SIZE} · Reputación del club: <b>${rep}/100</b>` +
       (blocked ? '<br><span style="color:#e74c3c;">Números rojos: no puedes fichar hasta equilibrar las cuentas.</span>' : '');
     if(!career.transferMarket || !career.transferMarket.length){
       const p=document.createElement('p'); p.className='hint'; p.textContent='No hay jugadores disponibles en el mercado ahora mismo. Se renueva cada temporada.';
@@ -1572,10 +1642,11 @@
     career.transferMarket.forEach(p=>{
       const card = renderPlayerCard(p);
       const price = calcMarketValue(p);
+      const willingToSign = canSignPlayer(userTeam, p);
       const btnRow=document.createElement('div'); btnRow.className='btn-row'; btnRow.style.marginTop='6px';
       const buyBtn=document.createElement('button'); buyBtn.className='mode-btn small primary';
       buyBtn.textContent = `Fichar (${formatMoney(price)})`;
-      if(blocked || (userTeam.budget||0) < price || userTeam.slots.length >= MAX_SQUAD_SIZE) buyBtn.disabled = true;
+      if(blocked || (userTeam.budget||0) < price || userTeam.slots.length >= MAX_SQUAD_SIZE || !willingToSign) buyBtn.disabled = true;
       buyBtn.addEventListener('click', ()=>{
         userTeam.budget = (userTeam.budget||0) - price;
         userTeam.slots.push(p.id);
@@ -1586,6 +1657,49 @@
       });
       btnRow.appendChild(buyBtn);
       card.appendChild(btnRow);
+      if(!willingToSign){
+        const warn=document.createElement('p'); warn.className='hint';
+        warn.style.color='#e74c3c';
+        warn.textContent = 'No está interesado en un club de tu reputación.';
+        card.appendChild(warn);
+      }
+      el.appendChild(card);
+    });
+  }
+  function renderCareerFacilitiesScreen(){
+    const userTeam = career.teams.find(t=>t.isUser);
+    if(!userTeam.facilities) userTeam.facilities = {youth:1, training:1, stadium:1};
+    const hintEl = document.getElementById('facilitiesHint');
+    hintEl.innerHTML = `Presupuesto: <b style="color:var(--gold);">${formatMoney(userTeam.budget||0)}</b> · Reputación del club: <b>${clubReputation(userTeam)}/100</b>`;
+    const el = document.getElementById('careerFacilitiesList');
+    el.innerHTML='';
+    Object.keys(FACILITY_TYPES).forEach(key=>{
+      const info = FACILITY_TYPES[key];
+      const level = userTeam.facilities[key] || 1;
+      const cost = facilityUpgradeCost(level, userTeam.division);
+      const card=document.createElement('div'); card.className='card'; card.style.marginBottom='10px';
+      const title=document.createElement('b'); title.className='card-title'; title.textContent = `${info.label} — Nivel ${level}/5`;
+      card.appendChild(title);
+      const desc=document.createElement('p'); desc.className='hint'; desc.textContent = info.desc;
+      card.appendChild(desc);
+      const stars=document.createElement('div'); stars.style.cssText='font-size:18px; margin:4px 0 8px;';
+      stars.textContent = '★'.repeat(level) + '☆'.repeat(5-level);
+      card.appendChild(stars);
+      const btn=document.createElement('button'); btn.className='mode-btn small primary';
+      if(cost===null){
+        btn.textContent = 'Nivel máximo alcanzado';
+        btn.disabled = true;
+      } else {
+        btn.textContent = `Mejorar a nivel ${level+1} (${formatMoney(cost)})`;
+        if((userTeam.budget||0) < cost) btn.disabled = true;
+        btn.addEventListener('click', ()=>{
+          userTeam.budget -= cost;
+          userTeam.facilities[key] = level+1;
+          persistCareers();
+          renderCareerFacilitiesScreen();
+        });
+      }
+      card.appendChild(btn);
       el.appendChild(card);
     });
   }
@@ -2552,8 +2666,10 @@
       if(f){
         if(matchContext.userIsHome){ f.scoreHome=score.A; f.scoreAway=score.B; } else { f.scoreHome=score.B; f.scoreAway=score.A; }
         f.played=true;
-        const summaryUser = awardXPForPids(matchParticipants.A, matchStats);
-        awardXPForPids(matchParticipants.B, matchStats);
+        const userTeamRef = career.teams.find(t=>t.isUser);
+        const oppTeamRef = career.teams[matchContext.userIsHome ? f.awayIdx : f.homeIdx];
+        const summaryUser = awardXPForPids(matchParticipants.A, matchStats, trainingBoostFor(userTeamRef));
+        awardXPForPids(matchParticipants.B, matchStats, trainingBoostFor(oppTeamRef));
         maybeAdvanceJornada();
         career.lastMatchSummary = { opponent: matchNames.B, entries: summaryUser };
         persistCareers();
