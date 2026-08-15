@@ -115,6 +115,30 @@
 
   .player-card{padding:10px 0; border-bottom:1px solid #234;}
   #selectedPlayerInfo .player-card{border-bottom:none; padding-top:4px;}
+
+  .lineup-pitch-wrap{
+    position:relative; width:100%; aspect-ratio: 13.24/9; margin-bottom:10px;
+    background:repeating-linear-gradient(90deg, #1b4332 0 7%, #245c40 7% 14%);
+    border:3px solid var(--chalk); border-radius:8px; overflow:hidden;
+    box-shadow:0 6px 16px rgba(0,0,0,.4);
+  }
+  .lineup-marker{
+    position:absolute; width:15%; aspect-ratio:1; transform:translate(-50%,-50%);
+    border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-weight:bold; font-size:clamp(10px,3vw,15px); cursor:pointer;
+    border:2px solid rgba(0,0,0,.35); box-shadow:0 2px 5px rgba(0,0,0,.45);
+    background:var(--gold); color:#1b2a12;
+  }
+  .lineup-marker.empty{ background:rgba(255,255,255,.12); color:var(--chalk); border:2px dashed rgba(255,255,255,.5); }
+  .lineup-marker.active{ outline:3px solid #fff; z-index:2; transform:translate(-50%,-50%) scale(1.15); }
+  .lineup-candidate{
+    display:flex; justify-content:space-between; align-items:center; gap:8px;
+    padding:9px 0; border-bottom:1px solid #234; cursor:pointer;
+  }
+  .lineup-candidate:last-child{border-bottom:none;}
+  .lineup-candidate:active{background:rgba(255,210,63,.1);}
+  .lineup-candidate .lc-info b{display:block; font-size:13.5px;}
+  .lineup-candidate .lc-info span{font-size:10.5px; color:#9fd4b8;}
   .player-card:last-child{border-bottom:none;}
   .player-card-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;}
   .player-card-head b{font-size:14px;}
@@ -389,8 +413,9 @@
       <b class="card-title">FORMACIÓN</b>
       <select id="formationSelect" style="width:100%; padding:8px; border-radius:6px; border:1px solid #2f5c46; background:#0e2118; color:var(--chalk); font-size:13px;"></select>
     </div>
-    <p class="hint">Elige quién juega en cada puesto. Cualquier jugador puede ocupar cualquier puesto: su posición oculta solo afecta a su progresión.</p>
-    <div class="card"><div id="lineupSlots"></div></div>
+    <p class="hint">Toca una posición del campo para elegir o cambiar jugador. Cualquier jugador puede ocupar cualquier puesto: su posición oculta solo afecta a su progresión.</p>
+    <div class="lineup-pitch-wrap" id="lineupPitchWrap"></div>
+    <div class="card"><div id="lineupCandidates"></div></div>
     <div class="btn-row">
       <button class="mode-btn small" id="btnCancelLineup">Cancelar</button>
       <button class="mode-btn small primary" id="btnConfirmLineup">Confirmar y jugar</button>
@@ -739,6 +764,7 @@
     }
     userTeam.formation = e.target.value;
     pendingLineup = autoPickLineup(userTeam.slots, userTeam.formation);
+    activeSlotIdx = null;
     persistCareers();
     renderLineupScreen();
   });
@@ -1390,6 +1416,7 @@
   let pendingLineup = null;
   let chosenKit = 'primary';
   let lineupMode = 'match'; // 'match' (antes de un partido) | 'default' (fijar titulares desde la Plantilla)
+  let activeSlotIdx = null; // puesto del campo actualmente seleccionado para asignar jugador
 
   function openLineupScreen(fixtureId){
     const f = career.fixtures.find(x=>x.id===fixtureId);
@@ -1398,6 +1425,7 @@
     lineupMode = 'match';
     lineupFixtureId = fixtureId;
     chosenKit = 'primary';
+    activeSlotIdx = null;
     const validPrev = userTeam.lineup && userTeam.lineup.length===6 && userTeam.lineup.every(id=>{ const p=career.players.find(x=>x.id===id); return p && userTeam.slots.includes(id) && !(p.injuryMatchesLeft>0); });
     pendingLineup = validPrev ? [...userTeam.lineup] : autoPickLineup(userTeam.slots, userTeam.formation);
     showScreen('careerLineupScreen');
@@ -1406,6 +1434,7 @@
     const userTeam = career.teams.find(t=>t.isUser);
     lineupMode = 'default';
     lineupFixtureId = null;
+    activeSlotIdx = null;
     const validPrev = userTeam.lineup && userTeam.lineup.length===6 && userTeam.lineup.every(id=>{ const p=career.players.find(x=>x.id===id); return p && userTeam.slots.includes(id) && !(p.injuryMatchesLeft>0); });
     pendingLineup = validPrev ? [...userTeam.lineup] : autoPickLineup(userTeam.slots, userTeam.formation);
     showScreen('careerLineupScreen');
@@ -1450,40 +1479,55 @@
     formationSelect.value = userTeam.formation || DEFAULT_FORMATION;
 
     const roles = slotRolesForFormation(userTeam.formation);
-    const el = document.getElementById('lineupSlots');
-    el.innerHTML='';
-    roles.forEach((role, idx)=>{
-      const row=document.createElement('div'); row.className='slot-row'; row.style.flexWrap='wrap';
-      const label=document.createElement('label'); label.textContent = roleShortLabel(role, idx, roles);
-      const select=document.createElement('select');
+    const layout = buildLayoutForFormation(userTeam.formation);
+
+    const pitchEl = document.getElementById('lineupPitchWrap');
+    pitchEl.innerHTML = '';
+    layout.forEach((slot, idx)=>{
+      const pid = pendingLineup[idx];
+      const p = pid ? career.players.find(x=>x.id===pid) : null;
+      const marker = document.createElement('div');
+      marker.className = 'lineup-marker' + (!p ? ' empty' : '') + (activeSlotIdx===idx ? ' active' : '');
+      marker.style.left = ((slot.col/13)*100) + '%';
+      marker.style.top = ((slot.row/8)*100) + '%';
+      marker.textContent = p ? (p.squadNumber ? String(p.squadNumber) : roles[idx][0]) : roles[idx][0];
+      marker.title = p ? `${p.name} (${roleShortLabel(roles[idx], idx, roles)})` : roleShortLabel(roles[idx], idx, roles);
+      marker.addEventListener('click', ()=>{ activeSlotIdx = (activeSlotIdx===idx ? null : idx); renderLineupScreen(); });
+      pitchEl.appendChild(marker);
+    });
+
+    const candEl = document.getElementById('lineupCandidates');
+    candEl.innerHTML = '';
+    if(activeSlotIdx===null || activeSlotIdx>=roles.length){
+      const hint=document.createElement('p'); hint.className='hint';
+      hint.textContent = 'Toca una posición del campo para elegir o cambiar jugador.';
+      candEl.appendChild(hint);
+    } else {
+      const idx = activeSlotIdx;
+      const title=document.createElement('b'); title.className='card-title';
+      title.textContent = `ELIGE: ${roleShortLabel(roles[idx], idx, roles)}`;
+      candEl.appendChild(title);
+      let any=false;
       userTeam.slots.forEach(pid=>{
         const p = career.players.find(x=>x.id===pid);
         if(!p || p.injuryMatchesLeft>0) return;
         const usedElsewhere = pendingLineup.some((sel,i)=> i!==idx && sel===pid);
         if(usedElsewhere) return;
-        const opt=document.createElement('option');
-        opt.value=pid; opt.textContent = `#${p.squadNumber||'-'} ${p.name}, ${p.age}a (${overallRating(p)})`;
-        if(pendingLineup[idx]===pid) opt.selected=true;
-        select.appendChild(opt);
+        any=true;
+        const row=document.createElement('div'); row.className='lineup-candidate';
+        const info=document.createElement('div'); info.className='lc-info';
+        const attrLine = ATTRS.map(a=>`<span style="color:${attrBarColor(p[a.key])};">${a.short}${p[a.key]}</span>`).join(' ');
+        info.innerHTML = `<b>#${p.squadNumber||'-'} ${escapeHtml(p.name)}, ${p.age}a</b><span>${attrLine}</span>`;
+        const pickBtn=document.createElement('button'); pickBtn.className='icon-btn'; pickBtn.textContent='Elegir';
+        row.appendChild(info); row.appendChild(pickBtn);
+        row.addEventListener('click', ()=>{ pendingLineup[idx]=pid; activeSlotIdx=null; renderLineupScreen(); });
+        candEl.appendChild(row);
       });
-      select.addEventListener('change', ()=>{ pendingLineup[idx]=select.value; renderLineupScreen(); });
-      row.appendChild(label); row.appendChild(select);
-      el.appendChild(row);
-
-      const currentP = career.players.find(x=>x.id===pendingLineup[idx]);
-      if(currentP){
-        const info=document.createElement('div');
-        info.style.cssText='width:100%; font-size:10.5px; color:#9fd4b8; margin:-2px 0 4px 0; display:flex; flex-wrap:wrap; gap:5px;';
-        ATTRS.forEach(a=>{
-          const v = currentP[a.key];
-          const span=document.createElement('span');
-          span.style.color = attrBarColor(v);
-          span.textContent = `${a.short}${v}`;
-          info.appendChild(span);
-        });
-        el.appendChild(info);
+      if(!any){
+        const p=document.createElement('p'); p.className='hint'; p.textContent='No hay jugadores disponibles para este puesto.';
+        candEl.appendChild(p);
       }
-    });
+    }
   }
   function confirmLineupAndPlay(){
     if(lineupMode==='default'){
