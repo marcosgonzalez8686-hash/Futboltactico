@@ -145,6 +145,35 @@
   .lineup-candidate:active{background:rgba(255,210,63,.1);}
   .lineup-candidate .lc-info b{display:block; font-size:13.5px;}
   .lineup-candidate .lc-info span{font-size:10.5px; color:#9fd4b8;}
+
+  .stadium-view{
+    display:grid; grid-template-columns: 22% 1fr 22%; grid-template-rows: 20% 1fr 20%;
+    gap:3px; width:100%; aspect-ratio:1.7/1; margin:8px 0 14px;
+  }
+  .stadium-pitch{
+    grid-column:2; grid-row:2; border-radius:4px; border:2px solid var(--chalk);
+    background:repeating-linear-gradient(90deg, #1b4332 0 12%, #245c40 12% 24%);
+  }
+  .stand-cell{
+    position:relative; background:rgba(255,255,255,.07); border-radius:4px; overflow:hidden;
+    border:1px dashed rgba(255,255,255,.25);
+  }
+  .stand-cell.north{ grid-column:2; grid-row:1; display:flex; align-items:flex-end; justify-content:center; }
+  .stand-cell.south{ grid-column:2; grid-row:3; display:flex; align-items:flex-start; justify-content:center; }
+  .stand-cell.east{ grid-column:3; grid-row:2; display:flex; justify-content:flex-start; align-items:center; }
+  .stand-cell.west{ grid-column:1; grid-row:2; display:flex; justify-content:flex-end; align-items:center; }
+  .stand-fill{
+    background:repeating-linear-gradient(0deg, #d4af37 0 4px, #b8901f 4px 8px);
+    transition:all .25s ease;
+  }
+  .stand-cell.north .stand-fill, .stand-cell.south .stand-fill{ width:100%; }
+  .stand-cell.east .stand-fill, .stand-cell.west .stand-fill{ height:100%; }
+  .stand-label{
+    position:absolute; top:2px; left:0; right:0; text-align:center;
+    font-size:8.5px; font-weight:bold; color:#fff; text-shadow:0 1px 2px #000; pointer-events:none;
+  }
+  .stand-card{ margin-bottom:10px; }
+  .stand-card .btn-row{ margin-top:6px; }
   .player-card:last-child{border-bottom:none;}
   .player-card-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;}
   .player-card-head b{font-size:14px;}
@@ -415,6 +444,10 @@
     <h2>Instalaciones del club</h2>
     <p class="hint" id="facilitiesHint"></p>
     <div id="careerFacilitiesList"></div>
+    <b class="card-title">ESTADIO</b>
+    <p class="hint" id="stadiumHint"></p>
+    <div class="stadium-view" id="stadiumView"></div>
+    <div id="stadiumStandsList"></div>
     <button class="mode-btn" id="btnBackFacilities">« Volver</button>
   </div>
 
@@ -905,11 +938,24 @@
   const FACILITY_TYPES = {
     youth:    {label:'Instalaciones juveniles', desc:'Mejora los atributos base y el potencial oculto de los canteranos que se generan.'},
     training: {label:'Instalaciones de entrenamiento', desc:'Aumenta la velocidad a la que tus jugadores y canteranos ganan experiencia.'},
-    stadium:  {label:'Estadio', desc:'Aumenta los ingresos de taquilla en tus partidos como local.'},
   };
+  const STAND_KEYS = ['north','south','east','west'];
+  const STAND_LABELS = {north:'Grada Norte', south:'Grada Sur', east:'Grada Este', west:'Grada Oeste'};
   function initialFacilityLevel(divisionLevel){
     const table = {1:4, 2:3, 3:2, 4:1, 5:1};
     return table[divisionLevel] || 1;
+  }
+  function normalizeStadium(team){
+    // compatibilidad: si el estadio era un único número (versión anterior), se reparte en las 4 gradas
+    if(typeof team.facilities.stadium === 'number'){
+      const lvl = team.facilities.stadium;
+      team.facilities.stadium = {north:lvl, south:lvl, east:lvl, west:lvl};
+    }
+    if(!team.facilities.stadium){
+      const lvl = initialFacilityLevel(team.division);
+      team.facilities.stadium = {north:lvl, south:lvl, east:lvl, west:lvl};
+    }
+    return team.facilities.stadium;
   }
   function facilityUpgradeCost(currentLevel, divisionLevel){
     if(currentLevel>=5) return null;
@@ -918,20 +964,40 @@
     const levelMultiplier = Math.pow(1.8, currentLevel-1);
     return Math.round(base * divF * levelMultiplier);
   }
+  function standUpgradeCost(currentLevel, divisionLevel){
+    if(currentLevel>=5) return null;
+    const base = 6000;
+    const divF = divisionFactor(divisionLevel||5);
+    const levelMultiplier = Math.pow(1.7, currentLevel-1);
+    return Math.round(base * divF * levelMultiplier);
+  }
   function trainingBoostFor(team){
     const lvl = (team && team.facilities && team.facilities.training) || 1;
     return 1 + (lvl-1)*0.12; // nivel1=1x .. nivel5=1.48x
   }
+  function standSeats(level, divisionLevel){
+    return Math.round(400 * divisionFactor(divisionLevel) * level);
+  }
+  function totalStadiumCapacity(team){
+    const stadium = normalizeStadium(team);
+    return STAND_KEYS.reduce((s,k)=> s + standSeats(stadium[k]||1, team.division), 0);
+  }
   function stadiumBoostFor(team){
-    const lvl = (team && team.facilities && team.facilities.stadium) || 1;
-    return 1 + (lvl-1)*0.25; // nivel1=1x .. nivel5=2x
+    const baseline = STAND_KEYS.reduce((s)=> s + standSeats(1, team.division), 0);
+    const capacity = totalStadiumCapacity(team);
+    return capacity / baseline; // las 4 gradas a nivel 1 = 1x; mejorarlas sube la taquilla en proporción
+  }
+  function avgFacilityLevelForReputation(team){
+    const stadium = normalizeStadium(team);
+    const stadiumAvg = STAND_KEYS.reduce((s,k)=> s+(stadium[k]||1), 0) / STAND_KEYS.length;
+    return ((team.facilities.youth||1) + (team.facilities.training||1) + stadiumAvg) / 3;
   }
 
   // ---------- Reputación ----------
   function clubReputation(team){
     const divRep = {1:95, 2:75, 3:55, 4:35, 5:15}[team.division] || 15;
-    const fac = team.facilities || {youth:1,training:1,stadium:1};
-    const facBonus = ((fac.youth+fac.training+fac.stadium)/3 - 1) * 3;
+    if(!team.facilities) team.facilities = {youth:1, training:1, stadium:{north:1,south:1,east:1,west:1}};
+    const facBonus = (avgFacilityLevelForReputation(team) - 1) * 3;
     return clamp(Math.round(divRep + facBonus), 1, 100);
   }
   function playerReputation(p){ return clamp(overallRating(p), 1, 100); }
@@ -1033,7 +1099,11 @@
     let allPlayers=[];
 
     // División 5 (la más baja): el club del usuario + 15 rivales
-    const userFacilities = {youth:initialFacilityLevel(5), training:initialFacilityLevel(5), stadium:initialFacilityLevel(5)};
+    function makeFacilities(divLevel){
+      const lvl = initialFacilityLevel(divLevel);
+      return {youth:lvl, training:lvl, stadium:{north:lvl, south:lvl, east:lvl, west:lvl}};
+    }
+    const userFacilities = makeFacilities(5);
     const userSquad = generateSquad(5);
     allPlayers.push(...userSquad);
     teams.push({id:uid(), name:clubName, isUser:true, division:5, slots:userSquad.map(p=>p.id), lineup:null, kitPrimary, kitSecondary, logo, formation:DEFAULT_FORMATION, budget:divisionEconomyRates(5).initialBudget, facilities:userFacilities});
@@ -1041,8 +1111,7 @@
       const squad=generateSquad(5);
       allPlayers.push(...squad);
       const [p1,p2]=randomKitPair();
-      const fac = {youth:initialFacilityLevel(5), training:initialFacilityLevel(5), stadium:initialFacilityLevel(5)};
-      teams.push({id:uid(), name:generateClubName(usedNames), isUser:false, division:5, slots:squad.map(p=>p.id), lineup:null, kitPrimary:p1, kitSecondary:p2, logo:LOGO_EMOJIS[randInt(0,LOGO_EMOJIS.length-1)], formation:pickRandomFormationKey(), budget:divisionEconomyRates(5).initialBudget, facilities:fac});
+      teams.push({id:uid(), name:generateClubName(usedNames), isUser:false, division:5, slots:squad.map(p=>p.id), lineup:null, kitPrimary:p1, kitSecondary:p2, logo:LOGO_EMOJIS[randInt(0,LOGO_EMOJIS.length-1)], formation:pickRandomFormationKey(), budget:divisionEconomyRates(5).initialBudget, facilities:makeFacilities(5)});
     }
     // Divisiones 1 a 4: todo rivales, nivel más alto cuanto menor el número de división
     for(let div=1; div<=4; div++){
@@ -1050,8 +1119,7 @@
         const squad=generateSquad(div);
         allPlayers.push(...squad);
         const [p1,p2]=randomKitPair();
-        const fac = {youth:initialFacilityLevel(div), training:initialFacilityLevel(div), stadium:initialFacilityLevel(div)};
-        teams.push({id:uid(), name:generateClubName(usedNames), isUser:false, division:div, slots:squad.map(p=>p.id), lineup:null, kitPrimary:p1, kitSecondary:p2, logo:LOGO_EMOJIS[randInt(0,LOGO_EMOJIS.length-1)], formation:pickRandomFormationKey(), budget:divisionEconomyRates(div).initialBudget, facilities:fac});
+        teams.push({id:uid(), name:generateClubName(usedNames), isUser:false, division:div, slots:squad.map(p=>p.id), lineup:null, kitPrimary:p1, kitSecondary:p2, logo:LOGO_EMOJIS[randInt(0,LOGO_EMOJIS.length-1)], formation:pickRandomFormationKey(), budget:divisionEconomyRates(div).initialBudget, facilities:makeFacilities(div)});
       }
     }
 
@@ -1295,9 +1363,15 @@
           persistCareers();
         }
         if(c.teams.some(t=>!t.facilities)){
-          c.teams.forEach(t=>{ if(!t.facilities) t.facilities = {youth:initialFacilityLevel(t.division), training:initialFacilityLevel(t.division), stadium:initialFacilityLevel(t.division)}; });
+          c.teams.forEach(t=>{
+            if(!t.facilities){
+              const lvl = initialFacilityLevel(t.division);
+              t.facilities = {youth:lvl, training:lvl, stadium:{north:lvl, south:lvl, east:lvl, west:lvl}};
+            }
+          });
           persistCareers();
         }
+        c.teams.forEach(t=>{ if(t.facilities) normalizeStadium(t); });
         if(!c.transferMarket){
           const uT = c.teams.find(t=>t.isUser);
           c.transferMarket = generateTransferMarket(18, clubReputation(uT));
@@ -1668,7 +1742,8 @@
   }
   function renderCareerFacilitiesScreen(){
     const userTeam = career.teams.find(t=>t.isUser);
-    if(!userTeam.facilities) userTeam.facilities = {youth:1, training:1, stadium:1};
+    if(!userTeam.facilities) userTeam.facilities = {youth:1, training:1};
+    const stadium = normalizeStadium(userTeam);
     const hintEl = document.getElementById('facilitiesHint');
     hintEl.innerHTML = `Presupuesto: <b style="color:var(--gold);">${formatMoney(userTeam.budget||0)}</b> · Reputación del club: <b>${clubReputation(userTeam)}/100</b>`;
     const el = document.getElementById('careerFacilitiesList');
@@ -1701,6 +1776,60 @@
       }
       card.appendChild(btn);
       el.appendChild(card);
+    });
+
+    // Estadio: dibujo + 4 gradas independientes
+    const capacity = totalStadiumCapacity(userTeam);
+    document.getElementById('stadiumHint').innerHTML =
+      `Aforo total: <b style="color:var(--gold);">${capacity.toLocaleString('es-ES')}</b> asientos · Aumenta los ingresos de taquilla en tus partidos como local.`;
+
+    const viewEl = document.getElementById('stadiumView');
+    viewEl.innerHTML = '';
+    const pitch=document.createElement('div'); pitch.className='stadium-pitch';
+    viewEl.appendChild(pitch);
+    STAND_KEYS.forEach(k=>{
+      const cell=document.createElement('div'); cell.className='stand-cell '+k;
+      const fill=document.createElement('div'); fill.className='stand-fill';
+      const level = stadium[k]||1;
+      const pct = (level/5*100)+'%';
+      if(k==='north' || k==='south'){ fill.style.height = pct; }
+      else { fill.style.width = pct; }
+      cell.appendChild(fill);
+      const label=document.createElement('div'); label.className='stand-label'; label.textContent = 'Nv'+level;
+      cell.appendChild(label);
+      viewEl.appendChild(cell);
+    });
+
+    const standsEl = document.getElementById('stadiumStandsList');
+    standsEl.innerHTML = '';
+    STAND_KEYS.forEach(k=>{
+      const level = stadium[k]||1;
+      const cost = standUpgradeCost(level, userTeam.division);
+      const card=document.createElement('div'); card.className='card stand-card';
+      const title=document.createElement('b'); title.className='card-title';
+      title.textContent = `${STAND_LABELS[k]} — Nivel ${level}/5 (${standSeats(level, userTeam.division).toLocaleString('es-ES')} asientos)`;
+      card.appendChild(title);
+      const stars=document.createElement('div'); stars.style.cssText='font-size:16px; margin:4px 0 6px;';
+      stars.textContent = '★'.repeat(level) + '☆'.repeat(5-level);
+      card.appendChild(stars);
+      const btnRow=document.createElement('div'); btnRow.className='btn-row';
+      const btn=document.createElement('button'); btn.className='mode-btn small primary';
+      if(cost===null){
+        btn.textContent='Nivel máximo';
+        btn.disabled=true;
+      } else {
+        btn.textContent = `Ampliar (${formatMoney(cost)})`;
+        if((userTeam.budget||0) < cost) btn.disabled = true;
+        btn.addEventListener('click', ()=>{
+          userTeam.budget -= cost;
+          stadium[k] = level+1;
+          persistCareers();
+          renderCareerFacilitiesScreen();
+        });
+      }
+      btnRow.appendChild(btn);
+      card.appendChild(btnRow);
+      standsEl.appendChild(card);
     });
   }
   function renderCareerHistory(){
