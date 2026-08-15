@@ -272,13 +272,14 @@
   .rules.open{display:block;}
   .storage-note{font-size:11px; color:#7fa892; text-align:center;}
 
-  .goal-flash, .half-flash, .full-flash{
+  .goal-flash, .half-flash, .full-flash, .week-flash{
     position:fixed; inset:0; z-index:9998; pointer-events:none;
     animation: goalFlash 0.9s ease-out forwards;
   }
   .goal-flash{ background:radial-gradient(circle at 50% 45%, rgba(255,210,63,.55), transparent 60%); }
   .half-flash{ background:radial-gradient(circle at 50% 45%, rgba(120,180,255,.5), transparent 60%); animation-duration:.9s; }
   .full-flash{ background:radial-gradient(circle at 50% 45%, rgba(255,255,255,.55), transparent 65%); animation-duration:1.3s; }
+  .week-flash{ background:radial-gradient(circle at 50% 45%, rgba(46,204,113,.5), transparent 60%); animation-duration:.8s; }
   @keyframes goalFlash{
     0%{ opacity:0; }
     20%{ opacity:1; }
@@ -306,6 +307,11 @@
     text-shadow:0 0 30px rgba(255,255,255,.9), 0 4px 14px rgba(0,0,0,.8);
     animation-duration:1.35s;
   }
+  .goal-popup span.popup-week{
+    color:#2ecc71; font-size:clamp(24px, 8vw, 52px);
+    text-shadow:0 0 22px rgba(46,204,113,.9), 0 4px 10px rgba(0,0,0,.7);
+    animation-duration:.85s;
+  }
   @keyframes goalPop{
     0%{ transform:scale(.25) rotate(-10deg); opacity:0; }
     18%{ transform:scale(1.2) rotate(4deg); opacity:1; }
@@ -313,6 +319,19 @@
     82%{ transform:scale(1) rotate(0deg); opacity:1; }
     100%{ transform:scale(1.35) rotate(0deg); opacity:0; }
   }
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.68); z-index:9995;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay[hidden]{ display:none; }
+  .modal-card{
+    background:var(--panel); border:2px solid var(--gold); border-radius:12px; padding:16px;
+    max-width:440px; width:100%; max-height:78vh; overflow-y:auto;
+    box-shadow:0 10px 34px rgba(0,0,0,.6);
+    animation: goalPop .5s cubic-bezier(.22,1.4,.4,1) forwards;
+  }
+  .modal-card .we-item{ margin-top:8px; padding-top:8px; border-top:1px solid #234; font-size:13.5px; line-height:1.5; }
+  .modal-card .we-item:first-child{ margin-top:0; padding-top:0; border-top:none; }
   .score-num.pulse{ animation: scorePulse .6s ease; }
   @keyframes scorePulse{
     0%{ transform:scale(1); }
@@ -539,6 +558,14 @@
       <button id="btnRestart">Reiniciar / salir</button>
     </div>
   </main>
+</div>
+
+<div class="modal-overlay" id="weekEventsModal" hidden>
+  <div class="modal-card">
+    <b class="card-title">HA PASADO ESTA SEMANA</b>
+    <div id="weekEventsBody"></div>
+    <button class="mode-btn primary" id="btnCloseWeekModal" style="margin-top:12px;">Entendido</button>
+  </div>
 </div>
 
 <script>
@@ -853,6 +880,7 @@
   document.getElementById('btnGoFriendly').addEventListener('click', ()=>showScreen('careerFriendlyScreen'));
   document.getElementById('btnBackFriendly').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnAdvanceWeek').addEventListener('click', advanceWeek);
+  document.getElementById('btnCloseWeekModal').addEventListener('click', ()=>{ document.getElementById('weekEventsModal').hidden = true; });
   document.getElementById('btnGoFacilities').addEventListener('click', ()=>showScreen('careerFacilitiesScreen'));
   document.getElementById('btnBackFacilities').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnBackStandings').addEventListener('click', ()=>showScreen('careerScreen'));
@@ -1458,6 +1486,7 @@
     refillScoutingPool();
     payWeeklyWages();
     if(phase.hasMatch){ processMatchdayRevenue(career.currentJornada); }
+    career.financialAlert = null;
     const forcedSale = enforceBudgetDiscipline();
     if(forcedSale){
       career.financialAlert = `Números rojos: se ha vendido a ${forcedSale.name} por ${formatMoney(forcedSale.price)} para cuadrar las cuentas.`;
@@ -1465,13 +1494,31 @@
     if(phase.hasMatch && career.currentJornada < TOTAL_JORNADAS){
       career.currentJornada++;
     }
+    const offersBefore = (career.pendingOffers||[]).length;
     career.week = (career.week||1) + 1;
     processWeeklyEvents();
-    if(career.week > TOTAL_SEASON_WEEKS){
-      processEndOfSeason();
-    }
+    const newOffers = (career.pendingOffers||[]).slice(offersBefore);
+    const seasonEnded = career.week > TOTAL_SEASON_WEEKS;
+    if(seasonEnded){ processEndOfSeason(); }
     persistCareers();
+
+    const phaseAfter = weekPhaseInfo(career.week);
+    showCelebration(seasonEnded ? '¡NUEVA TEMPORADA!' : `SEMANA ${career.week}`, 'week-flash', 'popup-week', 800);
+
+    const events = [];
+    if(forcedSale) events.push(`⚠️ ${career.financialAlert}`);
+    newOffers.forEach(o=> events.push(`💰 <b>${escapeHtml(o.buyerName)}</b> ofrece ${formatMoney(o.amount)} por ${escapeHtml(o.playerName)}. Responde desde el hub.`));
+    if(!seasonEnded && phaseAfter.label!==phase.label){ events.push(`📅 Ahora: <b>${phaseAfter.label}</b>`); }
+    if(seasonEnded){ events.push(`📅 Empieza la Temporada ${career.season} — pretemporada.`); }
+
     renderCareerScreen();
+    if(events.length){
+      setTimeout(()=> showWeekEventsModal(events), 350);
+    }
+  }
+  function showWeekEventsModal(items){
+    document.getElementById('weekEventsBody').innerHTML = items.map(t=>`<div class="we-item">${t}</div>`).join('');
+    document.getElementById('weekEventsModal').hidden = false;
   }
   function respondToOffer(offerId, accept){
     const offer = career.pendingOffers.find(o=>o.id===offerId);
