@@ -4,14 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Fútbol Táctico</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1b4332">
-<link rel="icon" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Fútbol Táctico">
 <style>
   :root{
     --pitch-dark:#1b4332;
@@ -1154,16 +1146,18 @@
     if(!career || !career.staff) return 0;
     return career.staff.reduce((s,st)=>s+ (st.wage||0), 0);
   }
-  function processEconomyForJornada(jornada){
+  function payWeeklyWages(){
+    career.teams.forEach(team=>{
+      team.budget = (team.budget||0) - calcTeamWageBill(team);
+    });
+  }
+  function processMatchdayRevenue(jornada){
     const jf = career.fixtures.filter(f=>f.jornada===jornada);
     jf.forEach(f=>{
       const home = career.teams[f.homeIdx], away = career.teams[f.awayIdx];
       const homeRates = divisionEconomyRates(home.division), awayRates = divisionEconomyRates(away.division);
       home.budget = (home.budget||0) + homeRates.tv + Math.round(homeRates.gate * stadiumBoostFor(home));
       away.budget = (away.budget||0) + awayRates.tv;
-    });
-    career.teams.forEach(team=>{
-      team.budget = (team.budget||0) - calcTeamWageBill(team);
     });
   }
   function awardSeasonPrizesForDivision(division, standings){
@@ -1380,6 +1374,7 @@
     // 3. Nueva temporada: recalendarizar según las divisiones ya actualizadas
     career.season++;
     career.currentJornada = 1;
+    career.week = 1;
     career.fixtures = buildSeasonFixtures(career.teams);
     refillScoutingPool();
     career.seasonSummary = {
@@ -1409,22 +1404,21 @@
     if(career.youthPlayers) career.youthPlayers.forEach(p=>{ if(p.injuryMatchesLeft>0) p.injuryMatchesLeft--; });
   }
 
-  function maybeAdvanceJornada(){
-    const jf = career.fixtures.filter(f=>f.jornada===career.currentJornada);
-    if(jf.length && jf.every(f=>f.played)){
-      trainYouthPlayers();
-      progressInjuries();
-      progressScouting();
-      refillScoutingPool();
-      processEconomyForJornada(career.currentJornada);
-      const forcedSale = enforceBudgetDiscipline();
-      if(forcedSale){
-        career.financialAlert = `Números rojos: se ha vendido a ${forcedSale.name} por ${formatMoney(forcedSale.price)} para cuadrar las cuentas.`;
-      }
-      const maxJ = TEAMS_PER_DIVISION - 1;
-      if(career.currentJornada < maxJ){ career.currentJornada++; }
-      else { processEndOfSeason(); }
-    }
+  const PRESEASON_WEEKS = 2;
+  const TOTAL_JORNADAS = TEAMS_PER_DIVISION - 1; // 15
+  const TOTAL_SEASON_WEEKS = 22;
+  function weekPhaseInfo(week){
+    if(week<=2) return {hasMatch:false, jornada:null, friendlies:true, transfers:true, label:'Pretemporada'};
+    if(week===3) return {hasMatch:true, jornada:1, friendlies:false, transfers:true, label:'Jornada 1'};
+    if(week>=4 && week<=9) return {hasMatch:true, jornada:week-2, friendlies:false, transfers:false, label:'Jornada '+(week-2)};
+    if(week>=10 && week<=12) return {hasMatch:false, jornada:null, friendlies:false, transfers:true, label:'Parón de mercado'};
+    if(week>=13 && week<=20) return {hasMatch:true, jornada:week-5, friendlies:false, transfers:false, label:'Jornada '+(week-5)};
+    return {hasMatch:false, jornada:null, friendlies:false, transfers:false, label:'Fin de temporada'};
+  }
+  function weekForJornada(j){
+    if(j<=1) return 3;
+    if(j>=2 && j<=7) return j+2;
+    return j+5; // j 8..15
   }
 
   function userFixtureThisJornada(){
@@ -1452,14 +1446,30 @@
 
   function advanceWeek(){
     if(!career) return;
-    const uf = userFixtureThisJornada();
-    if(uf && !uf.played){
-      return; // el botón debe estar deshabilitado en este caso; no se hace nada
+    const phase = weekPhaseInfo(career.week);
+    if(phase.hasMatch){
+      const uf = userFixtureThisJornada();
+      if(uf && !uf.played) return; // el botón debe estar deshabilitado en este caso
+      ensureJornadaSimulated();
     }
-    ensureJornadaSimulated();
+    trainYouthPlayers();
+    progressInjuries();
+    progressScouting();
+    refillScoutingPool();
+    payWeeklyWages();
+    if(phase.hasMatch){ processMatchdayRevenue(career.currentJornada); }
+    const forcedSale = enforceBudgetDiscipline();
+    if(forcedSale){
+      career.financialAlert = `Números rojos: se ha vendido a ${forcedSale.name} por ${formatMoney(forcedSale.price)} para cuadrar las cuentas.`;
+    }
+    if(phase.hasMatch && career.currentJornada < TOTAL_JORNADAS){
+      career.currentJornada++;
+    }
     career.week = (career.week||1) + 1;
     processWeeklyEvents();
-    maybeAdvanceJornada();
+    if(career.week > TOTAL_SEASON_WEEKS){
+      processEndOfSeason();
+    }
     persistCareers();
     renderCareerScreen();
   }
@@ -1534,8 +1544,9 @@
           delete c.transferMarket;
           persistCareers();
         }
-        if(c.week===undefined){
-          c.week = (c.season-1)*(TEAMS_PER_DIVISION-1) + c.currentJornada;
+        if(!c.weekPhaseMigrated){
+          c.week = weekForJornada(c.currentJornada);
+          c.weekPhaseMigrated = true;
           persistCareers();
         }
         if(!c.pendingOffers){ c.pendingOffers = []; persistCareers(); }
@@ -1582,9 +1593,13 @@
 
   function renderCareerScreen(){
     if(!career) return;
+    if(career.week===undefined) career.week = weekForJornada(career.currentJornada);
+    const phase = weekPhaseInfo(career.week);
     document.getElementById('careerTitle').innerHTML = teamBadgeHTML(career.teams[userTeamIdx()]) + escapeHtml(career.clubName);
     const maxJ = TEAMS_PER_DIVISION - 1;
-    document.getElementById('careerJornada').textContent = `Semana ${career.week||1} · Temporada ${career.season} · División ${userDivision()} · Jornada ${career.currentJornada} de ${maxJ}`;
+    document.getElementById('careerJornada').textContent = phase.hasMatch
+      ? `Semana ${career.week} · ${phase.label} · Temporada ${career.season} · División ${userDivision()} · Jornada ${phase.jornada} de ${maxJ}`
+      : `Semana ${career.week} · ${phase.label} · Temporada ${career.season} · División ${userDivision()}`;
     const userTeam = career.teams[userTeamIdx()];
     const budgetEl = document.getElementById('careerBudget');
     budgetEl.textContent = `💰 ${formatMoney(userTeam.budget||0)} · ⭐ Reputación ${clubReputation(userTeam)}/100`;
@@ -1680,15 +1695,25 @@
 
     renderCareerFixtures();
 
-    const uf = userFixtureThisJornada();
+    document.getElementById('btnGoFriendly').hidden = !phase.friendlies;
+
     const advanceBtn = document.getElementById('btnAdvanceWeek');
     const advanceHint = document.getElementById('advanceWeekHint');
-    if(uf && !uf.played){
-      advanceBtn.disabled = true;
-      advanceHint.textContent = 'Juega o simula tu partido de esta jornada antes de continuar.';
+    if(phase.hasMatch){
+      const uf = userFixtureThisJornada();
+      if(uf && !uf.played){
+        advanceBtn.disabled = true;
+        advanceHint.textContent = 'Juega o simula tu partido de esta jornada antes de continuar.';
+      } else {
+        advanceBtn.disabled = false;
+        advanceHint.textContent = 'Tu jornada está resuelta. Pulsa Seguir para pasar a la siguiente semana.';
+      }
     } else {
       advanceBtn.disabled = false;
-      advanceHint.textContent = 'Tu jornada está resuelta. Pulsa Seguir para pasar a la siguiente semana.';
+      let extra = [];
+      if(phase.friendlies) extra.push('puedes organizar amistosos');
+      if(phase.transfers) extra.push('puedes fichar jugadores en el Ojeo');
+      advanceHint.textContent = `${phase.label}: no hay partido esta semana` + (extra.length ? ' — ' + extra.join(' y ') + '.' : '.');
     }
   }
 
@@ -1954,6 +1979,7 @@
     const entry = career.scoutingPool.find(e=>e.id===entryId);
     if(!entry) return;
     const userTeam = career.teams.find(t=>t.isUser);
+    if(!weekPhaseInfo(career.week||1).transfers) return;
     const p = entry.player;
     const price = calcMarketValue(p);
     if((userTeam.budget||0) < price) return;
@@ -1975,8 +2001,11 @@
     el.innerHTML='';
     const blocked = (userTeam.budget||0) < 0;
     const rep = clubReputation(userTeam);
+    const phase = weekPhaseInfo(career.week||1);
+    const windowOpen = phase.transfers;
     hintEl.innerHTML = `Presupuesto: <b style="color:${blocked?'#e74c3c':'var(--gold)'};">${formatMoney(userTeam.budget||0)}</b> · Plantilla: ${userTeam.slots.length}/${MAX_SQUAD_SIZE} · Reputación: <b>${rep}/100</b>` +
-      (blocked ? '<br><span style="color:#e74c3c;">Números rojos: no puedes fichar hasta equilibrar las cuentas.</span>' : '');
+      (blocked ? '<br><span style="color:#e74c3c;">Números rojos: no puedes fichar hasta equilibrar las cuentas.</span>' : '') +
+      (!windowOpen ? '<br><span style="color:#e74c3c;">Mercado cerrado esta semana: solo se puede fichar en pretemporada (semanas 1-3) o en el parón (semanas 10-12). Puedes seguir investigando prospectos mientras tanto.</span>' : '');
 
     career.scoutingPool.forEach(entry=>{
       const card = renderScoutingCard(entry);
@@ -2015,8 +2044,8 @@
       const willingToSign = canSignPlayer(userTeam, p);
       const btnRow=document.createElement('div'); btnRow.className='btn-row'; btnRow.style.marginTop='6px';
       const buyBtn=document.createElement('button'); buyBtn.className='mode-btn small primary';
-      buyBtn.textContent = canOffer ? `Fichar (${formatMoney(truePrice)})` : 'Necesita más ojeo';
-      if(!canOffer || blocked || (userTeam.budget||0)<truePrice || userTeam.slots.length>=MAX_SQUAD_SIZE || !willingToSign) buyBtn.disabled=true;
+      buyBtn.textContent = !windowOpen ? 'Mercado cerrado' : (canOffer ? `Fichar (${formatMoney(truePrice)})` : 'Necesita más ojeo');
+      if(!windowOpen || !canOffer || blocked || (userTeam.budget||0)<truePrice || userTeam.slots.length>=MAX_SQUAD_SIZE || !willingToSign) buyBtn.disabled=true;
       buyBtn.addEventListener('click', ()=> signProspect(entry.id));
       btnRow.appendChild(buyBtn);
       card.appendChild(btnRow);
@@ -3320,13 +3349,6 @@
     showScreen('menuScreen');
   })();
 })();
-</script>
-<script>
-  if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
-    window.addEventListener('load', ()=>{
-      navigator.serviceWorker.register('sw.js').catch(()=>{});
-    });
-  }
 </script>
 </body>
 </html>
