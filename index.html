@@ -551,6 +551,8 @@
       • <b>Chutar</b> (con balón, dentro de tu rango según Fuerza): probabilidad según distancia, tiro y portero rival.<br>
       • <b>Robar</b>: si estás junto al rival con balón, según tu defensa y su regate. Si falla, puede pitarse <b>falta</b> — si entraste por detrás, es más probable y te llevas <b>tarjeta amarilla</b> (la 2ª amarilla es roja: expulsión el resto del partido, tu equipo juega con uno menos). Una falta corta el turno de tu equipo al momento y separa a los dos jugadores implicados; el jugador que sufre la falta queda junto al balón y en su siguiente turno solo podrá <b>chutar</b> o <b>pasar</b> (no moverse), como un saque de falta directo.<br>
       • <b>Regatear</b>: si llevas el balón y tienes un rival pegado, puedes intentar regatearlo eligiendo a qué casilla junto a él te mueves. Puede salir bien (avanzas), puedes perder el balón (se lo queda el rival), o puede que el rival cometa falta sobre ti.<br>
+      • Si pasas el balón y sigue siendo tu turno, el jugador que recibe el pase puede volver a pasar, chutar o regatear, no solo moverse.<br>
+      • Si fallas un <b>Robar</b> sin que haya falta, y tienes otro jugador también pegado al rival con balón, puedes intentar robar con él también en el mismo turno.<br>
       • Al seleccionar un jugador con balón (si puede chutar) se resalta en rojo la zona desde la que podría marcar — es más ancha a la altura de la portería y se cierra cerca del córner, donde no se puede chutar.<br>
       • Tras una falta, el jugador que la sufre puede <b>lesionarse</b> y quedar de baja varios partidos (Modo Carrera).<br>
       • En Modo Carrera puedes hacer hasta <b>3 cambios</b> por partido: pulsa el botón "Cambios" en cualquier momento para abrir la ventana de sustituciones.<br>
@@ -2627,6 +2629,8 @@
 
   let currentFormationA = DEFAULT_FORMATION, currentFormationB = DEFAULT_FORMATION;
   let freeKickPieceId = null; // pieza que debe sacar de falta: solo puede chutar o pasar, no moverse
+  let chainReceiverPieceId = null; // pieza que acaba de recibir un pase este turno: puede volver a pasar/chutar/regatear, no solo moverse
+  let tackleRetryAllowed = false; // tras un robo fallado (sin falta), otro jugador cercano puede intentarlo también
   let matchSubsUsed = 0;
   let subWindowOpen = false;
   const MAX_SUBS = 3;
@@ -2808,10 +2812,12 @@
       ball.col = destCell.col; ball.row = destCell.row;
       const receiver = getPieceAt(destCell.col, destCell.row);
       message = receiver ? `Pase completado a ${receiver.role}.` : 'Pase al espacio completado.';
+      return { success:true, receiver };
     } else {
       const free = findFreeCellNear(destCell.col, destCell.row);
       ball.col = free.col; ball.row = free.row;
       message = '¡Pase impreciso! Balón suelto.';
+      return { success:false, receiver:null };
     }
   }
   function isTackleFromBehind(defender, carrier){
@@ -2836,7 +2842,7 @@
     if(Math.random() < chance){
       ball.col = defender.col; ball.row = defender.row;
       message = '¡Robo exitoso!';
-      return {foul:false};
+      return {foul:false, failed:false};
     }
     const fromBehind = isTackleFromBehind(defender, carrier);
     const foulChance = fromBehind ? 0.55 : 0.25;
@@ -2868,11 +2874,11 @@
           }
         }
       }
-      return {foul:true};
+      return {foul:true, failed:false};
     } else {
-      message = 'Robo fallido.';
+      message = 'Robo fallido. ¡Puedes intentarlo con otro jugador que también esté cerca!';
     }
-    return {foul:false};
+    return {foul:false, failed:true};
   }
   function snapshotRoster(team){
     const roster = new Array(6).fill(null);
@@ -3010,10 +3016,12 @@
 
   function resetTurnState(){
     turnGuaranteedUsed = 0; turnUsedPieceIds = new Set(); turnActionUsed = false; turnBonusPieceId = null;
+    chainReceiverPieceId = null; tackleRetryAllowed = false;
   }
 
   function afterStep(piece, wasMove, forceEnd){
     if(freeKickPieceId===piece.id) freeKickPieceId = null;
+    if(chainReceiverPieceId===piece.id) chainReceiverPieceId = null;
     selected=null; actionMode=null;
     const stepMessage = message;
 
@@ -3110,9 +3118,9 @@
       const moves = validMoveCells(piece).sort((a,b)=>a.col-b.col);
       if(moves.length){ doMove(piece, moves[0].col, moves[0].row); afterStep(piece, true); return; }
     } else if(piece.role!=='GK') {
-      if(!turnActionUsed){
+      if(!turnActionUsed || tackleRetryAllowed){
         const tackleTarget = canTackle(piece);
-        if(tackleTarget){ turnActionUsed=true; const r=doTackle(piece, tackleTarget); afterStep(piece, false, r.foul); return; }
+        if(tackleTarget){ turnActionUsed=true; tackleRetryAllowed=false; const r=doTackle(piece, tackleTarget); tackleRetryAllowed=r.failed; afterStep(piece, false, r.foul); return; }
       }
       const targetPos = carrier || ball;
       const moves = validMoveCells(piece).sort((a,b)=>chebyshev(a,targetPos)-chebyshev(b,targetPos));
@@ -3155,9 +3163,9 @@
       const moves = validMoveCells(carrier).sort((a,b)=>a.col-b.col);
       if(moves.length){ doMove(carrier, moves[0].col, moves[0].row); afterStep(carrier, true); return; }
     } else if(carrier && carrier.team!==aiTeam){
-      if(!turnActionUsed){
+      if(!turnActionUsed || tackleRetryAllowed){
         const adjacent = movablePieces.find(p=>chebyshev(p,carrier)===1);
-        if(adjacent){ turnActionUsed=true; const r=doTackle(adjacent, carrier); afterStep(adjacent, false, r.foul); return; }
+        if(adjacent){ turnActionUsed=true; tackleRetryAllowed=false; const r=doTackle(adjacent, carrier); tackleRetryAllowed=r.failed; afterStep(adjacent, false, r.foul); return; }
       }
       if(movablePieces.length){
         const nearest = movablePieces.reduce((a,b)=>chebyshev(a,carrier)<chebyshev(b,carrier)?a:b);
@@ -3205,7 +3213,10 @@
     if(actionMode==='pass'){
       const cells = passTargetCells(selected);
       if(cells.some(c=>c.col===col && c.row===row)){
-        const passer=selected; turnActionUsed=true; doPass(passer, {col,row}); afterStep(passer, false); return;
+        const passer=selected; turnActionUsed=true;
+        const result = doPass(passer, {col,row});
+        chainReceiverPieceId = (result.success && result.receiver && result.receiver.team===passer.team) ? result.receiver.id : null;
+        afterStep(passer, false); return;
       }
       return;
     }
@@ -3395,10 +3406,11 @@
     const isGK = selected.role==='GK';
     if(actionMode===null){
       const isFreeKick = freeKickPieceId===selected.id;
+      const isChainReceiver = chainReceiverPieceId===selected.id;
       if(!isGK && !isFreeKick) addBtn('Mover', ()=>setActionMode('move'));
       const carrier = getCarrier();
       const hasBall = (carrier && carrier.id===selected.id) || isFreeKick;
-      if(hasBall && !turnActionUsed){
+      if(hasBall && (!turnActionUsed || isChainReceiver)){
         addBtn('Pasar', ()=>setActionMode('pass'));
         if(!isGK && canShoot(selected)) addBtn('Chutar', ()=>{ turnActionUsed=true; doShoot(selected); afterStep(selected, false); });
         if(!isGK && !isFreeKick){
@@ -3406,9 +3418,9 @@
           if(dribbleTarget) addBtn('Regatear', ()=>setActionMode('dribble'));
         }
       }
-      if(!isGK && !turnActionUsed && !hasBall){
+      if(!isGK && !hasBall && (!turnActionUsed || tackleRetryAllowed)){
         const tackleTarget = canTackle(selected);
-        if(tackleTarget) addBtn('Robar', ()=>{ turnActionUsed=true; const r=doTackle(selected, tackleTarget); afterStep(selected, false, r.foul); });
+        if(tackleTarget) addBtn('Robar', ()=>{ turnActionUsed=true; tackleRetryAllowed=false; const r=doTackle(selected, tackleTarget); tackleRetryAllowed=r.failed; afterStep(selected, false, r.foul); });
       }
       addBtn('Cancelar', ()=>{ selected=null; render(); }, 'secondary');
     } else {
