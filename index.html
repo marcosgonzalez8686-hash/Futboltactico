@@ -2751,8 +2751,6 @@
       return;
     }
     pushApart(defender, carrier);
-    pushApart(carrier, defender);
-    ball.col = carrier.col; ball.row = carrier.row;
     freeKickPieceId = carrier.id;
     const pid = defender.pid;
     const who = defender.name || `el ${defender.role}`;
@@ -2855,8 +2853,6 @@
     const foulChance = fromBehind ? 0.55 : 0.25;
     if(Math.random() < foulChance){
       pushApart(defender, carrier);
-      pushApart(carrier, defender);
-      ball.col = carrier.col; ball.row = carrier.row;
       freeKickPieceId = carrier.id;
       if(fromBehind){
         const pid = defender.pid;
