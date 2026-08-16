@@ -2359,6 +2359,13 @@
   function renderCareerFixtures(){
     const el = document.getElementById('careerFixtureList');
     el.innerHTML='';
+    const phase = weekPhaseInfo(career.week||1);
+    if(!phase.hasMatch){
+      const p=document.createElement('p'); p.className='hint';
+      p.textContent = 'No hay partidos programados esta semana.';
+      el.appendChild(p);
+      return;
+    }
     const div = userDivision();
     const jf = career.fixtures.filter(f=>f.jornada===career.currentJornada && f.division===div);
     jf.forEach(f=>{
