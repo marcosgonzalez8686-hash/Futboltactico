@@ -3316,9 +3316,10 @@
     const boxA=document.getElementById('scoreBoxA'), boxB=document.getElementById('scoreBoxB');
     boxA.style.background = matchKitColors.A || ''; boxA.style.color = matchKitColors.A ? textColorFor(matchKitColors.A) : '';
     boxB.style.background = matchKitColors.B || ''; boxB.style.color = matchKitColors.B ? textColorFor(matchKitColors.B) : '';
+    const turnColor = matchKitColors[turn] || (turn==='A' ? 'var(--team-a)' : 'var(--team-b)');
     turnEl.innerHTML = matchEnded
       ? `<b>¡Partido finalizado!</b>`
-      : `<span class="turn-dot ${turn.toLowerCase()}"></span> Turno: ${teamName(turn)} ${mode==='ai' && turn==='B' ? '(IA pensando…)' : ''} <span class="arrow">${turn==='A'?'▶':'◀'}</span>`;
+      : `<span class="turn-dot" style="background:${turnColor};"></span> Turno: ${teamName(turn)} ${mode==='ai' && turn==='B' ? '(IA pensando…)' : ''} <span class="arrow">${turn==='A'?'▶':'◀'}</span>`;
     document.getElementById('matchClock').textContent = matchEnded ? '' : `${matchClockLabel()}' · ${half===1 ? '1ª parte' : '2ª parte'}`;
     msgEl.textContent = message;
     renderSelectedPlayerInfo();
