@@ -874,6 +874,12 @@
   }
   history.replaceState({screen:'menuScreen'}, '', '#menuScreen');
   window.addEventListener('popstate', (e)=>{
+    const matchInProgress = mode!==null && !matchEnded && !document.getElementById('gameScreen').hidden;
+    if(matchInProgress){
+      // no se abandona un partido en curso con el botón atrás: se cancela la navegación
+      history.pushState({screen:'gameScreen'}, '', '#gameScreen');
+      return;
+    }
     const screen = (e.state && e.state.screen) || 'menuScreen';
     showScreen(screen, true);
   });
