@@ -839,7 +839,7 @@
   function teamName(t){ return matchNames[t]; }
 
   // ---------- Navegación de pantallas ----------
-  function showScreen(name){
+  function showScreen(name, fromHistory){
     ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen','careerFacilitiesScreen','careerAllFacilitiesScreen','careerFriendlyScreen','careerLineupScreen','gameScreen'].forEach(id=>{
       document.getElementById(id).hidden = (id !== name);
     });
@@ -857,7 +857,19 @@
     if(name==='careerFacilitiesScreen') renderCareerFacilitiesScreen();
     if(name==='careerHistoryScreen') renderCareerHistory();
     if(name==='careerLineupScreen') renderLineupScreen();
+    if(!fromHistory){
+      if(history.state && history.state.screen===name){
+        // ya estamos en ese estado (p.ej. primera carga): no duplicar
+      } else {
+        history.pushState({screen:name}, '', '#'+name);
+      }
+    }
   }
+  history.replaceState({screen:'menuScreen'}, '', '#menuScreen');
+  window.addEventListener('popstate', (e)=>{
+    const screen = (e.state && e.state.screen) || 'menuScreen';
+    showScreen(screen, true);
+  });
   document.getElementById('titleHome').addEventListener('click', ()=>showScreen('menuScreen'));
 
   // ---------- Menú ----------
