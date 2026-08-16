@@ -224,6 +224,10 @@
     content:''; position:absolute; inset:28%; border-radius:50%;
     background:rgba(124,252,148,.4); border:2px solid #7CFC94;
   }
+  .cell.highlight-dribble::after{
+    content:''; position:absolute; inset:24%; border-radius:50%;
+    background:rgba(255,140,26,.45); border:2px solid #ff8c1a;
+  }
   .cell.highlight-shoot-zone{
     box-shadow: inset 0 0 0 999px rgba(231,76,60,.16);
   }
@@ -545,8 +549,9 @@
       • <b>Mover</b>: 1 casilla en cualquier dirección, destino vacío.<br>
       • <b>Pasar</b> (con balón): envía el balón a cualquier casilla dentro de tu rango (según tu Fuerza: 2 a 5 casillas, 3 con Fuerza 50). Si hay un compañero ahí, la recibe; si no, queda suelta. Un rival en el camino bloquea esa dirección (y todo lo que quede detrás).<br>
       • <b>Chutar</b> (con balón, dentro de tu rango según Fuerza): probabilidad según distancia, tiro y portero rival.<br>
-      • <b>Robar</b>: si estás junto al rival con balón, según tu defensa y su regate. Si falla, puede pitarse <b>falta</b> — si entraste por detrás, es más probable y te llevas <b>tarjeta amarilla</b> (la 2ª amarilla es roja: expulsión el resto del partido, tu equipo juega con uno menos). Una falta corta el turno de tu equipo al momento y separa a los dos jugadores implicados.<br>
-      • Al seleccionar un jugador con balón (si puede chutar) se resalta en rojo la zona desde la que podría marcar.<br>
+      • <b>Robar</b>: si estás junto al rival con balón, según tu defensa y su regate. Si falla, puede pitarse <b>falta</b> — si entraste por detrás, es más probable y te llevas <b>tarjeta amarilla</b> (la 2ª amarilla es roja: expulsión el resto del partido, tu equipo juega con uno menos). Una falta corta el turno de tu equipo al momento y separa a los dos jugadores implicados; el jugador que sufre la falta queda junto al balón y en su siguiente turno solo podrá <b>chutar</b> o <b>pasar</b> (no moverse), como un saque de falta directo.<br>
+      • <b>Regatear</b>: si llevas el balón y tienes un rival pegado, puedes intentar regatearlo eligiendo a qué casilla junto a él te mueves. Puede salir bien (avanzas), puedes perder el balón (se lo queda el rival), o puede que el rival cometa falta sobre ti.<br>
+      • Al seleccionar un jugador con balón (si puede chutar) se resalta en rojo la zona desde la que podría marcar — es más ancha a la altura de la portería y se cierra cerca del córner, donde no se puede chutar.<br>
       • Tras una falta, el jugador que la sufre puede <b>lesionarse</b> y quedar de baja varios partidos (Modo Carrera).<br>
       • En Modo Carrera puedes hacer hasta <b>3 cambios</b> por partido: pulsa el botón "Cambios" en cualquier momento para abrir la ventana de sustituciones.<br>
       • Puedes <b>simular tu partido sin jugarlo</b> (según la media de atributos de los titulares de cada equipo, con opción de sorpresa) o <b>simular el resto</b> de un partido ya empezado desde el marcador y minuto actuales.<br>
@@ -2621,6 +2626,7 @@
   function pieceAttrs(p){ const o={}; ATTRS.forEach(a=>o[a.key]=p[a.key]); return o; }
 
   let currentFormationA = DEFAULT_FORMATION, currentFormationB = DEFAULT_FORMATION;
+  let freeKickPieceId = null; // pieza que debe sacar de falta: solo puede chutar o pasar, no moverse
   let matchSubsUsed = 0;
   let subWindowOpen = false;
   const MAX_SUBS = 3;
@@ -2629,6 +2635,7 @@
     const fw = pieces.find(p=>p.team===kickoffTeam && p.role==='FW') || pieces.find(p=>p.team===kickoffTeam);
     if(fw){ ball = {col:fw.col, row:fw.row}; } else { ball = {col:6, row:4}; }
     turn = kickoffTeam;
+    freeKickPieceId = null;
   }
 
   function chebyshev(a,b){ return Math.max(Math.abs(a.col-b.col), Math.abs(a.row-b.row)); }
@@ -2702,11 +2709,77 @@
     if(chebyshev(piece,carrier)!==1) return null;
     return carrier;
   }
+  function adjacentOpponent(piece){
+    return pieces.find(p=> p.team!==piece.team && chebyshev(piece,p)===1);
+  }
+  function dribbleTargetCells(carrier){
+    const defender = adjacentOpponent(carrier);
+    if(!defender) return [];
+    const out=[];
+    for(let dc=-1; dc<=1; dc++){
+      for(let dr=-1; dr<=1; dr++){
+        if(dc===0 && dr===0) continue;
+        const col=defender.col+dc, row=defender.row+dr;
+        if(!inPlayBounds(col,row)) continue;
+        if(getPieceAt(col,row)) continue;
+        out.push({col,row});
+      }
+    }
+    return out;
+  }
+  function doDribble(carrier, defender, targetCol, targetRow){
+    const chance = clamp(0.5 + normalize(carrier.dribble)*0.3 - normalize(defender.defense)*0.2 - normalize(defender.strength)*0.05, 0.1, 0.9);
+    if(Math.random() < chance){
+      carrier.col = targetCol; carrier.row = targetRow;
+      ball.col = targetCol; ball.row = targetRow;
+      message = '¡Regate exitoso!';
+      return;
+    }
+    if(Math.random() < 0.55){
+      ball.col = defender.col; ball.row = defender.row;
+      message = 'Regate fallido: el rival se queda con el balón.';
+      return;
+    }
+    pushApart(defender, carrier);
+    pushApart(carrier, defender);
+    freeKickPieceId = carrier.id;
+    const pid = defender.pid;
+    const who = defender.name || `el ${defender.role}`;
+    const cardCount = pid ? (yellowCardsByPid[pid] = (yellowCardsByPid[pid]||0) + 1) : 1;
+    if(cardCount>=2){
+      message = `¡Falta en el regate y segunda amarilla, ROJA para ${who}! Expulsado el resto del partido.`;
+      sendOffPiece(defender);
+    } else {
+      message = `¡Falta sobre el regateador! Tarjeta amarilla para ${who}.`;
+    }
+    if(career && carrier.pid){
+      const injuryChance = 0.06;
+      if(Math.random() < injuryChance){
+        const injPlayer = career.players.find(p=>p.id===carrier.pid);
+        if(injPlayer){
+          const matches = randInt(1,4);
+          injPlayer.injuryMatchesLeft = Math.max(injPlayer.injuryMatchesLeft||0, matches);
+          message += ` ¡${carrier.name||carrier.role} se ha lesionado! Baja para ${matches} partido(s).`;
+        }
+      }
+    }
+  }
   function shootDistance(piece){
     const goalCol = piece.team==='A' ? 13 : 0;
     return Math.abs(piece.col - goalCol);
   }
-  function canShoot(piece){ return shootDistance(piece) <= rangeFromStrength(piece.strength); }
+  function shootRowPenalty(row){
+    const dist = Math.abs(row - 4); // 4 = fila central del campo (ROWS=9)
+    if(dist<=1) return 0;      // filas 3-5: boca de la portería, zona ancha sin penalización
+    if(dist===2) return 1;     // filas 2 y 6
+    if(dist===3) return 2;     // filas 1 y 7
+    return Infinity;           // filas 0 y 8: córner, no se puede chutar
+  }
+  function canShoot(piece){
+    const penalty = shootRowPenalty(piece.row);
+    if(!isFinite(penalty)) return false;
+    return shootDistance(piece) <= (rangeFromStrength(piece.strength) - penalty);
+  }
 
   function findFreeCellNear(col,row){
     for(let r=0;r<6;r++){
@@ -2770,6 +2843,7 @@
     if(Math.random() < foulChance){
       pushApart(defender, carrier);
       pushApart(carrier, defender);
+      freeKickPieceId = carrier.id;
       if(fromBehind){
         const pid = defender.pid;
         const who = defender.name || `el ${defender.role}`;
@@ -2939,6 +3013,7 @@
   }
 
   function afterStep(piece, wasMove, forceEnd){
+    if(freeKickPieceId===piece.id) freeKickPieceId = null;
     selected=null; actionMode=null;
     const stepMessage = message;
 
@@ -3003,7 +3078,9 @@
 
   function aiActWithPiece(piece){
     const carrier = getCarrier();
-    if(carrier && carrier.id===piece.id){
+    const isFreeKick = freeKickPieceId===piece.id;
+    const hasBall = (carrier && carrier.id===piece.id) || isFreeKick;
+    if(hasBall){
       if(piece.role==='GK'){
         const targets = aiPassTargets(piece);
         if(targets.length){
@@ -3019,6 +3096,16 @@
           targets.sort((a,b)=>a.col-b.col);
           turnActionUsed=true; doPass(piece, {col:targets[0].col,row:targets[0].row}); afterStep(piece, false); return;
         }
+      }
+      if(isFreeKick){
+        // saque de falta: nunca se mueve, como mucho intenta un pase a cualquier compañero
+        if(!turnActionUsed){
+          const anyTargets = aiPassTargets(piece);
+          if(anyTargets.length){
+            turnActionUsed=true; doPass(piece, {col:anyTargets[0].col,row:anyTargets[0].row}); afterStep(piece, false); return;
+          }
+        }
+        afterStep(piece, false); return;
       }
       const moves = validMoveCells(piece).sort((a,b)=>a.col-b.col);
       if(moves.length){ doMove(piece, moves[0].col, moves[0].row); afterStep(piece, true); return; }
@@ -3122,6 +3209,14 @@
       }
       return;
     }
+    if(actionMode==='dribble'){
+      const defender = adjacentOpponent(selected);
+      const cells = dribbleTargetCells(selected);
+      if(defender && cells.some(c=>c.col===col && c.row===row)){
+        const carrier=selected; turnActionUsed=true; doDribble(carrier, defender, col, row); afterStep(carrier, false); return;
+      }
+      return;
+    }
     if(!getPieceAt(col,row)){ selected=null; actionMode=null; render(); }
   }
   function setActionMode(m){ actionMode=m; render(); }
@@ -3151,8 +3246,11 @@
           cell.classList.add('playable');
           if(col===6) cell.classList.add('centerline');
           cell.addEventListener('click', ()=>clickCell(col,row));
-          if(shootZone && Math.abs(col-shootZone.goalCol)<=shootZone.range){
-            cell.classList.add('highlight-shoot-zone');
+          if(shootZone){
+            const penalty = shootRowPenalty(row);
+            if(isFinite(penalty) && Math.abs(col-shootZone.goalCol)<=(shootZone.range-penalty)){
+              cell.classList.add('highlight-shoot-zone');
+            }
           }
         }
         if(actionMode==='move' && selected && validMoveCells(selected).some(c=>c.col===col && c.row===row)){
@@ -3160,6 +3258,9 @@
         }
         if(actionMode==='pass' && selected && passTargetCells(selected).some(c=>c.col===col && c.row===row)){
           cell.classList.add('highlight-pass');
+        }
+        if(actionMode==='dribble' && selected && dribbleTargetCells(selected).some(c=>c.col===col && c.row===row)){
+          cell.classList.add('highlight-dribble');
         }
         boardEl.appendChild(cell);
       }
@@ -3293,14 +3394,19 @@
     if(mode==='ai' && selected.team==='B') return;
     const isGK = selected.role==='GK';
     if(actionMode===null){
-      if(!isGK) addBtn('Mover', ()=>setActionMode('move'));
+      const isFreeKick = freeKickPieceId===selected.id;
+      if(!isGK && !isFreeKick) addBtn('Mover', ()=>setActionMode('move'));
       const carrier = getCarrier();
-      const hasBall = carrier && carrier.id===selected.id;
+      const hasBall = (carrier && carrier.id===selected.id) || isFreeKick;
       if(hasBall && !turnActionUsed){
         addBtn('Pasar', ()=>setActionMode('pass'));
         if(!isGK && canShoot(selected)) addBtn('Chutar', ()=>{ turnActionUsed=true; doShoot(selected); afterStep(selected, false); });
+        if(!isGK && !isFreeKick){
+          const dribbleTarget = adjacentOpponent(selected);
+          if(dribbleTarget) addBtn('Regatear', ()=>setActionMode('dribble'));
+        }
       }
-      if(!isGK && !turnActionUsed){
+      if(!isGK && !turnActionUsed && !hasBall){
         const tackleTarget = canTackle(selected);
         if(tackleTarget) addBtn('Robar', ()=>{ turnActionUsed=true; const r=doTackle(selected, tackleTarget); afterStep(selected, false, r.foul); });
       }
