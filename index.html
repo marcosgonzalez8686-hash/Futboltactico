@@ -2746,6 +2746,7 @@
     }
     pushApart(defender, carrier);
     pushApart(carrier, defender);
+    ball.col = carrier.col; ball.row = carrier.row;
     freeKickPieceId = carrier.id;
     const pid = defender.pid;
     const who = defender.name || `el ${defender.role}`;
@@ -2849,6 +2850,7 @@
     if(Math.random() < foulChance){
       pushApart(defender, carrier);
       pushApart(carrier, defender);
+      ball.col = carrier.col; ball.row = carrier.row;
       freeKickPieceId = carrier.id;
       if(fromBehind){
         const pid = defender.pid;
@@ -3084,6 +3086,14 @@
     if(mode==='ai' && turn==='B'){ setTimeout(aiTakeTurn, 700); }
   }
 
+  function sortMovesTowardGoal(moves, piece){
+    const goalCol = piece.team==='A' ? 13 : 0;
+    return moves.slice().sort((a,b)=>{
+      const da = Math.abs(a.col-goalCol), db = Math.abs(b.col-goalCol);
+      if(da!==db) return da-db;
+      return Math.abs(a.row-4) - Math.abs(b.row-4); // a igualdad de avance, prioriza quedarse cerca del centro (embudo de tiro)
+    });
+  }
   function aiActWithPiece(piece){
     const carrier = getCarrier();
     const isFreeKick = freeKickPieceId===piece.id;
@@ -3115,7 +3125,7 @@
         }
         afterStep(piece, false); return;
       }
-      const moves = validMoveCells(piece).sort((a,b)=>a.col-b.col);
+      const moves = sortMovesTowardGoal(validMoveCells(piece), piece);
       if(moves.length){ doMove(piece, moves[0].col, moves[0].row); afterStep(piece, true); return; }
     } else if(piece.role!=='GK') {
       if(!turnActionUsed || tackleRetryAllowed){
@@ -3160,7 +3170,7 @@
           turnActionUsed=true; doPass(carrier, {col:targets[0].col,row:targets[0].row}); afterStep(carrier, false); return;
         }
       }
-      const moves = validMoveCells(carrier).sort((a,b)=>a.col-b.col);
+      const moves = sortMovesTowardGoal(validMoveCells(carrier), carrier);
       if(moves.length){ doMove(carrier, moves[0].col, moves[0].row); afterStep(carrier, true); return; }
     } else if(carrier && carrier.team!==aiTeam){
       if(!turnActionUsed || tackleRetryAllowed){
