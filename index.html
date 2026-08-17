@@ -177,6 +177,8 @@
   .attr-bar-row .abr-val{width:20px; text-align:right; font-size:10.5px; font-weight:bold; color:var(--chalk); flex-shrink:0;}
 
   .fixture-item{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:9px 0; border-bottom:1px solid #234;}
+  .club-link{cursor:pointer; text-decoration:underline dotted; text-underline-offset:2px;}
+  .club-link:active{opacity:0.7;}
   .fixture-item:last-child{border-bottom:none;}
   .fixture-teams{font-size:12.5px;}
   .fixture-score{font-weight:bold; color:var(--gold); font-size:13px;}
@@ -419,15 +421,15 @@
     </div>
     <div class="btn-row">
       <button class="mode-btn small" id="btnGoHistory">Historial del club</button>
+      <button class="mode-btn small" id="btnGoCalendar">Calendario</button>
+    </div>
+    <div class="btn-row">
       <button class="mode-btn small" id="btnGoYouth">Cantera</button>
-    </div>
-    <div class="btn-row">
       <button class="mode-btn small" id="btnGoMarket">Ojeo</button>
-      <button class="mode-btn small" id="btnGoStaff">Personal</button>
     </div>
     <div class="btn-row">
+      <button class="mode-btn small" id="btnGoStaff">Personal</button>
       <button class="mode-btn small" id="btnGoFacilities">Instalaciones</button>
-      <button class="mode-btn small" id="btnGoAllFacilities">Instalaciones (todos los clubes)</button>
     </div>
     <button class="mode-btn small" id="btnGoFriendly">Organizar amistoso</button>
     <div class="card"><b class="card-title">PARTIDOS DE LA JORNADA</b><div id="careerFixtureList"></div></div>
@@ -481,8 +483,7 @@
   </div>
 
   <div class="screen" id="careerAllFacilitiesScreen" hidden>
-    <h2>Instalaciones de los clubes</h2>
-    <div class="division-tabs" id="allFacilitiesDivisionTabs"></div>
+    <h2 id="clubViewTitle">Instalaciones del club</h2>
     <div id="allFacilitiesList"></div>
     <button class="mode-btn" id="btnBackAllFacilities">« Volver</button>
   </div>
@@ -510,6 +511,12 @@
     <h2>Historial del club</h2>
     <div class="card"><div id="careerHistoryList"></div></div>
     <button class="mode-btn" id="btnBackHistory">« Volver</button>
+  </div>
+
+  <div class="screen" id="careerCalendarScreen" hidden>
+    <h2>Calendario</h2>
+    <div class="card"><div id="careerCalendarList"></div></div>
+    <button class="mode-btn" id="btnBackCalendar">« Volver</button>
   </div>
 
   <div class="screen" id="careerLineupScreen" hidden>
@@ -848,7 +855,7 @@
 
   // ---------- Navegación de pantallas ----------
   function showScreen(name, fromHistory){
-    ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen','careerFacilitiesScreen','careerAllFacilitiesScreen','careerFriendlyScreen','careerLineupScreen','gameScreen'].forEach(id=>{
+    ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerCalendarScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen','careerFacilitiesScreen','careerAllFacilitiesScreen','careerFriendlyScreen','careerLineupScreen','gameScreen'].forEach(id=>{
       document.getElementById(id).hidden = (id !== name);
     });
     document.getElementById('scoreboard').hidden = (name !== 'gameScreen');
@@ -860,10 +867,11 @@
     if(name==='careerYouthScreen') renderCareerYouthScreen();
     if(name==='careerMarketScreen') renderCareerMarketScreen();
     if(name==='careerStaffScreen') renderCareerStaffScreen();
-    if(name==='careerAllFacilitiesScreen') renderAllFacilitiesScreen();
+    if(name==='careerAllFacilitiesScreen') renderClubFacilitiesView();
     if(name==='careerFriendlyScreen') renderCareerFriendlyScreen();
     if(name==='careerFacilitiesScreen') renderCareerFacilitiesScreen();
     if(name==='careerHistoryScreen') renderCareerHistory();
+    if(name==='careerCalendarScreen') renderCareerCalendar();
     if(name==='careerLineupScreen') renderLineupScreen();
     if(!fromHistory){
       if(history.state && history.state.screen===name){
@@ -905,8 +913,9 @@
   document.getElementById('btnBackMarket').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnGoStaff').addEventListener('click', ()=>showScreen('careerStaffScreen'));
   document.getElementById('btnBackStaff').addEventListener('click', ()=>showScreen('careerScreen'));
-  document.getElementById('btnGoAllFacilities').addEventListener('click', ()=>showScreen('careerAllFacilitiesScreen'));
   document.getElementById('btnBackAllFacilities').addEventListener('click', ()=>showScreen('careerScreen'));
+  document.getElementById('btnGoCalendar').addEventListener('click', ()=>showScreen('careerCalendarScreen'));
+  document.getElementById('btnBackCalendar').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnGoFriendly').addEventListener('click', ()=>showScreen('careerFriendlyScreen'));
   document.getElementById('btnBackFriendly').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnAdvanceWeek').addEventListener('click', advanceWeek);
@@ -986,9 +995,11 @@
       if(viewingDivision>1 && i<PROMOTED_PER_DIV) rowClass='promo';
       else if(viewingDivision<DIVISIONS && i>=st.length-RELEGATED_PER_DIV) rowClass='releg';
       const isUser = career.teams[t.idx].isUser;
-      html += `<tr class="${rowClass}"><td class="tname">${isUser?'★ ':''}${teamBadgeHTML(career.teams[t.idx])}${escapeHtml(t.name)}</td><td>${t.pj}</td><td>${t.g}</td><td>${t.e}</td><td>${t.p}</td><td>${t.dg}</td><td><b>${t.pts}</b></td></tr>`;
+      html += `<tr class="${rowClass}"><td class="tname">${isUser?'★ ':''}${clubNameLink(career.teams[t.idx], t.idx)}</td><td>${t.pj}</td><td>${t.g}</td><td>${t.e}</td><td>${t.p}</td><td>${t.dg}</td><td><b>${t.pts}</b></td></tr>`;
     });
-    document.getElementById('careerStandingsTable').innerHTML = html;
+    const tableEl = document.getElementById('careerStandingsTable');
+    tableEl.innerHTML = html;
+    wireClubLinks(tableEl);
   }
 
   // ---------- Modo Carrera ----------
@@ -1278,7 +1289,7 @@
       currentJornada:1, season:1, week:1, seasonSummary:null,
       youthPlayers: generateYouthSquad(5, userFacilities.youth), youthReviewPending:false,
       scoutingPool: generateScoutingPool(clubReputation(teams[0])), staff:[], staffCandidates: generateStaffCandidates(5), financialAlert:null,
-      pendingOffers:[],
+      pendingOffers:[], clubHistory:[],
     };
     careersList.push(newCareer);
     career = newCareer;
@@ -1399,16 +1410,23 @@
   function processEndOfSeason(){
     // 1. Ascensos y descensos (calculados antes de tocar nada) + premios de temporada
     const moves = []; // {idx, to}
+    const uIdx = userTeamIdx();
+    let userSeasonEntry = null;
     for(let div=1; div<=DIVISIONS; div++){
       const st = computeStandingsForDivision(div);
       awardSeasonPrizesForDivision(div, st);
+      const userPos = st.findIndex(s=>s.idx===uIdx);
+      if(userPos>=0){
+        userSeasonEntry = { season:career.season, division:div, position:userPos+1, teamsInDivision:st.length, points:st[userPos].pts, champion:(userPos===0) };
+      }
       if(div>1) st.slice(0,PROMOTED_PER_DIV).forEach(s=> moves.push({idx:s.idx, to:div-1}));
       if(div<DIVISIONS) st.slice(-RELEGATED_PER_DIV).forEach(s=> moves.push({idx:s.idx, to:div+1}));
     }
-    const uIdx = userTeamIdx();
     const divisionBefore = career.teams[uIdx].division;
     moves.forEach(m=>{ career.teams[m.idx].division = m.to; });
     const divisionAfter = career.teams[uIdx].division;
+    if(!career.clubHistory) career.clubHistory = [];
+    if(userSeasonEntry) career.clubHistory.push(userSeasonEntry);
 
     // 2. Envejecer y procesar retiros (con fichaje de reemplazo del mismo puesto y nivel)
     const retiredNames=[], arrivedNames=[];
@@ -1627,6 +1645,7 @@
           persistCareers();
         }
         if(!c.pendingOffers){ c.pendingOffers = []; persistCareers(); }
+        if(!c.clubHistory){ c.clubHistory = []; persistCareers(); }
         (function migrateStamina(){
           let changed=false;
           const assignIfMissing = (p)=>{ if(p && p.stamina===undefined){ p.stamina = randInt(20,80); changed=true; } };
@@ -2208,33 +2227,42 @@
 
   // ---------- Instalaciones de todos los clubes ----------
   let viewingFacilitiesDivision = null;
-  function renderAllFacilitiesScreen(){
-    if(viewingFacilitiesDivision===null) viewingFacilitiesDivision = userDivision();
-    const tabsEl = document.getElementById('allFacilitiesDivisionTabs');
-    tabsEl.innerHTML='';
-    for(let d=1; d<=DIVISIONS; d++){
-      const btn=document.createElement('button'); btn.textContent='Div '+d;
-      if(d===viewingFacilitiesDivision) btn.classList.add('active');
-      btn.addEventListener('click', ()=>{ viewingFacilitiesDivision=d; renderAllFacilitiesScreen(); });
-      tabsEl.appendChild(btn);
-    }
+  let viewingClubTeamIdx = null;
+  function openClubFacilitiesView(teamIdx){
+    viewingClubTeamIdx = teamIdx;
+    showScreen('careerAllFacilitiesScreen');
+  }
+  function clubNameLink(team, teamIdx){
+    return `<span class="club-link" data-team-idx="${teamIdx}">${teamBadgeHTML(team)}${escapeHtml(team.name)}</span>`;
+  }
+  function wireClubLinks(container){
+    container.querySelectorAll('.club-link').forEach(elLink=>{
+      elLink.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const idx = parseInt(elLink.dataset.teamIdx, 10);
+        if(!isNaN(idx)) openClubFacilitiesView(idx);
+      });
+    });
+  }
+  function renderClubFacilitiesView(){
+    const t = career.teams[viewingClubTeamIdx];
+    if(!t){ showScreen('careerScreen'); return; }
+    document.getElementById('clubViewTitle').innerHTML = `${teamBadgeHTML(t)}${escapeHtml(t.name)}`;
+    if(!t.facilities) t.facilities = {youth:1, training:1, stadium:{north:1,south:1,east:1,west:1}};
+    normalizeStadium(t);
     const el = document.getElementById('allFacilitiesList');
     el.innerHTML='';
-    career.teams.filter(t=>t.division===viewingFacilitiesDivision).forEach(t=>{
-      if(!t.facilities) t.facilities = {youth:1, training:1, stadium:{north:1,south:1,east:1,west:1}};
-      normalizeStadium(t);
-      const card=document.createElement('div'); card.className='card'; card.style.marginBottom='8px';
-      const title=document.createElement('b'); title.className='card-title';
-      title.innerHTML = `${t.isUser?'★ ':''}${teamBadgeHTML(t)}${escapeHtml(t.name)}`;
-      card.appendChild(title);
-      const cap = totalStadiumCapacity(t);
-      const line=document.createElement('div'); line.style.cssText='font-size:12.5px; margin-top:4px; line-height:1.7;';
-      line.innerHTML = `Juveniles: ${'★'.repeat(t.facilities.youth)}${'☆'.repeat(5-t.facilities.youth)}<br>
-        Entrenamiento: ${'★'.repeat(t.facilities.training)}${'☆'.repeat(5-t.facilities.training)}<br>
-        Estadio: ${cap.toLocaleString('es-ES')} asientos`;
-      card.appendChild(line);
-      el.appendChild(card);
-    });
+    const card=document.createElement('div'); card.className='card'; card.style.marginBottom='8px';
+    const rep=document.createElement('p'); rep.className='hint';
+    rep.innerHTML = `División ${t.division} · Reputación del club: <b>${clubReputation(t)}/100</b>`;
+    card.appendChild(rep);
+    const cap = totalStadiumCapacity(t);
+    const line=document.createElement('div'); line.style.cssText='font-size:13px; margin-top:4px; line-height:1.8;';
+    line.innerHTML = `Instalaciones juveniles: ${'★'.repeat(t.facilities.youth)}${'☆'.repeat(5-t.facilities.youth)}<br>
+      Instalaciones de entrenamiento: ${'★'.repeat(t.facilities.training)}${'☆'.repeat(5-t.facilities.training)}<br>
+      Estadio: ${cap.toLocaleString('es-ES')} asientos`;
+    card.appendChild(line);
+    el.appendChild(card);
   }
 
   let viewingFriendlyDivision = null;
@@ -2254,13 +2282,14 @@
       if(t.isUser || t.division!==viewingFriendlyDivision) return;
       const row=document.createElement('div'); row.className='fixture-item';
       const teamsSpan=document.createElement('div'); teamsSpan.className='fixture-teams';
-      teamsSpan.innerHTML = `${teamBadgeHTML(t)}${escapeHtml(t.name)}`;
+      teamsSpan.innerHTML = clubNameLink(t, idx);
       row.appendChild(teamsSpan);
       const btn=document.createElement('button'); btn.className='icon-btn'; btn.textContent='Jugar amistoso';
       btn.addEventListener('click', ()=>openFriendlyLineupScreen(idx));
       row.appendChild(btn);
       el.appendChild(row);
     });
+    wireClubLinks(el);
   }
   function openFriendlyLineupScreen(oppIdx){
     const userTeam = career.teams.find(t=>t.isUser);
@@ -2368,28 +2397,95 @@
       standsEl.appendChild(card);
     });
   }
+  function buildEvolutionSVG(values, opts){
+    const w = 320, h = 110, pad = 18;
+    const n = values.length;
+    if(!n) return '<p class="hint">Aún no hay datos de temporadas anteriores.</p>';
+    const minV = opts.min, maxV = opts.max;
+    const range = Math.max(1, maxV-minV);
+    const stepX = n>1 ? (w-2*pad)/(n-1) : 0;
+    const pts = values.map((v,i)=>{
+      const x = pad + i*stepX;
+      const y = pad + ((v-minV)/range)*(h-2*pad); // menor valor (mejor) queda arriba
+      return [x,y];
+    });
+    const line = pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+    const circles = pts.map((p,i)=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="${opts.color}"><title>Temporada ${opts.seasons[i]}: ${values[i]}</title></circle>`).join('');
+    const labels = pts.map((p,i)=> i%Math.ceil(n/6||1)===0 ? `<text x="${p[0].toFixed(1)}" y="${h-2}" font-size="7" fill="#9fd4b8" text-anchor="middle">T${opts.seasons[i]}</text>` : '').join('');
+    return `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:${h}px;">
+      <polyline points="${line}" fill="none" stroke="${opts.color}" stroke-width="2"/>
+      ${circles}${labels}
+    </svg>`;
+  }
   function renderCareerHistory(){
     const el = document.getElementById('careerHistoryList');
     el.innerHTML='';
+    const hist = career.clubHistory || [];
+    if(!hist.length){
+      el.innerHTML = '<p class="hint">Termina tu primera temporada para empezar a ver la evolución del club.</p>';
+      return;
+    }
+    const divTitle=document.createElement('b'); divTitle.className='card-title'; divTitle.textContent='DIVISIÓN POR TEMPORADA (1 = más alta)';
+    el.appendChild(divTitle);
+    const divChart=document.createElement('div');
+    divChart.innerHTML = buildEvolutionSVG(hist.map(h=>h.division), {min:1, max:DIVISIONS, color:'#2ecc71', seasons:hist.map(h=>h.season)});
+    el.appendChild(divChart);
+
+    const posTitle=document.createElement('b'); posTitle.className='card-title'; posTitle.style.marginTop='14px'; posTitle.style.display='block';
+    posTitle.textContent='POSICIÓN FINAL EN SU DIVISIÓN (1 = campeón)';
+    el.appendChild(posTitle);
+    const maxPos = Math.max(...hist.map(h=>h.teamsInDivision||TEAMS_PER_DIVISION));
+    const posChart=document.createElement('div');
+    posChart.innerHTML = buildEvolutionSVG(hist.map(h=>h.position), {min:1, max:maxPos, color:'#f4d03f', seasons:hist.map(h=>h.season)});
+    el.appendChild(posChart);
+
+    const titlesTitle=document.createElement('b'); titlesTitle.className='card-title'; titlesTitle.style.marginTop='14px'; titlesTitle.style.display='block';
+    titlesTitle.textContent='TÍTULOS';
+    el.appendChild(titlesTitle);
+    const champs = hist.filter(h=>h.champion);
+    if(!champs.length){
+      const p=document.createElement('p'); p.className='hint'; p.textContent='Todavía no has sido campeón de tu división.';
+      el.appendChild(p);
+    } else {
+      champs.forEach(h=>{
+        const row=document.createElement('div'); row.style.cssText='margin-top:6px; font-size:13px;';
+        row.innerHTML = `🏆 Temporada ${h.season} — Campeón de División ${h.division}`;
+        el.appendChild(row);
+      });
+    }
+  }
+  function renderCareerCalendar(){
+    const el = document.getElementById('careerCalendarList');
+    el.innerHTML='';
+    const div = userDivision();
     const rows = career.fixtures
-      .filter(f=> f.played && (isUserTeam(f.homeIdx) || isUserTeam(f.awayIdx)))
+      .filter(f=> f.division===div && (isUserTeam(f.homeIdx) || isUserTeam(f.awayIdx)))
       .sort((a,b)=>a.jornada-b.jornada);
-    if(!rows.length){ el.innerHTML='<p class="hint">Aún no has jugado partidos.</p>'; return; }
+    if(!rows.length){ el.innerHTML='<p class="hint">Aún no hay calendario disponible.</p>'; return; }
     rows.forEach(f=>{
       const userIsHome = isUserTeam(f.homeIdx);
-      const rival = career.teams[userIsHome ? f.awayIdx : f.homeIdx].name;
-      const gf = userIsHome ? f.scoreHome : f.scoreAway;
-      const gc = userIsHome ? f.scoreAway : f.scoreHome;
-      const resultLabel = gf>gc ? 'Victoria' : (gf<gc ? 'Derrota' : 'Empate');
+      const rivalIdx = userIsHome ? f.awayIdx : f.homeIdx;
+      const rivalTeam = career.teams[rivalIdx];
       const row=document.createElement('div'); row.className='fixture-item';
       const teamsSpan=document.createElement('div'); teamsSpan.className='fixture-teams';
-      teamsSpan.textContent = `J${f.jornada} · vs ${rival} (${resultLabel})`;
-      row.appendChild(teamsSpan);
-      const scoreSpan=document.createElement('div'); scoreSpan.className='fixture-score';
-      scoreSpan.textContent = `${gf} - ${gc}`;
-      row.appendChild(scoreSpan);
+      if(f.played){
+        const gf = userIsHome ? f.scoreHome : f.scoreAway;
+        const gc = userIsHome ? f.scoreAway : f.scoreHome;
+        const resultLabel = gf>gc ? 'Victoria' : (gf<gc ? 'Derrota' : 'Empate');
+        teamsSpan.innerHTML = `J${f.jornada} · vs ${clubNameLink(rivalTeam, rivalIdx)} (${resultLabel})`;
+        row.appendChild(teamsSpan);
+        const scoreSpan=document.createElement('div'); scoreSpan.className='fixture-score';
+        scoreSpan.textContent = `${gf} - ${gc}`;
+        row.appendChild(scoreSpan);
+      } else {
+        teamsSpan.innerHTML = `J${f.jornada} · vs ${clubNameLink(rivalTeam, rivalIdx)} ${userIsHome?'(casa)':'(fuera)'}`;
+        row.appendChild(teamsSpan);
+        const scoreSpan=document.createElement('div'); scoreSpan.className='fixture-score'; scoreSpan.textContent='—';
+        row.appendChild(scoreSpan);
+      }
       el.appendChild(row);
     });
+    wireClubLinks(el);
   }
   function renderCareerFixtures(){
     const el = document.getElementById('careerFixtureList');
@@ -2407,7 +2503,7 @@
       const home=career.teams[f.homeIdx], away=career.teams[f.awayIdx];
       const row=document.createElement('div'); row.className='fixture-item';
       const teamsSpan=document.createElement('div'); teamsSpan.className='fixture-teams';
-      teamsSpan.innerHTML = `${teamBadgeHTML(home)}${escapeHtml(home.name)} vs ${escapeHtml(away.name)}${teamBadgeHTML(away)}`;
+      teamsSpan.innerHTML = `${clubNameLink(home, f.homeIdx)} vs ${clubNameLink(away, f.awayIdx)}`;
       row.appendChild(teamsSpan);
       if(f.played){
         const s=document.createElement('div'); s.className='fixture-score'; s.textContent=`${f.scoreHome} - ${f.scoreAway}`;
@@ -2426,6 +2522,7 @@
       }
       el.appendChild(row);
     });
+    wireClubLinks(el);
   }
 
   // ---------- Selección de alineación y camiseta ----------
