@@ -2602,11 +2602,14 @@
     userTeam.lineup = [...pendingLineup];
     persistCareers();
     const oppLineup = autoPickLineup(oppTeam.slots, oppTeam.formation);
-    const userColor = chosenKit==='primary' ? userTeam.kitPrimary : userTeam.kitSecondary;
+    const userIsHome = (userIdx===f.homeIdx);
+    let userColor = chosenKit==='primary' ? userTeam.kitPrimary : userTeam.kitSecondary;
     let oppColor = oppTeam.kitPrimary;
-    if(hexDistance(oppColor, userColor) < 90) oppColor = oppTeam.kitSecondary;
+    if(hexDistance(oppColor, userColor) < 90){
+      if(userIsHome){ oppColor = oppTeam.kitSecondary; } else { userColor = userTeam.kitSecondary; }
+    }
     matchNames = {A:userTeam.name, B:oppTeam.name};
-    matchContext = {type:'career', fixtureId:f.id, userIsHome:(userIdx===f.homeIdx)};
+    matchContext = {type:'career', fixtureId:f.id, userIsHome};
     matchKitColors = {A:userColor, B:oppColor};
     startMatch('ai', rosterFromCareerTeam(userTeam, pendingLineup), rosterFromCareerTeam(oppTeam, oppLineup), userTeam.formation, oppTeam.formation);
   }
