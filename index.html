@@ -632,8 +632,9 @@
     {key:'pass', label:'Pase', short:'PAS'},
     {key:'defense', label:'Defensa', short:'DEF'},
     {key:'dribble', label:'Regate', short:'REG'},
+    {key:'stamina', label:'Resistencia', short:'RES'},
   ];
-  const NEUTRAL = {goalkeeping:50, speed:50, strength:50, shot:50, pass:50, defense:50, dribble:50};
+  const NEUTRAL = {goalkeeping:50, speed:50, strength:50, shot:50, pass:50, defense:50, dribble:50, stamina:50};
 
   const FIRST_NAMES=['Alex','Sara','Marcos','Lucía','Diego','Elena','Iván','Marta','Pablo','Nuria','Hugo','Carla','Dani','Vera','Adrián','Noa','Sergio','Irene','Mateo','Claudia'];
   const LAST_NAMES=['García','Pérez','Rodríguez','López','Martín','Sánchez','Romero','Torres','Navarro','Ramos','Ortiz','Molina','Delgado','Castro','Vega','Reyes','Flores','Cabrera','Serrano','Iglesias'];
@@ -757,10 +758,10 @@
   }
 
   const POSITION_TIERS = {
-    GK: { high:['goalkeeping'], mid:['pass','strength','dribble'], low:['speed','shot','defense'] },
-    DF: { high:['defense'],     mid:['strength','speed','pass'],   low:['goalkeeping','shot','dribble'] },
-    MF: { high:['pass'],        mid:['dribble','speed','defense'], low:['goalkeeping','shot','strength'] },
-    FW: { high:['shot'],        mid:['speed','dribble','strength'],low:['goalkeeping','pass','defense'] },
+    GK: { high:['goalkeeping'], mid:['pass','strength','dribble'], low:['speed','shot','defense','stamina'] },
+    DF: { high:['defense'],     mid:['strength','speed','pass','stamina'],   low:['goalkeeping','shot','dribble'] },
+    MF: { high:['pass'],        mid:['dribble','speed','defense','stamina'], low:['goalkeeping','shot','strength'] },
+    FW: { high:['shot'],        mid:['speed','dribble','strength','stamina'],low:['goalkeeping','pass','defense'] },
   };
   function tierColorForAttr(role, attrKey){
     const tiers = POSITION_TIERS[role] || POSITION_TIERS.MF;
@@ -1289,10 +1290,10 @@
   function userDivision(){ return career.teams[userTeamIdx()].division; }
 
   const LEVEL_UP_WEIGHTS = {
-    GK: {goalkeeping:0.55, pass:0.15, strength:0.10, dribble:0.10, defense:0.05, speed:0.03, shot:0.02},
-    DF: {defense:0.45, strength:0.20, pass:0.10, dribble:0.08, speed:0.09, shot:0.04, goalkeeping:0.04},
-    MF: {pass:0.40, dribble:0.20, defense:0.12, shot:0.10, speed:0.10, strength:0.05, goalkeeping:0.03},
-    FW: {shot:0.40, speed:0.20, dribble:0.12, pass:0.10, strength:0.10, defense:0.05, goalkeeping:0.03},
+    GK: {goalkeeping:0.50, pass:0.15, strength:0.10, dribble:0.08, defense:0.05, speed:0.03, shot:0.02, stamina:0.07},
+    DF: {defense:0.45, strength:0.15, pass:0.10, dribble:0.08, speed:0.09, shot:0.04, goalkeeping:0.04, stamina:0.05},
+    MF: {pass:0.40, dribble:0.15, defense:0.12, shot:0.10, speed:0.05, strength:0.05, goalkeeping:0.03, stamina:0.10},
+    FW: {shot:0.40, speed:0.20, dribble:0.12, pass:0.10, strength:0.05, defense:0.05, goalkeeping:0.03, stamina:0.05},
   };
   function pickWeighted(weights){
     let roll = Math.random();
@@ -1626,6 +1627,14 @@
           persistCareers();
         }
         if(!c.pendingOffers){ c.pendingOffers = []; persistCareers(); }
+        (function migrateStamina(){
+          let changed=false;
+          const assignIfMissing = (p)=>{ if(p && p.stamina===undefined){ p.stamina = randInt(20,80); changed=true; } };
+          c.players.forEach(assignIfMissing);
+          if(c.youthPlayers) c.youthPlayers.forEach(assignIfMissing);
+          if(c.scoutingPool) c.scoutingPool.forEach(entry=> assignIfMissing(entry.player));
+          if(changed) persistCareers();
+        })();
         career=c; showScreen('careerScreen');
       });
       const delBtn=document.createElement('button'); delBtn.className='icon-btn danger';
@@ -2629,7 +2638,7 @@
       if(sentOffSlots[team].has(i)) return null; // expulsado: no vuelve a aparecer en el resto del partido
       const col = team==='A' ? p.col : (13 - p.col);
       const attrs = roster[i] || NEUTRAL;
-      const piece = {id:team+i, team, role:p.role, col, row:p.row, pid: attrs.id || null, name: attrs.name || null, number: attrs.number || null, goals:0};
+      const piece = {id:team+i, team, role:p.role, col, row:p.row, pid: attrs.id || null, name: attrs.name || null, number: attrs.number || null, goals:0, fatigue: attrs.fatigue!==undefined ? attrs.fatigue : 0};
       ATTRS.forEach(a=> piece[a.key] = attrs[a.key]!==undefined ? attrs[a.key] : NEUTRAL[a.key]);
       return piece;
     }).filter(Boolean);
@@ -2741,7 +2750,7 @@
     return out;
   }
   function doDribble(carrier, defender, targetCol, targetRow){
-    const chance = clamp(0.5 + normalize(carrier.dribble)*0.3 - normalize(defender.defense)*0.2 - normalize(defender.strength)*0.05, 0.1, 0.9);
+    const chance = clamp(0.5 + normalize(fatiguedAttr(carrier,'dribble'))*0.3 - normalize(fatiguedAttr(defender,'defense'))*0.2 - normalize(fatiguedAttr(defender,'strength'))*0.05, 0.1, 0.9);
     if(Math.random() < chance){
       carrier.col = targetCol; carrier.row = targetRow;
       ball.col = targetCol; ball.row = targetRow;
@@ -2765,7 +2774,7 @@
       message = `¡Falta sobre el regateador! Tarjeta amarilla para ${who}.`;
     }
     if(career && carrier.pid){
-      const injuryChance = 0.06;
+      const injuryChance = 0.06 * (1 + (carrier.fatigue||0)/100);
       if(Math.random() < injuryChance){
         const injPlayer = career.players.find(p=>p.id===carrier.pid);
         if(injPlayer){
@@ -2790,7 +2799,7 @@
   function canShoot(piece){
     const penalty = shootRowPenalty(piece.row);
     if(!isFinite(penalty)) return false;
-    return shootDistance(piece) <= (rangeFromStrength(piece.strength) - penalty);
+    return shootDistance(piece) <= (rangeFromStrength(fatiguedAttr(piece,'strength')) - penalty);
   }
 
   function findFreeCellNear(col,row){
@@ -2815,7 +2824,7 @@
   }
   function doPass(passer, destCell){
     const dist = chebyshev(passer, destCell);
-    const chance = clamp(0.85 - 0.05*dist + normalize(passer.pass)*0.25, 0.3, 0.95);
+    const chance = clamp(0.85 - 0.05*dist + normalize(fatiguedAttr(passer,'pass'))*0.25, 0.3, 0.95);
     if(Math.random() < chance){
       ball.col = destCell.col; ball.row = destCell.row;
       const receiver = getPieceAt(destCell.col, destCell.row);
@@ -2846,7 +2855,7 @@
     if(inPlayBounds(nc,nr) && !getPieceAt(nc,nr)){ piece.col = nc; piece.row = nr; }
   }
   function doTackle(defender, carrier){
-    const chance = clamp(0.45 + normalize(defender.defense)*0.25 + normalize(defender.strength)*0.1 - normalize(carrier.dribble)*0.25, 0.1, 0.9);
+    const chance = clamp(0.45 + normalize(fatiguedAttr(defender,'defense'))*0.25 + normalize(fatiguedAttr(defender,'strength'))*0.1 - normalize(fatiguedAttr(carrier,'dribble'))*0.25, 0.1, 0.9);
     if(Math.random() < chance){
       ball.col = defender.col; ball.row = defender.row;
       message = '¡Robo exitoso!';
@@ -2871,7 +2880,7 @@
         message = '¡Falta! El árbitro corta el juego.';
       }
       if(career && carrier.pid){
-        const injuryChance = fromBehind ? 0.12 : 0.05;
+        const injuryChance = (fromBehind ? 0.12 : 0.05) * (1 + (carrier.fatigue||0)/100);
         if(Math.random() < injuryChance){
           const injPlayer = career.players.find(p=>p.id===carrier.pid);
           if(injPlayer){
@@ -2891,7 +2900,7 @@
     const roster = new Array(6).fill(null);
     pieces.filter(p=>p.team===team).forEach(p=>{
       const slotIdx = parseInt(p.id.slice(1), 10);
-      roster[slotIdx] = {...pieceAttrs(p), name:p.name, id:p.pid, number:p.number||null};
+      roster[slotIdx] = {...pieceAttrs(p), name:p.name, id:p.pid, number:p.number||null, fatigue:p.fatigue||0};
     });
     return roster;
   }
@@ -2950,7 +2959,7 @@
   }
   function doShoot(shooter){
     const dist = shootDistance(shooter);
-    let chance = 0.75 - 0.09*(dist-1) + normalize(shooter.shot)*0.25;
+    let chance = 0.75 - 0.09*(dist-1) + normalize(fatiguedAttr(shooter,'shot'))*0.25;
     const oppGK = pieces.find(p=>p.team!==shooter.team && p.role==='GK');
     if(oppGK){
       chance -= normalize(oppGK.goalkeeping)*0.3;
@@ -2997,6 +3006,7 @@
         half=2;
         halfSeconds=0;
         resetFormation('B', snapshotRoster('A'), snapshotRoster('B'));
+        pieces.forEach(p=>{ p.fatigue = clamp((p.fatigue||0) - 20, 0, 100); });
         message = '¡Descanso! Comienza la 2ª parte.';
         triggerHalftimeCelebration();
           return 'halftime';
@@ -3026,7 +3036,18 @@
     chainReceiverPieceId = null; tackleRetryAllowed = false;
   }
 
+  function fatigueIncrement(piece){
+    return clamp(7 - Math.round((piece.stamina||50)/20), 2, 7);
+  }
+  function fatiguePenaltyFactor(piece){
+    const f = piece.fatigue || 0;
+    return 1 - (f/100)*0.3; // hasta -30% de efectividad a cansancio máximo
+  }
+  function fatiguedAttr(piece, key){
+    return Math.max(1, Math.round(piece[key] * fatiguePenaltyFactor(piece)));
+  }
   function afterStep(piece, wasMove, forceEnd){
+    piece.fatigue = clamp((piece.fatigue||0) + fatigueIncrement(piece), 0, 100);
     if(freeKickPieceId===piece.id) freeKickPieceId = null;
     if(chainReceiverPieceId===piece.id) chainReceiverPieceId = null;
     selected=null; actionMode=null;
@@ -3066,7 +3087,7 @@
     } else {
       turnGuaranteedUsed++;
       if(wasMove){
-        const chance = piece.speed/100;
+        const chance = fatiguedAttr(piece,'speed')/100;
         if(Math.random() < chance){
           turnBonusPieceId = piece.id;
           selected = piece;
@@ -3296,7 +3317,9 @@
       el.className = `piece team-${p.team.toLowerCase()} role-${p.role}`;
       el.style.gridColumn=(p.col+1); el.style.gridRow=(p.row+1);
       el.textContent = p.number ? String(p.number) : p.role[0];
-      el.title = p.name ? `${p.name} — POR${p.goalkeeping} VEL${p.speed} FUE${p.strength} TIR${p.shot} PAS${p.pass} DEF${p.defense} REG${p.dribble}` : '';
+      el.title = p.name ? `${p.name} — POR${p.goalkeeping} VEL${p.speed} FUE${p.strength} TIR${p.shot} PAS${p.pass} DEF${p.defense} REG${p.dribble} RES${p.stamina} · Cansancio ${p.fatigue||0}%` : '';
+      if((p.fatigue||0) >= 70) el.style.opacity = '0.7';
+      else if((p.fatigue||0) >= 40) el.style.opacity = '0.87';
       if(matchKitColors[p.team]){
         el.style.background = matchKitColors[p.team];
         el.style.color = textColorFor(matchKitColors[p.team]);
@@ -3342,6 +3365,9 @@
     const numLabel = p.number ? `#${p.number} ` : '';
     const title = p.name ? `${numLabel}${p.name}` : `${numLabel}${roleNames[p.role]||p.role} sin nombre`;
     let html = `<div class="player-card"><div class="player-card-head"><b>${escapeHtml(title)}</b><span>${roleNames[p.role]||p.role} · ${teamName(p.team)}</span></div>`;
+    const fatigue = p.fatigue||0;
+    const fatigueColor = fatigue>=70 ? '#e74c3c' : (fatigue>=35 ? '#f4d03f' : '#2ecc71');
+    html += `<div style="font-size:10.5px;color:#9fd4b8;margin:2px 0 6px;">Cansancio: <b style="color:${fatigueColor};">${fatigue}%</b>${fatigue>=70 ? ' — considera hacer un cambio' : ''}</div>`;
     ATTRS.forEach(a=>{
       const v = p[a.key];
       html += `<div class="attr-bar-row"><div class="abr-label">${a.short}</div><div class="attr-bar-track"><div class="attr-bar-fill" style="width:${v}%;background:${attrBarColor(v)}"></div></div><div class="abr-val">${v}</div></div>`;
@@ -3357,6 +3383,7 @@
     piece.name = benchPlayer.name;
     piece.number = benchPlayer.squadNumber || null;
     ATTRS.forEach(a=> piece[a.key] = benchPlayer[a.key]);
+    piece.fatigue = 0;
     if(!matchParticipants.A.includes(benchPlayer.id)) matchParticipants.A.push(benchPlayer.id);
     matchSubsUsed++;
     message = `Cambio: entra ${benchPlayer.name}.`;
