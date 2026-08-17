@@ -424,11 +424,10 @@
       <button class="mode-btn small" id="btnGoCalendar">Calendario</button>
     </div>
     <div class="btn-row">
-      <button class="mode-btn small" id="btnGoYouth">Cantera</button>
       <button class="mode-btn small" id="btnGoMarket">Ojeo</button>
+      <button class="mode-btn small" id="btnGoStaff">Personal</button>
     </div>
     <div class="btn-row">
-      <button class="mode-btn small" id="btnGoStaff">Personal</button>
       <button class="mode-btn small" id="btnGoFacilities">Instalaciones</button>
     </div>
     <button class="mode-btn small" id="btnGoFriendly">Organizar amistoso</button>
@@ -451,7 +450,10 @@
   <div class="screen" id="careerRosterScreen" hidden>
     <h2>Plantilla</h2>
     <p class="hint">Hasta 15 jugadores. Fija tus titulares por defecto o cámbialos antes de cada partido.</p>
-    <button class="mode-btn primary" id="btnEditDefaultLineup">Editar titulares</button>
+    <div class="btn-row">
+      <button class="mode-btn primary" id="btnEditDefaultLineup">Editar titulares</button>
+      <button class="mode-btn" id="btnGoYouth">Cantera</button>
+    </div>
     <div class="card"><div id="careerRosterList"></div></div>
     <button class="mode-btn" id="btnBackRoster">« Volver</button>
   </div>
@@ -908,7 +910,7 @@
   document.getElementById('btnGoRoster').addEventListener('click', ()=>showScreen('careerRosterScreen'));
   document.getElementById('btnGoHistory').addEventListener('click', ()=>showScreen('careerHistoryScreen'));
   document.getElementById('btnGoYouth').addEventListener('click', ()=>showScreen('careerYouthScreen'));
-  document.getElementById('btnBackYouth').addEventListener('click', ()=>showScreen('careerScreen'));
+  document.getElementById('btnBackYouth').addEventListener('click', ()=>showScreen('careerRosterScreen'));
   document.getElementById('btnGoMarket').addEventListener('click', ()=>showScreen('careerMarketScreen'));
   document.getElementById('btnBackMarket').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnGoStaff').addEventListener('click', ()=>showScreen('careerStaffScreen'));
@@ -1829,11 +1831,12 @@
   }
   function renderPlayerCard(p, opts){
     const editableNumber = opts && opts.editableNumber;
+    const hideValue = opts && opts.hideValue;
     const card=document.createElement('div'); card.className='player-card';
     const head=document.createElement('div'); head.className='player-card-head';
     const numLabel = p.squadNumber ? `#${p.squadNumber} ` : '';
     const injuryLabel = p.injuryMatchesLeft>0 ? ` <span style="color:#e74c3c;">🚑 ${p.injuryMatchesLeft} partido(s) baja</span>` : '';
-    const valueLabel = ` <span style="color:var(--gold);">· ${formatMoney(calcMarketValue(p))}</span>`;
+    const valueLabel = hideValue ? '' : ` <span style="color:var(--gold);">· ${formatMoney(calcMarketValue(p))}</span>`;
     head.innerHTML = `<b>${numLabel}${escapeHtml(p.name)}</b><span>${p.age} años${valueLabel}${injuryLabel}</span>`;
     card.appendChild(head);
     if(editableNumber){
@@ -1953,6 +1956,9 @@
       const youthTitle=document.createElement('b'); youthTitle.className='card-title'; youthTitle.style.marginTop='10px'; youthTitle.style.display='block';
       youthTitle.textContent='CANTERA';
       el.appendChild(youthTitle);
+      const youthNote=document.createElement('p'); youthNote.className='hint';
+      youthNote.textContent = 'Los canteranos no se pueden vender ni conocer su valor de mercado hasta que suban al primer equipo.';
+      el.appendChild(youthNote);
     } else {
       hintEl.textContent = `Plantilla actual: ${userTeam.slots.length}/${MAX_SQUAD_SIZE}. Las decisiones sobre la cantera y la plantilla se toman al final de temporada.`;
       confirmBtn.hidden = true;
@@ -1963,7 +1969,7 @@
       return;
     }
     career.youthPlayers.forEach(p=>{
-      const card = renderPlayerCard(p);
+      const card = renderPlayerCard(p, {hideValue:true});
       if(career.youthReviewPending){
         const btnRow=document.createElement('div'); btnRow.className='btn-row'; btnRow.style.marginTop='6px';
         const promoteBtn=document.createElement('button'); promoteBtn.className='mode-btn small primary'; promoteBtn.textContent='Subir al 1er equipo';
@@ -1984,26 +1990,6 @@
         btnRow.appendChild(promoteBtn); btnRow.appendChild(discardBtn);
         card.appendChild(btnRow);
       }
-      const sellRow=document.createElement('div'); sellRow.className='btn-row'; sellRow.style.marginTop='6px';
-      const sellPrice = Math.round(calcMarketValue(p)*0.8);
-      const isSellPending = pendingSellPid===p.id;
-      const sellBtn=document.createElement('button'); sellBtn.className='mode-btn small';
-      sellBtn.textContent = isSellPending ? `¿Seguro? Vender por ${formatMoney(sellPrice)}` : `Vender (${formatMoney(sellPrice)})`;
-      sellBtn.addEventListener('click', ()=>{
-        if(!isSellPending){ pendingSellPid=p.id; renderCareerYouthScreen(); return; }
-        career.youthPlayers = career.youthPlayers.filter(x=>x.id!==p.id);
-        userTeam.budget = (userTeam.budget||0) + sellPrice;
-        pendingSellPid = null;
-        persistCareers();
-        renderCareerYouthScreen();
-      });
-      sellRow.appendChild(sellBtn);
-      if(isSellPending){
-        const cancelSellBtn=document.createElement('button'); cancelSellBtn.className='mode-btn small'; cancelSellBtn.textContent='Cancelar';
-        cancelSellBtn.addEventListener('click', ()=>{ pendingSellPid=null; renderCareerYouthScreen(); });
-        sellRow.appendChild(cancelSellBtn);
-      }
-      card.appendChild(sellRow);
       el.appendChild(card);
     });
   }
