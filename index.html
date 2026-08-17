@@ -1814,7 +1814,8 @@
     const head=document.createElement('div'); head.className='player-card-head';
     const numLabel = p.squadNumber ? `#${p.squadNumber} ` : '';
     const injuryLabel = p.injuryMatchesLeft>0 ? ` <span style="color:#e74c3c;">🚑 ${p.injuryMatchesLeft} partido(s) baja</span>` : '';
-    head.innerHTML = `<b>${numLabel}${escapeHtml(p.name)}</b><span>${p.age} años${injuryLabel}</span>`;
+    const valueLabel = ` <span style="color:var(--gold);">· ${formatMoney(calcMarketValue(p))}</span>`;
+    head.innerHTML = `<b>${numLabel}${escapeHtml(p.name)}</b><span>${p.age} años${valueLabel}${injuryLabel}</span>`;
     card.appendChild(head);
     if(editableNumber){
       const numRow=document.createElement('div'); numRow.className='slot-row';
