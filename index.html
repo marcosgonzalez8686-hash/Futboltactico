@@ -908,7 +908,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=19"></script>
+<script src="sound.js?v=20"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1387,7 +1387,6 @@
   }
 
   const MAX_SQUAD_SIZE = 15;
-  const YOUTH_SQUAD_SIZE = 10;
   function generateYouthPlayer(targetPos, divisionLevel, facilityLevel){
     const p = generateRandomPlayer(targetPos, Math.min(DIVISIONS, (divisionLevel||5)+1));
     p.age = randInt(15,17);
@@ -1398,11 +1397,27 @@
     p.hiddenGrowth = clamp(Math.round((randInt(30,99)+randInt(30,99))/2) + growthBoost, 1, 99);
     return p;
   }
-  function generateYouthSquad(divisionLevel, facilityLevel){ return SQUAD_TARGETS.slice(0,YOUTH_SQUAD_SIZE).map(role=>generateYouthPlayer(role, divisionLevel, facilityLevel)); }
+  // Tamaño del filial según las instalaciones juveniles: nivel 1 → 4 canteranos … nivel 5 → 12
+  function youthSquadSize(facilityLevel){ return 2 + 2*clamp(facilityLevel||1, 1, 5); }
+  function generateYouthSquad(divisionLevel, facilityLevel){
+    const n = youthSquadSize(facilityLevel);
+    const roles = []; for(let i=0;i<n;i++) roles.push(SQUAD_TARGETS[i % SQUAD_TARGETS.length]);
+    return roles.map(role=>generateYouthPlayer(role, divisionLevel, facilityLevel));
+  }
+  // Coste semanal de un canterano: 20 € × división, y un 15 % más por cada nivel de instalaciones
+  function youthWageEach(team){
+    const lvl = (team.facilities && team.facilities.youth) || 1;
+    return Math.round(20 * divisionFactor(team.division) * (1 + 0.15*(lvl-1)));
+  }
+  // Cantera semanal de un club: el usuario paga sus canteranos reales; los rivales, un filial del tamaño de sus instalaciones
+  function youthWeeklyCost(team){
+    const n = team.isUser ? (career.youthPlayers ? career.youthPlayers.length : 0) : youthSquadSize((team.facilities && team.facilities.youth) || 1);
+    return n * youthWageEach(team);
+  }
 
   // ---------- Instalaciones ----------
   const FACILITY_TYPES = {
-    youth:    {label:'Instalaciones juveniles', desc:'Mejora los atributos base y el potencial oculto de los canteranos que se generan.'},
+    youth:    {label:'Instalaciones juveniles', desc:'Más canteranos en el filial (de 4 a 12) y con mejores atributos y potencial. Cada canterano cobra un poco más por nivel.'},
     training: {label:'Instalaciones de entrenamiento', desc:'Aumenta la velocidad a la que tus jugadores y canteranos ganan experiencia.'},
   };
   const STAND_KEYS = ['north','south','east','west'];
@@ -1478,14 +1493,14 @@
     const f = divisionFactor(level);
     return {
       initialBudget: Math.round(80000 * f),
-      tv: Math.round(800 * f),
+      tv: Math.round(1600 * f),
       gate: Math.round(500 * f),
       prizeBase: Math.round(4000 * f),
     };
   }
   function calcWage(p){
     const overall = overallRating(p);
-    const base = overall * 15;
+    const base = overall * 10;
     const ageFactor = clamp(1 - Math.abs(p.age-27)*0.02, 0.5, 1.15);
     return Math.max(50, Math.round(base * ageFactor));
   }
@@ -1503,9 +1518,7 @@
   function calcTeamWageBill(team){
     let total = 0;
     team.slots.forEach(pid=>{ const p=career.players.find(x=>x.id===pid); if(p) total += calcWage(p); });
-    if(team.isUser && career.youthPlayers){
-      total += career.youthPlayers.length * Math.round(50 * divisionFactor(team.division));
-    }
+    total += youthWeeklyCost(team);
     if(team.isUser){
       total += calcStaffWageBill();
     }
@@ -1600,7 +1613,7 @@
   }
 
   // ---------- Afición y asistencia ----------
-  const TICKET_PRICE = 0.5; // € por espectador
+  const TICKET_PRICE = 2; // € por espectador
   function fanMoodOf(team){ return typeof team.fanMood === 'number' ? team.fanMood : 50; }
   function changeFanMood(team, delta){
     // vuelve poco a poco hacia 50 y se mueve con los resultados
@@ -1634,7 +1647,7 @@
         // desglose: plantilla, cantera y personal
         let players = 0;
         team.slots.forEach(pid=>{ const p=career.players.find(x=>x.id===pid); if(p) players += calcWage(p); });
-        const youth = career.youthPlayers ? career.youthPlayers.length * Math.round(50 * divisionFactor(team.division)) : 0;
+        const youth = youthWeeklyCost(team);
         userMoney('wages', -players); userMoney('youth', -youth); userMoney('staff', -calcStaffWageBill());
       } else {
         team.budget = (team.budget||0) - calcTeamWageBill(team);
@@ -2056,7 +2069,7 @@
         }
         if(!c.youthPlayers){
           const uTeam = c.teams.find(t=>t.isUser);
-          c.youthPlayers = generateYouthSquad(uTeam ? uTeam.division : 5);
+          c.youthPlayers = generateYouthSquad(uTeam ? uTeam.division : 5, uTeam && uTeam.facilities ? uTeam.facilities.youth : 1);
           c.youthReviewPending = false;
           persistCareers();
         }
@@ -2366,8 +2379,10 @@
     el.innerHTML='';
     const hintEl = document.getElementById('youthHint');
     const confirmBtn = document.getElementById('btnConfirmYouth');
+    const yLvl = (userTeam.facilities && userTeam.facilities.youth) || 1;
+    const youthCostTxt = ` Filial: ${(career.youthPlayers||[]).length} canteranos · ${formatMoney(youthWeeklyCost(userTeam))} por semana (${formatMoney(youthWageEach(userTeam))} cada uno). Con tus instalaciones juveniles de nivel ${yLvl} el filial nuevo de cada temporada tendrá ${youthSquadSize(yLvl)} canteranos.`;
     if(career.youthReviewPending){
-      hintEl.textContent = `Plantilla actual: ${userTeam.slots.length}/${MAX_SQUAD_SIZE}. Decide qué canteranos subes al primer equipo o descartas, y si quieres liberar sitio descartando jugadores del primer equipo. Los canteranos que no decidas se descartarán al confirmar.`;
+      hintEl.textContent = `Plantilla actual: ${userTeam.slots.length}/${MAX_SQUAD_SIZE}. Decide qué canteranos subes al primer equipo o descartas, y si quieres liberar sitio descartando jugadores del primer equipo. Los canteranos que no decidas se descartarán al confirmar.` + youthCostTxt;
       confirmBtn.hidden = false;
 
       const squadTitle=document.createElement('b'); squadTitle.className='card-title'; squadTitle.textContent='TU PLANTILLA (descartar)';
@@ -2411,7 +2426,7 @@
       youthNote.textContent = 'Los canteranos no se pueden vender ni conocer su valor de mercado hasta que suban al primer equipo.';
       el.appendChild(youthNote);
     } else {
-      hintEl.textContent = `Plantilla actual: ${userTeam.slots.length}/${MAX_SQUAD_SIZE}. Las decisiones sobre la cantera y la plantilla se toman al final de temporada.`;
+      hintEl.textContent = `Plantilla actual: ${userTeam.slots.length}/${MAX_SQUAD_SIZE}. Las decisiones sobre la cantera y la plantilla se toman al final de temporada.` + youthCostTxt;
       confirmBtn.hidden = true;
     }
     if(!career.youthPlayers || !career.youthPlayers.length){
@@ -2769,7 +2784,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=19').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=20').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -4241,7 +4256,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=19').then(m=>{
+      import('./match3d.js?v=20').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
