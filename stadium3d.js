@@ -173,6 +173,7 @@ function buildStand(level, len, kit, mats, opts){
 
   // Público: cuantas más filas, más gente
   const per = Math.floor(len/0.24);
+  const occ = opts && typeof opts.occupancy === 'number' ? opts.occupancy : 0.82;
   const total = rows.length*per;
   if(total){
     const fans = new THREE.InstancedMesh(new THREE.BoxGeometry(0.13, 0.2, 0.1), mats.fan, total);
@@ -182,7 +183,7 @@ function buildStand(level, len, kit, mats, opts){
     let k = 0;
     rows.forEach(r=>{
       for(let s=0;s<per;s++){
-        if(Math.random() < 0.18) continue; // asientos vacíos
+        if(Math.random() > occ) continue; // asientos vacíos según el público que ha venido
         const x = -len/2 + 0.12 + s*(len-0.24)/Math.max(1,per-1) + (Math.random()-0.5)*0.05;
         mtx.makeTranslation(x, r.y + 0.1, r.z + 0.04);
         fans.setMatrixAt(k, mtx);
@@ -256,7 +257,7 @@ function buildExtras(levels, kit, mats, halfL, halfW, gap){
 }
 
 // Gradas, esquinas y focos listos para rodear otro campo (lo usa el partido en 3D)
-export function buildStadiumShell(levels, kitColors, dims){
+export function buildStadiumShell(levels, kitColors, dims, extra){
   const kit = {primary: (kitColors && kitColors.primary) || '#e8871e', secondary: (kitColors && kitColors.secondary) || '#2b4c7e'};
   const mats = makeMats();
   mats.adTex = adBoardTexture(kit.primary, kit.secondary);
@@ -264,7 +265,7 @@ export function buildStadiumShell(levels, kitColors, dims){
   const sides = sidesFor(dims.halfL, dims.halfW, dims.gap);
   STAND_KEYS.forEach(k=>{
     const sd = sides[k];
-    const g = buildStand(lv(levels[k]), sd.len, kit, mats, {isEnd: k==='east' || k==='west'});
+    const g = buildStand(lv(levels[k]), sd.len, kit, mats, {isEnd: k==='east' || k==='west', occupancy: extra && extra.occupancy});
     g.position.set(...sd.pos); g.rotation.y = sd.rot;
     group.add(g);
   });
@@ -335,6 +336,7 @@ export function mountStadium(container){
   const standGroups = {};
   const extras = new THREE.Group(); scene.add(extras);
   let prevLevels = null, kit = {primary: '#e8871e', secondary: '#2b4c7e'};
+  let curOccupancy = 0.82; // proporción de asientos ocupados que se dibujan
   const growAnims = [];
 
   // Cámara orbital sencilla
@@ -387,7 +389,7 @@ export function mountStadium(container){
       const old = standGroups[k];
       if(old){ scene.remove(old); old.traverse(o=>{ if(o.geometry) o.geometry.dispose(); }); }
       const s = SIDES[k];
-      const g = buildStand(lv(levels[k]), s.len, kit, mats, {isEnd: k==='east' || k==='west'});
+      const g = buildStand(lv(levels[k]), s.len, kit, mats, {isEnd: k==='east' || k==='west', occupancy: curOccupancy});
       g.position.set(...s.pos); g.rotation.y = s.rot;
       scene.add(g); standGroups[k] = g;
       if(animateKeys.includes(k)){ g.scale.y = 0.02; growAnims.push({g, t0: performance.now()}); }
@@ -408,8 +410,11 @@ export function mountStadium(container){
     opts = opts || {};
     const prevKit = kit;
     kit = {primary: (kitColors && kitColors.primary) || '#e8871e', secondary: (kitColors && kitColors.secondary) || '#2b4c7e'};
+    const prevOcc = curOccupancy;
+    if(typeof opts.occupancy === 'number') curOccupancy = opts.occupancy;
     const changed = !prevLevels || Object.keys(SIDES).some(k=> prevLevels[k] !== levels[k])
-      || prevKit.primary !== kit.primary || prevKit.secondary !== kit.secondary;
+      || prevKit.primary !== kit.primary || prevKit.secondary !== kit.secondary
+      || Math.abs(prevOcc - curOccupancy) > 0.03;
     const grown = (prevLevels && !opts.reset) ? Object.keys(SIDES).filter(k=> (lv(levels[k])) > (lv(prevLevels[k]))) : [];
     if(changed) rebuild(levels, grown);
     // Al ampliar una grada, la cámara gira hacia ella

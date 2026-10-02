@@ -2,7 +2,7 @@
 // No contiene reglas: recibe el estado ya calculado por index.html y avisa de los toques
 // sobre fichas o casillas para que el juego los procese igual que en el tablero 2D.
 import * as THREE from './vendor/three.module.min.js';
-import { buildStadiumShell } from './stadium3d.js?v=17';
+import { buildStadiumShell } from './stadium3d.js?v=18';
 
 const COLS = 14, ROWS = 9;
 const GOAL_COL_W = 0.62;
@@ -209,7 +209,7 @@ export function mountMatch3D(container, handlers){
 
   // Estadio alrededor (se cambia con setVenue)
   let venue = null, venueExtent = 12;
-  function setVenue(levels, kit){
+  function setVenue(levels, kit, occupancy){
     if(venue){
       scene.remove(venue);
       venue.traverse(o=>{
@@ -217,7 +217,7 @@ export function mountMatch3D(container, handlers){
         (Array.isArray(o.material) ? o.material : [o.material]).forEach(m=>{ if(m){ if(m.map) m.map.dispose(); m.dispose(); } });
       });
     }
-    const shell = buildStadiumShell(levels, kit, {halfL: HALF_L, halfW: HALF_W, gap: 1.1});
+    const shell = buildStadiumShell(levels, kit, {halfL: HALF_L, halfW: HALF_W, gap: 1.1}, {occupancy});
     venue = shell.group; venueExtent = shell.extent;
     scene.add(venue);
   }

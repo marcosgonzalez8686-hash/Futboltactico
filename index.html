@@ -392,6 +392,42 @@
   .pc-attr span{font-size:10.5px; color:#9fd4b8; font-weight:600;}
   .pc-attr b{font-size:15px; font-weight:900; text-shadow:0 1px 2px rgba(0,0,0,.5);}
   .match-menu-btn{display:none;}
+  .fx-att{display:block; font-size:11px; color:#9fd4b8; margin-top:2px; font-weight:normal;}
+  .match-crowd{color:#8ecbff;}
+
+  /* Finanzas */
+  .fin-kpis{display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;}
+  .fin-kpi{background:var(--panel); border:1px solid #2f5c46; border-radius:10px; padding:8px; text-align:center;}
+  .fin-kpi span{display:block; font-size:10.5px; color:#9fd4b8;}
+  .fin-kpi b{display:block; font-size:16px; margin-top:2px; color:var(--chalk);}
+  .fin-tabs{display:flex; gap:6px;}
+  .fin-tabs button{flex:1; padding:8px; border-radius:8px; border:1.5px solid #2f5c46; background:transparent; color:#cfe8d8; font-weight:bold; cursor:pointer;}
+  .fin-tabs button.active{background:var(--gold); color:#0d1f18; border-color:var(--gold);}
+  .fin-nav{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;}
+  .fin-nav b{font-size:14px;}
+  .fin-nav button{background:#1c4433; color:var(--chalk); border:none; border-radius:8px; padding:6px 12px; font-size:14px; cursor:pointer;}
+  .fin-nav button:disabled{opacity:.3; cursor:default;}
+  .fin-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  .fin-table td{padding:4px 2px; border-bottom:1px solid rgba(255,255,255,.06);}
+  .fin-table td:last-child{text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .fin-table tr.fin-head td{color:#9fd4b8; font-weight:bold; padding-top:10px; border-bottom:1px solid #2f5c46;}
+  .fin-table tr.fin-total td{font-weight:bold;}
+  .fin-pos{color:#5ee08f;} .fin-neg{color:#ff8b80;}
+  .fin-table .muted{color:#7fa892;}
+  .fin-chart{position:relative; margin:4px 0 16px;}
+  .fin-chart h4{margin:0 0 2px; font-size:12.5px; color:var(--chalk);}
+  .fin-chart .fin-sub{font-size:10.5px; color:#9fd4b8; margin-bottom:4px;}
+  .fin-chart svg{display:block; width:100%; height:auto; overflow:visible; touch-action:pan-y;}
+  .fin-legend{display:flex; gap:12px; font-size:11px; color:#cfe8d8; margin:2px 0 4px;}
+  .fin-legend i{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:4px; vertical-align:-1px;}
+  .fin-tip{
+    position:absolute; pointer-events:none; z-index:5; background:#0a1a12; border:1px solid #2f5c46; border-radius:8px;
+    padding:5px 8px; font-size:11px; color:var(--chalk); white-space:nowrap; box-shadow:0 4px 12px rgba(0,0,0,.5);
+    transform:translate(-50%, -100%); display:none;
+  }
+  .fin-tip .muted{color:#9fd4b8;}
+  .fin-select{width:100%; padding:6px; border-radius:6px; border:1px solid #2f5c46; background:#0e2118; color:var(--chalk); font-size:12px; margin-bottom:4px;}
+
   .view-toggle .lbl-s{display:none;}
 
   /* Partido a pantalla completa en horizontal: el campo ocupa toda la pantalla y el resto flota encima */
@@ -616,6 +652,7 @@
     </div>
     <div class="turn-indicator" id="turnIndicator"></div>
     <div class="turn-indicator" id="matchClock"></div>
+    <div class="turn-indicator match-crowd" id="matchCrowd" hidden></div>
   </header>
 
   <!-- MENU -->
@@ -684,6 +721,7 @@
     </div>
     <div class="btn-row">
       <button class="mode-btn small" id="btnGoFacilities">Instalaciones</button>
+      <button class="mode-btn small" id="btnGoFinance">Finanzas</button>
     </div>
     <button class="mode-btn small" id="btnGoFriendly">Organizar amistoso</button>
     <div class="card"><b class="card-title">PARTIDOS DE LA JORNADA</b><div id="careerFixtureList"></div></div>
@@ -772,6 +810,18 @@
     <button class="mode-btn" id="btnBackHistory">« Volver</button>
   </div>
 
+  <div class="screen" id="careerFinanceScreen" hidden>
+    <h2>Finanzas</h2>
+    <div class="fin-kpis" id="financeKpis"></div>
+    <div class="fin-tabs" id="financeTabs">
+      <button data-view="week" class="active">Semana</button>
+      <button data-view="season">Temporada</button>
+    </div>
+    <div class="card" id="financeSummary"></div>
+    <div class="card" id="financeCharts"></div>
+    <button class="mode-btn" id="btnBackFinance">« Volver</button>
+  </div>
+
   <div class="screen" id="careerCalendarScreen" hidden>
     <h2>Calendario</h2>
     <div class="card"><div id="careerCalendarList"></div></div>
@@ -856,7 +906,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=17"></script>
+<script src="sound.js?v=18"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1117,6 +1167,7 @@
   let matchEnded = false;
   let matchKitColors = {A:null, B:null}; // colores personalizados (solo Modo Carrera)
   let matchVenueTeam = null; // club local en Modo Carrera (para el estadio 3D)
+  let matchAttendance = null; // {attendance, capacity} del partido en curso (Modo Carrera)
   let fx3dEvents = []; // lo ocurrido desde el último dibujo, para animar a los jugadores 3D
   let actionSeq = 0, actingTeam = null, lastToastKey = ''; // para destacar el resultado de cada acción
   function fx3d(ev){
@@ -1128,6 +1179,10 @@
   function homeTeamLetter(){ return (matchContext && matchContext.type==='career' && !matchContext.userIsHome) ? 'B' : 'A'; }
   function crowdLevelForMatch(){
     if(!matchVenueTeam) return 0.5;
+    if(matchAttendance){
+      // volumen según los espectadores frente a un estadio lleno de la división (4 gradas a nivel 5)
+      return clamp(matchAttendance.attendance / (standSeats(5, matchVenueTeam.division)*4), 0, 1);
+    }
     const st = normalizeStadium(matchVenueTeam);
     return STAND_KEYS.reduce((s,k)=> s + standLevel(st[k]), 0) / 20;
   }
@@ -1141,7 +1196,7 @@
 
   // ---------- Navegación de pantallas ----------
   function showScreen(name, fromHistory){
-    ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerCalendarScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen','careerFacilitiesScreen','careerAllFacilitiesScreen','careerFriendlyScreen','careerLineupScreen','gameScreen'].forEach(id=>{
+    ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerCalendarScreen','careerFinanceScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen','careerFacilitiesScreen','careerAllFacilitiesScreen','careerFriendlyScreen','careerLineupScreen','gameScreen'].forEach(id=>{
       document.getElementById(id).hidden = (id !== name);
     });
     document.getElementById('scoreboard').hidden = (name !== 'gameScreen');
@@ -1162,6 +1217,7 @@
     if(name==='careerFacilitiesScreen') renderCareerFacilitiesScreen();
     if(name==='careerHistoryScreen') renderCareerHistory();
     if(name==='careerCalendarScreen') renderCareerCalendar();
+    if(name==='careerFinanceScreen'){ financeView = {mode: financeView.mode, season: career.season||1, week: null}; renderFinanceScreen(); }
     if(name==='careerLineupScreen') renderLineupScreen();
     if(!fromHistory){
       if(history.state && history.state.screen===name){
@@ -1205,6 +1261,12 @@
   document.getElementById('btnBackStaff').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnBackAllFacilities').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnGoCalendar').addEventListener('click', ()=>showScreen('careerCalendarScreen'));
+  document.getElementById('btnGoFinance').addEventListener('click', ()=>showScreen('careerFinanceScreen'));
+  document.getElementById('btnBackFinance').addEventListener('click', ()=>showScreen('careerScreen'));
+  document.getElementById('financeTabs').addEventListener('click', e=>{
+    const v = e.target.dataset && e.target.dataset.view; if(!v) return;
+    financeView.mode = v; renderFinanceScreen();
+  });
   document.getElementById('btnBackCalendar').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnGoFriendly').addEventListener('click', ()=>showScreen('careerFriendlyScreen'));
   document.getElementById('btnBackFriendly').addEventListener('click', ()=>showScreen('careerScreen'));
@@ -1253,7 +1315,7 @@
     matchNames = {A:'Ámbar', B:'Azul'};
     matchContext = null;
     matchKitColors = {A:null, B:null};
-    matchVenueTeam = null;
+    matchVenueTeam = null; matchAttendance = null;
     startMatch(m, genericRoster(), genericRoster());
   }
   function genericRoster(){ return SLOT_ROLES.map(()=>({...NEUTRAL, name:null, id:null})); }
@@ -1509,9 +1571,72 @@
     if(!career || !career.staff) return 0;
     return career.staff.reduce((s,st)=>s+ (st.wage||0), 0);
   }
+  // ---------- Libro de cuentas del club del usuario (por semana) ----------
+  const FIN_INCOME = {tv:'Derechos de TV', gate:'Taquilla', prizes:'Premios', sales:'Venta de jugadores'};
+  const FIN_EXPENSE = {wages:'Sueldos de la plantilla', youth:'Cantera', staff:'Personal', facilities:'Obras e instalaciones', signings:'Fichajes'};
+  function finEntry(season, week){
+    if(!career.finance) career.finance = [];
+    let e = career.finance.find(x=>x.s===season && x.w===week);
+    if(!e){
+      e = {s:season, w:week, inc:{}, exp:{}, budget:null};
+      career.finance.push(e);
+      // se guardan como mucho 6 temporadas
+      const minSeason = season - 5;
+      career.finance = career.finance.filter(x=> x.s >= minSeason);
+    }
+    return e;
+  }
+  // Mueve dinero del club del usuario y lo apunta: amount > 0 ingreso, < 0 gasto
+  function userMoney(cat, amount){
+    if(!amount) return;
+    const team = career.teams.find(t=>t.isUser);
+    team.budget = (team.budget||0) + amount;
+    const e = finEntry(career.season||1, clamp(career.week||1, 1, TOTAL_SEASON_WEEKS));
+    const bucket = amount > 0 ? e.inc : e.exp;
+    bucket[cat] = (bucket[cat]||0) + Math.abs(amount);
+    e.budget = team.budget;
+  }
+
+  // ---------- Afición y asistencia ----------
+  const TICKET_PRICE = 0.5; // € por espectador
+  function fanMoodOf(team){ return typeof team.fanMood === 'number' ? team.fanMood : 50; }
+  function changeFanMood(team, delta){
+    // vuelve poco a poco hacia 50 y se mueve con los resultados
+    const m = fanMoodOf(team);
+    team.fanMood = Math.round(clamp(m + (50 - m)*0.08 + delta, 5, 100));
+  }
+  // Público que querría venir al partido (antes de limitarlo por el aforo)
+  function expectedDemand(home, away, friendly){
+    const base = standSeats(1, home.division) * 4;
+    const rep = clubReputation(home), repAway = clubReputation(away);
+    const moodF = 0.45 + fanMoodOf(home)/100*1.1;
+    const repF = 0.7 + rep/100*0.7;
+    const rivalF = clamp(0.85 + (repAway - rep)/100*0.8, 0.75, 1.3);
+    return base * moodF * repF * rivalF * (friendly ? 0.35 : 1);
+  }
+  function computeAttendance(home, away, friendly){
+    const capacity = totalStadiumCapacity(home);
+    const demand = expectedDemand(home, away, friendly) * (0.9 + Math.random()*0.2);
+    return {attendance: Math.round(Math.min(capacity, demand)), capacity};
+  }
+  function ensureFixtureAttendance(f){
+    if(typeof f.attendance === 'number') return;
+    const r = computeAttendance(career.teams[f.homeIdx], career.teams[f.awayIdx], false);
+    f.attendance = r.attendance; f.capacity = r.capacity;
+  }
+  function formatInt(n){ return Math.round(n).toLocaleString('es-ES'); }
+
   function payWeeklyWages(){
     career.teams.forEach(team=>{
-      team.budget = (team.budget||0) - calcTeamWageBill(team);
+      if(team.isUser){
+        // desglose: plantilla, cantera y personal
+        let players = 0;
+        team.slots.forEach(pid=>{ const p=career.players.find(x=>x.id===pid); if(p) players += calcWage(p); });
+        const youth = career.youthPlayers ? career.youthPlayers.length * Math.round(50 * divisionFactor(team.division)) : 0;
+        userMoney('wages', -players); userMoney('youth', -youth); userMoney('staff', -calcStaffWageBill());
+      } else {
+        team.budget = (team.budget||0) - calcTeamWageBill(team);
+      }
     });
   }
   function processMatchdayRevenue(jornada){
@@ -1519,8 +1644,19 @@
     jf.forEach(f=>{
       const home = career.teams[f.homeIdx], away = career.teams[f.awayIdx];
       const homeRates = divisionEconomyRates(home.division), awayRates = divisionEconomyRates(away.division);
-      home.budget = (home.budget||0) + homeRates.tv + Math.round(homeRates.gate * stadiumBoostFor(home));
-      away.budget = (away.budget||0) + awayRates.tv;
+      // Taquilla según los espectadores que han ido de verdad
+      ensureFixtureAttendance(f);
+      const gate = Math.round(f.attendance * TICKET_PRICE);
+      if(home.isUser){ userMoney('tv', homeRates.tv); userMoney('gate', gate); }
+      else home.budget = (home.budget||0) + homeRates.tv + gate;
+      if(away.isUser) userMoney('tv', awayRates.tv);
+      else away.budget = (away.budget||0) + awayRates.tv;
+      // La afición reacciona al resultado
+      if(f.played){
+        const dh = f.scoreHome > f.scoreAway ? 7 : (f.scoreHome < f.scoreAway ? -6 : 1);
+        const da = f.scoreAway > f.scoreHome ? 7 : (f.scoreAway < f.scoreHome ? -6 : 1);
+        changeFanMood(home, dh); changeFanMood(away, da);
+      }
     });
   }
   function awardSeasonPrizesForDivision(division, standings){
@@ -1528,7 +1664,8 @@
     standings.forEach((s,i)=>{
       const team = career.teams[s.idx];
       const prize = Math.round(rates.prizeBase * (1 - (i/standings.length)*0.8));
-      team.budget = (team.budget||0) + prize;
+      if(team.isUser) userMoney('prizes', prize);
+      else team.budget = (team.budget||0) + prize;
     });
   }
   function enforceBudgetDiscipline(){
@@ -1540,7 +1677,7 @@
     candidates.sort((a,b)=> calcMarketValue(b)-calcMarketValue(a));
     const toSell = candidates[0];
     const price = Math.round(calcMarketValue(toSell)*0.8/1000)*1000;
-    team.budget += price;
+    userMoney('sales', price);
     team.slots = team.slots.filter(id=>id!==toSell.id);
     team.lineup = null;
     career.players = career.players.filter(p=>p.id!==toSell.id);
@@ -1663,6 +1800,7 @@
     f.scoreHome = Math.max(0, Math.round(expHome + (Math.random()-0.5)*2));
     f.scoreAway = Math.max(0, Math.round(expAway + (Math.random()-0.5)*2));
     f.played = true;
+    ensureFixtureAttendance(f);
     awardXPForPids(homeLineup, {}, trainingBoostFor(home));
     awardXPForPids(awayLineup, {}, trainingBoostFor(away));
   }
@@ -1719,7 +1857,11 @@
       if(div<DIVISIONS) st.slice(-RELEGATED_PER_DIV).forEach(s=> moves.push({idx:s.idx, to:div+1}));
     }
     const divisionBefore = career.teams[uIdx].division;
-    moves.forEach(m=>{ career.teams[m.idx].division = m.to; });
+    moves.forEach(m=>{
+      const t = career.teams[m.idx];
+      changeFanMood(t, m.to < t.division ? 15 : -12);
+      t.division = m.to;
+    });
     const divisionAfter = career.teams[uIdx].division;
     if(!career.clubHistory) career.clubHistory = [];
     if(userSeasonEntry) career.clubHistory.push(userSeasonEntry);
@@ -1743,7 +1885,14 @@
       }
     });
 
-    // 3. Nueva temporada: recalendarizar según las divisiones ya actualizadas
+    // 3. Guardar los espectadores de los partidos en casa antes de rehacer el calendario
+    if(!career.attendanceHistory) career.attendanceHistory = [];
+    career.fixtures.filter(f=>f.played && f.homeIdx===uIdx && typeof f.attendance==='number').forEach(f=>{
+      career.attendanceHistory.push({s:career.season, j:f.jornada, rival:career.teams[f.awayIdx].name, a:f.attendance, c:f.capacity});
+    });
+    career.attendanceHistory = career.attendanceHistory.filter(a=> a.s >= career.season - 5);
+
+    // 4. Nueva temporada: recalendarizar según las divisiones ya actualizadas
     career.season++;
     career.currentJornada = 1;
     career.week = 1;
@@ -1835,6 +1984,7 @@
     if(forcedSale){
       career.financialAlert = `Números rojos: se ha vendido a ${forcedSale.name} por ${formatMoney(forcedSale.price)} para cuadrar las cuentas.`;
     }
+    { const e = finEntry(career.season||1, clamp(career.week||1, 1, TOTAL_SEASON_WEEKS)); e.budget = career.teams.find(t=>t.isUser).budget; }
     if(phase.hasMatch && career.currentJornada < TOTAL_JORNADAS){
       career.currentJornada++;
     }
@@ -1873,7 +2023,7 @@
       if(p){
         userTeam.slots = userTeam.slots.filter(id=>id!==offer.playerId);
         userTeam.lineup = null;
-        userTeam.budget = (userTeam.budget||0) + offer.amount;
+        userMoney('sales', offer.amount);
         career.players = career.players.filter(x=>x.id!==offer.playerId);
       }
     }
@@ -2375,7 +2525,7 @@
     if((userTeam.budget||0) < price) return;
     if(userTeam.slots.length >= MAX_SQUAD_SIZE) return;
     if(!canSignPlayer(userTeam, p)) return;
-    userTeam.budget -= price;
+    userMoney('signings', -price);
     userTeam.slots.push(p.id);
     career.players.push(p);
     career.scoutingPool = career.scoutingPool.filter(e=>e.id!==entryId);
@@ -2605,17 +2755,19 @@
     if(!el || stadium3dFailed || !webglAvailable()){ if(el) el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; return; }
     const levels = {...normalizeStadium(team)};
     const kit = {primary: team.kitPrimary, secondary: team.kitSecondary};
+    const cap = totalStadiumCapacity(team);
+    const occupancy = cap ? clamp(expectedDemand(team, team, false)/cap, 0.05, 1) : 0;
     const apply = ()=>{
       try{
         el.hidden = false; if(fallbackEl) fallbackEl.hidden = true;
         if(!stadium3dViews[containerId]) stadium3dViews[containerId] = stadium3dModule.mountStadium(el);
-        stadium3dViews[containerId].update(levels, kit, {reset});
+        stadium3dViews[containerId].update(levels, kit, {reset, occupancy});
       } catch(e){
         stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false;
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=17').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=18').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -2647,7 +2799,7 @@
         btn.textContent = `Mejorar a nivel ${level+1} (${formatMoney(cost)})`;
         if((userTeam.budget||0) < cost) btn.disabled = true;
         btn.addEventListener('click', ()=>{
-          userTeam.budget -= cost;
+          userMoney('facilities', -cost);
           userTeam.facilities[key] = level+1;
           persistCareers();
           renderCareerFacilitiesScreen();
@@ -2703,7 +2855,7 @@
         btn.textContent = level===0 ? `Construir grada (${formatMoney(cost)})` : `Ampliar (${formatMoney(cost)})`;
         if((userTeam.budget||0) < cost) btn.disabled = true;
         btn.addEventListener('click', ()=>{
-          userTeam.budget -= cost;
+          userMoney('facilities', -cost);
           stadium[k] = level+1;
           persistCareers();
           renderCareerFacilitiesScreen();
@@ -2789,7 +2941,9 @@
         const gf = userIsHome ? f.scoreHome : f.scoreAway;
         const gc = userIsHome ? f.scoreAway : f.scoreHome;
         const resultLabel = gf>gc ? 'Victoria' : (gf<gc ? 'Derrota' : 'Empate');
-        teamsSpan.innerHTML = `J${f.jornada} · vs ${clubNameLink(rivalTeam, rivalIdx)} (${resultLabel})`;
+        const att = typeof f.attendance === 'number'
+          ? `<span class="fx-att">👥 ${formatInt(f.attendance)} espectadores${f.capacity ? ` · ${Math.round(f.attendance/f.capacity*100)} %` : ''} · ${userIsHome ? 'en casa' : 'fuera'}</span>` : '';
+        teamsSpan.innerHTML = `J${f.jornada} · vs ${clubNameLink(rivalTeam, rivalIdx)} (${resultLabel})${att}`;
         row.appendChild(teamsSpan);
         const scoreSpan=document.createElement('div'); scoreSpan.className='fixture-score';
         scoreSpan.textContent = `${gf} - ${gc}`;
@@ -2804,6 +2958,247 @@
     });
     wireClubLinks(el);
   }
+  // ---------- Pantalla de Finanzas ----------
+  let financeView = {mode:'week', season:1, week:null};
+  const FIN_COLORS = {inc:'#3987e5', exp:'#e66767', line:'#3987e5', ref:'#9fd4b8', grid:'rgba(255,255,255,.08)', text:'#9fd4b8'};
+  function finSum(o){ return Object.values(o||{}).reduce((a,b)=>a+b, 0); }
+  function moneySigned(n){ return (n>0?'+':n<0?'−':'') + formatMoney(Math.abs(n)); }
+  function financeWeeks(season){
+    return (career.finance||[]).filter(e=>e.s===season).sort((a,b)=>a.w-b.w);
+  }
+  function weekLabel(w){ const ph = weekPhaseInfo(w); return `Semana ${w} · ${ph.label}`; }
+  function finTableHTML(inc, exp){
+    let h = '<table class="fin-table">';
+    h += '<tr class="fin-head"><td>Ingresos</td><td></td></tr>';
+    const incKeys = Object.keys(FIN_INCOME).filter(k=>inc[k]);
+    if(!incKeys.length) h += '<tr><td class="muted">Sin ingresos</td><td>—</td></tr>';
+    incKeys.forEach(k=>{ h += `<tr><td>${FIN_INCOME[k]}</td><td class="fin-pos">+${formatMoney(inc[k])}</td></tr>`; });
+    h += '<tr class="fin-head"><td>Gastos</td><td></td></tr>';
+    const expKeys = Object.keys(FIN_EXPENSE).filter(k=>exp[k]);
+    if(!expKeys.length) h += '<tr><td class="muted">Sin gastos</td><td>—</td></tr>';
+    expKeys.forEach(k=>{ h += `<tr><td>${FIN_EXPENSE[k]}</td><td class="fin-neg">−${formatMoney(exp[k])}</td></tr>`; });
+    const net = finSum(inc) - finSum(exp);
+    h += `<tr class="fin-head"><td>Saldo</td><td></td></tr>`;
+    h += `<tr class="fin-total"><td>Ingresos − gastos</td><td class="${net>=0?'fin-pos':'fin-neg'}">${moneySigned(net)}</td></tr>`;
+    return h + '</table>';
+  }
+  function homeAttendanceRows(season){
+    // Partidos en casa del usuario con espectadores (solo temporada actual: el calendario se rehace cada año)
+    if(season !== (career.season||1)) return (career.attendanceHistory||[]).filter(a=>a.s===season);
+    const uIdx = userTeamIdx();
+    return career.fixtures.filter(f=>f.played && f.homeIdx===uIdx && typeof f.attendance==='number')
+      .sort((a,b)=>a.jornada-b.jornada)
+      .map(f=>({s:season, j:f.jornada, rival:career.teams[f.awayIdx].name, a:f.attendance, c:f.capacity}));
+  }
+  function renderFinanceScreen(){
+    const team = career.teams.find(t=>t.isUser);
+    const mood = fanMoodOf(team);
+    const moodLabel = mood>=75 ? 'Entusiasmada' : mood>=55 ? 'Contenta' : mood>=40 ? 'Normal' : mood>=25 ? 'Descontenta' : 'Enfadada';
+    const cap = totalStadiumCapacity(team);
+    document.getElementById('financeKpis').innerHTML =
+      `<div class="fin-kpi"><span>Presupuesto</span><b class="${(team.budget||0)>=0?'':'fin-neg'}">${formatMoney(team.budget||0)}</b></div>`+
+      `<div class="fin-kpi"><span>Afición</span><b>${mood}/100</b><span>${moodLabel}</span></div>`+
+      `<div class="fin-kpi"><span>Aforo</span><b>${formatInt(cap)}</b><span>asientos</span></div>`;
+    document.querySelectorAll('#financeTabs button').forEach(b=> b.classList.toggle('active', b.dataset.view===financeView.mode));
+
+    const seasons = [...new Set((career.finance||[]).map(e=>e.s))].sort((a,b)=>a-b);
+    if(!seasons.includes(career.season||1)) seasons.push(career.season||1);
+    const season = financeView.season;
+    const weeks = financeWeeks(season);
+    const sumEl = document.getElementById('financeSummary');
+    let nav = '', body = '';
+    if(financeView.mode === 'week'){
+      const avail = weeks.map(e=>e.w);
+      const curW = clamp(career.week||1, 1, TOTAL_SEASON_WEEKS);
+      if(season === (career.season||1) && !avail.includes(curW)) avail.push(curW);
+      avail.sort((a,b)=>a-b);
+      // por defecto: la última semana cerrada (o la actual si aún no hay ninguna)
+      if(financeView.week === null || !avail.includes(financeView.week)){
+        const closed = avail.filter(w=> season !== (career.season||1) || w < curW);
+        financeView.week = closed.length ? closed[closed.length-1] : avail[avail.length-1];
+      }
+      const i = avail.indexOf(financeView.week);
+      const e = weeks.find(x=>x.w===financeView.week) || {inc:{}, exp:{}};
+      const inProgress = season === (career.season||1) && financeView.week === curW;
+      nav = `<div class="fin-nav"><button data-nav="-1" ${i<=0?'disabled':''}>◀</button><b>T${season} · ${weekLabel(financeView.week)}${inProgress?' (en curso)':''}</b><button data-nav="1" ${i>=avail.length-1?'disabled':''}>▶</button></div>`;
+      body = finTableHTML(e.inc, e.exp);
+      if(typeof e.budget === 'number') body += `<p class="hint" style="margin-top:6px;">Presupuesto al cerrar la semana: <b>${formatMoney(e.budget)}</b></p>`;
+      sumEl.innerHTML = nav + body;
+      sumEl.querySelectorAll('[data-nav]').forEach(b=> b.addEventListener('click', ()=>{
+        const j = i + parseInt(b.dataset.nav, 10);
+        if(avail[j] !== undefined){ financeView.week = avail[j]; renderFinanceScreen(); }
+      }));
+    } else {
+      const si = seasons.indexOf(season);
+      const inc = {}, exp = {};
+      weeks.forEach(e=>{
+        Object.entries(e.inc).forEach(([k,v])=> inc[k]=(inc[k]||0)+v);
+        Object.entries(e.exp).forEach(([k,v])=> exp[k]=(exp[k]||0)+v);
+      });
+      nav = `<div class="fin-nav"><button data-nav="-1" ${si<=0?'disabled':''}>◀</button><b>Temporada ${season}${season===(career.season||1)?' (en curso)':''}</b><button data-nav="1" ${si>=seasons.length-1?'disabled':''}>▶</button></div>`;
+      body = finTableHTML(inc, exp);
+      sumEl.innerHTML = nav + body;
+      sumEl.querySelectorAll('[data-nav]').forEach(b=> b.addEventListener('click', ()=>{
+        const j = si + parseInt(b.dataset.nav, 10);
+        if(seasons[j] !== undefined){ financeView.season = seasons[j]; financeView.week = null; renderFinanceScreen(); }
+      }));
+    }
+    renderFinanceCharts(season, weeks);
+  }
+
+  // Gráficos SVG con tooltip al pasar el dedo o el ratón
+  const CH = {w:340, h:150, l:44, r:10, t:10, b:22};
+  function niceMax(v){ if(v<=0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const n = v/p; return (n<=1?1:n<=2?2:n<=5?5:10)*p; }
+  function shortMoney(n){
+    const a = Math.abs(n), sgn = n<0?'−':'';
+    if(a>=1e6) return sgn+(a/1e6).toFixed(a>=1e7?0:1).replace('.',',')+' M';
+    if(a>=1e4) return sgn+Math.round(a/1e3)+' k';
+    if(a>=1e3) return sgn+(Math.round(a/100)/10).toString().replace('.',',')+' k';
+    return sgn+Math.round(a);
+  }
+  function axisY(minV, maxV, fmt){
+    let g = '';
+    const ticks = 4;
+    for(let i=0;i<=ticks;i++){
+      const v = minV + (maxV-minV)*i/ticks;
+      const y = CH.t + (CH.h-CH.t-CH.b)*(1 - i/ticks);
+      g += `<line x1="${CH.l}" x2="${CH.w-CH.r}" y1="${y}" y2="${y}" stroke="${FIN_COLORS.grid}" stroke-width="1"/>`;
+      g += `<text x="${CH.l-5}" y="${y+3}" font-size="9" fill="${FIN_COLORS.text}" text-anchor="end">${fmt(v)}</text>`;
+    }
+    return g;
+  }
+  function xLabels(labels, xAt){
+    const n = labels.length, every = Math.max(1, Math.ceil(n/7));
+    return labels.map((lb,i)=> (i%every===0 || i===n-1) ? `<text x="${xAt(i)}" y="${CH.h-6}" font-size="9" fill="${FIN_COLORS.text}" text-anchor="middle">${lb}</text>` : '').join('');
+  }
+  function yScale(minV, maxV){ return v=> CH.t + (CH.h-CH.t-CH.b)*(1 - (v-minV)/((maxV-minV)||1)); }
+  // Barra con el extremo de datos redondeado (4 px) y la base recta
+  function barPath(x, w, yBase, yEnd){
+    const r = Math.min(4, w/2, Math.abs(yEnd-yBase));
+    if(yEnd < yBase){ // hacia arriba
+      return `M${x},${yBase} V${yEnd+r} Q${x},${yEnd} ${x+r},${yEnd} H${x+w-r} Q${x+w},${yEnd} ${x+w},${yEnd+r} V${yBase} Z`;
+    }
+    return `M${x},${yBase} V${yEnd-r} Q${x},${yEnd} ${x+r},${yEnd} H${x+w-r} Q${x+w},${yEnd} ${x+w},${yEnd-r} V${yBase} Z`;
+  }
+  function chartBox(title, sub, svgInner, legend){
+    return `<div class="fin-chart"><h4>${title}</h4>${sub?`<div class="fin-sub">${sub}</div>`:''}${legend||''}
+      <svg viewBox="0 0 ${CH.w} ${CH.h}" role="img" aria-label="${title}">${svgInner}<line class="hover-x" x1="0" x2="0" y1="${CH.t}" y2="${CH.h-CH.b}" stroke="#cfe8d8" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/><circle class="hover-dot" r="4.5" fill="none" stroke="#f1faee" stroke-width="2" visibility="hidden"/></svg>
+      <div class="fin-tip"></div></div>`;
+  }
+  // Conecta el tooltip: busca el punto más cercano en X
+  function wireChart(box, n, xAt, tipFor, dotY){
+    const svg = box.querySelector('svg'), tip = box.querySelector('.fin-tip');
+    const hx = svg.querySelector('.hover-x'), hd = svg.querySelector('.hover-dot');
+    const show = ev=>{
+      const r = svg.getBoundingClientRect();
+      const px = (ev.clientX - r.left) / r.width * CH.w;
+      let best = 0, bd = Infinity;
+      for(let i=0;i<n;i++){ const d = Math.abs(xAt(i)-px); if(d<bd){ bd=d; best=i; } }
+      const x = xAt(best);
+      hx.setAttribute('x1', x); hx.setAttribute('x2', x); hx.setAttribute('visibility', 'visible');
+      const dy = dotY ? dotY(best) : null;
+      if(dy !== null){ hd.setAttribute('cx', x); hd.setAttribute('cy', dy); hd.setAttribute('visibility', 'visible'); }
+      tip.innerHTML = tipFor(best);
+      tip.style.display = 'block';
+      const bx = box.getBoundingClientRect();
+      tip.style.left = clamp(x/CH.w*r.width + (r.left-bx.left), 60, bx.width-60) + 'px';
+      tip.style.top = (r.top - bx.top + 4) + 'px';
+    };
+    const hide = ()=>{ tip.style.display='none'; hx.setAttribute('visibility','hidden'); hd.setAttribute('visibility','hidden'); };
+    svg.addEventListener('pointermove', show);
+    svg.addEventListener('pointerdown', show);
+    svg.addEventListener('pointerleave', hide);
+  }
+  function lineChart(values, labels, color, fmtTip, allowNeg){
+    const n = values.length;
+    const xAt = i=> n>1 ? CH.l + (CH.w-CH.l-CH.r)*i/(n-1) : (CH.l+CH.w-CH.r)/2;
+    let minV = Math.min(0, ...values), maxV = Math.max(...values, 1);
+    maxV = niceMax(maxV); if(minV<0) minV = -niceMax(-minV);
+    const y = yScale(minV, maxV);
+    let g = axisY(minV, maxV, shortMoney);
+    if(minV<0) g += `<line x1="${CH.l}" x2="${CH.w-CH.r}" y1="${y(0)}" y2="${y(0)}" stroke="#cfe8d8" stroke-width="1"/>`;
+    g += `<polyline points="${values.map((v,i)=>xAt(i).toFixed(1)+','+y(v).toFixed(1)).join(' ')}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    // solo se etiqueta el último punto
+    const last = n-1;
+    g += `<circle cx="${xAt(last)}" cy="${y(values[last])}" r="4" fill="${color}" stroke="#123326" stroke-width="2"/>`;
+    g += `<text x="${Math.min(xAt(last), CH.w-CH.r)}" y="${y(values[last])-8}" font-size="9.5" fill="#f1faee" text-anchor="end" font-weight="bold">${shortMoney(values[last])}</text>`;
+    g += xLabels(labels, xAt);
+    return {svg:g, xAt, dotY:i=>y(values[i])};
+  }
+  function renderFinanceCharts(season, weeks){
+    const el = document.getElementById('financeCharts');
+    if(!weeks.length){
+      el.innerHTML = '<p class="hint">Los gráficos aparecerán cuando termine la primera semana con movimientos de dinero.</p>';
+      return;
+    }
+    const labels = weeks.map(e=>'S'+e.w);
+    let html = '';
+    const parts = [];
+    // 1. Presupuesto
+    const budgets = []; let lastB = null;
+    weeks.forEach(e=>{ if(typeof e.budget==='number') lastB = e.budget; budgets.push(lastB===null?0:lastB); });
+    const c1 = lineChart(budgets, labels, FIN_COLORS.line);
+    html += chartBox(`Presupuesto · Temporada ${season}`, 'Dinero disponible al cerrar cada semana', c1.svg);
+    parts.push({n:weeks.length, xAt:c1.xAt, dotY:c1.dotY, tip:i=>`<b>${weekLabel(weeks[i].w)}</b><br>Presupuesto: ${formatMoney(budgets[i])}`});
+    // 2. Ingresos (arriba) y gastos (abajo) por semana
+    const incs = weeks.map(e=>finSum(e.inc)), exps = weeks.map(e=>finSum(e.exp));
+    const n = weeks.length;
+    const slot = (CH.w-CH.l-CH.r)/n, bw = Math.max(3, Math.min(16, slot-2));
+    const xAt2 = i=> CH.l + slot*i + slot/2;
+    const m = niceMax(Math.max(...incs, ...exps, 1));
+    const y2 = yScale(-m, m);
+    let g2 = axisY(-m, m, v=> shortMoney(Math.abs(v)));
+    weeks.forEach((e,i)=>{
+      const x = xAt2(i)-bw/2;
+      if(incs[i]) g2 += `<path d="${barPath(x, bw, y2(0)-1, y2(incs[i]))}" fill="${FIN_COLORS.inc}"/>`;
+      if(exps[i]) g2 += `<path d="${barPath(x, bw, y2(0)+1, y2(-exps[i]))}" fill="${FIN_COLORS.exp}"/>`;
+    });
+    g2 += `<line x1="${CH.l}" x2="${CH.w-CH.r}" y1="${y2(0)}" y2="${y2(0)}" stroke="#cfe8d8" stroke-width="1"/>`;
+    g2 += xLabels(labels, xAt2);
+    const legend2 = `<div class="fin-legend"><span><i style="background:${FIN_COLORS.inc}"></i>Ingresos (arriba)</span><span><i style="background:${FIN_COLORS.exp}"></i>Gastos (abajo)</span></div>`;
+    html += chartBox('Ingresos y gastos por semana', '', g2, legend2);
+    parts.push({n, xAt:xAt2, dotY:null, tip:i=>{
+      const net = incs[i]-exps[i];
+      return `<b>${weekLabel(weeks[i].w)}</b><br><span style="color:${FIN_COLORS.inc}">■</span> Ingresos: ${formatMoney(incs[i])}<br><span style="color:${FIN_COLORS.exp}">■</span> Gastos: ${formatMoney(exps[i])}<br><span class="muted">Saldo:</span> ${moneySigned(net)}`;
+    }});
+    // 3. Evolución de un concepto
+    const cats = [...Object.entries(FIN_INCOME).map(([k,v])=>({k, v, t:'inc'})), ...Object.entries(FIN_EXPENSE).map(([k,v])=>({k, v, t:'exp'}))];
+    if(!financeView.cat) financeView.cat = 'inc:gate';
+    const [ct, ck] = financeView.cat.split(':');
+    const catLabel = (ct==='inc'?FIN_INCOME:FIN_EXPENSE)[ck];
+    const vals3 = weeks.map(e=> (e[ct]||{})[ck]||0);
+    // Barras por semana (hay semanas a 0, una línea quedaría en zigzag)
+    const col3 = ct==='inc'?FIN_COLORS.inc:FIN_COLORS.exp;
+    const m3 = niceMax(Math.max(...vals3, 1)), y3 = yScale(0, m3);
+    let g3 = axisY(0, m3, shortMoney);
+    vals3.forEach((v,i)=>{ if(v) g3 += `<path d="${barPath(xAt2(i)-bw/2, bw, y3(0), y3(v))}" fill="${col3}"/>`; });
+    g3 += xLabels(labels, xAt2);
+    const c3 = {svg:g3, xAt:xAt2, dotY:null};
+    const sel = `<select class="fin-select" id="finCatSelect">${cats.map(c=>`<option value="${c.t}:${c.k}" ${financeView.cat===c.t+':'+c.k?'selected':''}>${c.t==='inc'?'Ingreso':'Gasto'} · ${c.v}</option>`).join('')}</select>`;
+    html += chartBox(`Evolución: ${catLabel}`, '', c3.svg, sel);
+    parts.push({n, xAt:c3.xAt, dotY:c3.dotY, tip:i=>`<b>${weekLabel(weeks[i].w)}</b><br>${catLabel}: ${formatMoney(vals3[i])}`});
+    // 4. Espectadores en casa
+    const att = homeAttendanceRows(season);
+    if(att.length){
+      const na = att.length, slot4 = (CH.w-CH.l-CH.r)/na, bw4 = Math.max(4, Math.min(22, slot4-2));
+      const xAt4 = i=> CH.l + slot4*i + slot4/2;
+      const m4 = niceMax(Math.max(...att.map(a=>Math.max(a.a, a.c||0)), 1));
+      const y4 = yScale(0, m4);
+      let g4 = axisY(0, m4, v=> v>=1000 ? Math.round(v/100)/10+' k' : Math.round(v));
+      att.forEach((a,i)=>{ g4 += `<path d="${barPath(xAt4(i)-bw4/2, bw4, y4(0), y4(a.a))}" fill="${FIN_COLORS.inc}"/>`; });
+      // aforo como referencia
+      g4 += `<polyline points="${att.map((a,i)=>`${(xAt4(i)-slot4/2).toFixed(1)},${y4(a.c||0).toFixed(1)} ${(xAt4(i)+slot4/2).toFixed(1)},${y4(a.c||0).toFixed(1)}`).join(' ')}" fill="none" stroke="${FIN_COLORS.ref}" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+      g4 += xLabels(att.map(a=>'J'+a.j), xAt4);
+      const legend4 = `<div class="fin-legend"><span><i style="background:${FIN_COLORS.inc}"></i>Espectadores</span><span><i style="background:none; border-top:2px dashed ${FIN_COLORS.ref}; border-radius:0; height:0; width:12px;"></i>Aforo</span></div>`;
+      html += chartBox('Espectadores en casa', 'Por jornada de liga', g4, legend4);
+      parts.push({n:na, xAt:xAt4, dotY:null, tip:i=>`<b>J${att[i].j} · vs ${escapeHtml(att[i].rival)}</b><br>${formatInt(att[i].a)} espectadores<br><span class="muted">Aforo ${formatInt(att[i].c||0)} · ${att[i].c?Math.round(att[i].a/att[i].c*100):0} %</span>`});
+    }
+    el.innerHTML = html;
+    el.querySelectorAll('.fin-chart').forEach((box, idx)=>{ const p = parts[idx]; if(p) wireChart(box, p.n, p.xAt, p.tip, p.dotY); });
+    const selEl = document.getElementById('finCatSelect');
+    if(selEl) selEl.addEventListener('change', ()=>{ financeView.cat = selEl.value; renderFinanceCharts(season, weeks); });
+  }
+
   function renderCareerFixtures(){
     const el = document.getElementById('careerFixtureList');
     el.innerHTML='';
@@ -3016,6 +3411,7 @@
       matchContext = {type:'career_friendly', opponentIdx:friendlyOpponentIdx};
       matchKitColors = {A:userColor, B:oppColor};
       matchVenueTeam = userTeam; // el amistoso se juega en casa
+      matchAttendance = computeAttendance(userTeam, oppTeam, true);
       startMatch('ai', rosterFromCareerTeam(userTeam, pendingLineup), rosterFromCareerTeam(oppTeam, oppLineup), userTeam.formation, oppTeam.formation);
       return;
     }
@@ -3037,6 +3433,8 @@
     matchContext = {type:'career', fixtureId:f.id, userIsHome};
     matchKitColors = {A:userColor, B:oppColor};
     matchVenueTeam = userIsHome ? userTeam : oppTeam; // estadio del equipo local
+    ensureFixtureAttendance(f);
+    matchAttendance = {attendance: f.attendance, capacity: f.capacity};
     startMatch('ai', rosterFromCareerTeam(userTeam, pendingLineup), rosterFromCareerTeam(oppTeam, oppLineup), userTeam.formation, oppTeam.formation);
   }
   function rosterFromCareerTeam(team, lineupIds){
@@ -3803,8 +4201,9 @@
     const venueKit = matchVenueTeam
       ? {primary: matchVenueTeam.kitPrimary, secondary: matchVenueTeam.kitSecondary}
       : {primary: matchKitColors.A || defaultKit('A'), secondary: matchKitColors.B || defaultKit('B')};
-    const venueKey = JSON.stringify([venueLevels, venueKit]);
-    if(venueKey !== match3dVenueKey){ match3dVenueKey = venueKey; match3dView.setVenue(venueLevels, venueKit); }
+    const occupancy = matchAttendance && matchAttendance.capacity ? matchAttendance.attendance/matchAttendance.capacity : 0.82;
+    const venueKey = JSON.stringify([venueLevels, venueKit, occupancy]);
+    if(venueKey !== match3dVenueKey){ match3dVenueKey = venueKey; match3dView.setVenue(venueLevels, venueKit, occupancy); }
     const carrier = getCarrier();
     match3dView.update({
       reset: isNewMatch,
@@ -3840,7 +4239,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=17').then(m=>{
+      import('./match3d.js?v=18').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
@@ -4009,6 +4408,12 @@
       ? `<b>¡Partido finalizado!</b>`
       : `<span class="turn-dot" style="background:${turnColor};"></span> Turno: ${teamName(turn)} ${mode==='ai' && turn==='B' ? '(IA pensando…)' : ''} <span class="arrow">${turn==='A'?'▶':'◀'}</span>`;
     document.getElementById('matchClock').textContent = matchEnded ? '' : `${matchClockLabel()}' · ${half===1 ? '1ª parte' : '2ª parte'}`;
+    const crowdEl = document.getElementById('matchCrowd');
+    crowdEl.hidden = !matchAttendance;
+    if(matchAttendance){
+      const pct = matchAttendance.capacity ? Math.round(matchAttendance.attendance/matchAttendance.capacity*100) : 0;
+      crowdEl.textContent = `👥 ${formatInt(matchAttendance.attendance)} espectadores · ${pct} % del aforo`;
+    }
     showActionMessage();
     renderSelectedPlayerInfo();
     renderSubsWindow();
@@ -4205,6 +4610,10 @@
     showScreen('gameScreen');
     skipMoveFx = true; shotFx = null;
     if(window.FTSound){ FTSound.crowdStart(crowdLevelForMatch()); FTSound.whistle('start', 0.6); }
+    if(matchAttendance){
+      const a = matchAttendance, pct = a.capacity ? Math.round(a.attendance/a.capacity*100) : 0;
+      setTimeout(()=> showToast(`<span class="t-icon">👥</span>${formatInt(a.attendance)} espectadores<span class="t-sub">${pct} % del aforo (${formatInt(a.capacity)} asientos)</span>`, '', '#5dade2', 2600), 500);
+    }
     if(view3dOn && !match3dView){ view3dOn = false; updateViewToggle(); render(); set3DMode(true); return; }
     updateViewToggle();
     render();
