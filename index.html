@@ -397,6 +397,97 @@
   .fx-att{display:block; font-size:11px; color:#9fd4b8; margin-top:2px; font-weight:normal;}
   .match-crowd{color:#8ecbff;}
 
+  /* ---------- Modo Carrera estilo manager ---------- */
+  body.career-chrome #app{padding-top:58px; padding-bottom:128px;}
+  .career-bar{
+    position:fixed; top:0; left:0; right:0; z-index:50; height:54px;
+    display:flex; align-items:center; gap:8px; padding:0 10px;
+    background:linear-gradient(180deg,#0f2a1f,#0a1d15); border-bottom:2px solid var(--gold);
+    box-shadow:0 3px 10px rgba(0,0,0,.45);
+  }
+  .career-bar[hidden], .career-dock[hidden]{display:none;}
+  .cb-club{display:flex; align-items:center; gap:6px; min-width:0; flex:1;}
+  .cb-club > span{display:flex; flex-direction:column; min-width:0;}
+  .cb-club b{font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .cb-club small{font-size:10.5px; color:#9fd4b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .cb-stats{display:flex; gap:8px; font-size:12px; font-weight:bold; white-space:nowrap;}
+  .cb-gear{background:transparent; border:none; font-size:18px; cursor:pointer; padding:4px;}
+  .cb-menu{position:absolute; top:54px; right:6px; background:#0f2a1f; border:1px solid #2f5c46; border-radius:10px; padding:6px; display:flex; flex-direction:column; gap:4px; box-shadow:0 8px 20px rgba(0,0,0,.6);}
+  .cb-menu[hidden]{display:none;}
+  .cb-menu button{background:var(--panel); color:var(--chalk); border:1px solid #2f5c46; border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; text-align:left;}
+  .career-dock{
+    position:fixed; left:0; right:0; bottom:0; z-index:50;
+    background:linear-gradient(0deg,#0a1d15,#0f2a1f); border-top:1px solid #2f5c46; box-shadow:0 -4px 14px rgba(0,0,0,.5);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .continue-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px 6px; max-width:520px; margin:0 auto;}
+  .continue-row span{font-size:11.5px; color:#9fd4b8;}
+  #btnAdvanceWeek{
+    background:var(--gold); color:#0d1f18; border:none; border-radius:10px; padding:11px 22px; font-size:15px; font-weight:900;
+    cursor:pointer; box-shadow:0 3px 10px rgba(255,210,63,.3); white-space:nowrap;
+  }
+  #btnAdvanceWeek:disabled{background:#3a4a42; color:#9fb3a8; box-shadow:none; cursor:not-allowed;}
+  .career-nav{display:flex; max-width:520px; margin:0 auto;}
+  .career-nav button{
+    flex:1; position:relative; background:transparent; border:none; color:#9fd4b8; font-size:10.5px; font-weight:bold;
+    padding:4px 0 8px; display:flex; flex-direction:column; align-items:center; gap:1px; cursor:pointer; border-top:3px solid transparent;
+  }
+  .career-nav button span{font-size:19px; line-height:1.1;}
+  .career-nav button.active{color:var(--gold); border-top-color:var(--gold);}
+  .nav-badge{position:absolute; top:2px; left:calc(50% + 6px); min-width:16px; height:16px; border-radius:8px; background:#e74c3c; color:#fff; font-size:10px; font-style:normal; line-height:16px; padding:0 4px;}
+  .nav-badge[hidden]{display:none;}
+  .mgr-card{background:var(--panel); border:1px solid #2f5c46; border-radius:12px; padding:10px 12px;}
+  .mgr-next{background:linear-gradient(160deg,#1a4a35,#123326 60%); border-color:#3a7a5a;}
+  .nm-head{display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap;}
+  .nm-head span{font-size:11.5px; color:#9fd4b8;}
+  .nm-row{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:6px; margin:10px 0 6px;}
+  .nm-team{display:flex; flex-direction:column; align-items:center; text-align:center; gap:3px;}
+  .nm-team .team-badge{transform:scale(1.5); margin:6px 0 4px;}
+  .nm-team b{font-size:13px;}
+  .nm-team small{font-size:10.5px; color:#9fd4b8;}
+  .nm-vs{font-family:'Arial Black',sans-serif; font-size:20px; color:var(--gold);}
+  .nm-score{font-family:'Arial Black',sans-serif; font-size:24px; color:var(--chalk);}
+  .nm-actions{display:flex; gap:8px;}
+  .nm-actions button{flex:1;}
+  .inbox-count{background:#e74c3c; color:#fff; border-radius:9px; padding:0 6px; font-size:11px; margin-left:4px;}
+  .inbox-msg{display:flex; gap:10px; padding:9px 0; border-top:1px solid rgba(255,255,255,.07);}
+  .inbox-msg:first-of-type{border-top:none;}
+  .im-ico{font-size:22px; line-height:1.2;}
+  .im-body{flex:1; font-size:12.5px; line-height:1.45;}
+  .im-body > b{display:block; font-size:13px; margin-bottom:2px;}
+  .im-body summary{cursor:pointer; color:#9fd4b8;}
+  .im-actions{display:flex; gap:6px; margin-top:6px;}
+  .im-actions:empty{display:none;}
+  .im-actions .mode-btn{width:auto; padding:7px 12px; font-size:12px;}
+  .mgr-grid{display:grid; grid-template-columns:3fr 2fr; gap:10px;}
+  .mgr-grid .mgr-card{cursor:pointer;}
+  .mini-table{width:100%; border-collapse:collapse; font-size:11.5px;}
+  .mini-table th{color:#9fd4b8; font-weight:600; font-size:10px; text-align:right;}
+  .mini-table td{padding:3px 2px; text-align:right;}
+  .mini-table td:first-child{text-align:left; color:#9fd4b8; width:16px;}
+  .mini-table td.mt-name{text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:110px;}
+  .mini-table tr.me td{background:rgba(255,210,63,.16); color:var(--chalk);}
+  .mini-table tr.me td:first-child{border-radius:6px 0 0 6px;} .mini-table tr.me td:last-child{border-radius:0 6px 6px 0;}
+  .mini-table tr.promo td:first-child{box-shadow:inset 3px 0 0 #27ae60;}
+  .mini-table tr.releg td:first-child{box-shadow:inset 3px 0 0 #c0392b;}
+  .form-row{display:flex; gap:5px; flex-wrap:wrap; margin-top:6px;}
+  .form-dot{width:26px; height:26px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:900; font-size:12px; color:#0d1f18;}
+  .form-dot.f-V{background:#2ecc71;} .form-dot.f-E{background:#bdc3c7;} .form-dot.f-D{background:#e74c3c; color:#fff;}
+  .mgr-round summary{cursor:pointer; font-weight:bold; font-size:13px; color:#cfe8d8;}
+  .hub-list{display:flex; flex-direction:column; gap:10px;}
+  .hub-item{
+    display:flex; align-items:center; gap:12px; width:100%; text-align:left; cursor:pointer;
+    background:var(--panel); border:1px solid #2f5c46; border-radius:12px; padding:14px; color:var(--chalk);
+  }
+  .hub-item:active{transform:scale(.98);}
+  .hub-item:disabled{opacity:.5; cursor:not-allowed;}
+  .hi-ico{font-size:26px;}
+  .hi-txt{flex:1; display:flex; flex-direction:column;}
+  .hi-txt b{font-size:15px;}
+  .hi-txt small{font-size:11.5px; color:#9fd4b8; margin-top:2px;}
+  .hi-arrow{font-size:24px; color:var(--gold);}
+  @media (max-width:360px){ .cb-stats span:nth-child(2){display:none;} }
+
   /* Finanzas */
   .fin-kpis{display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;}
   .fin-kpi{background:var(--panel); border:1px solid #2f5c46; border-radius:10px; padding:8px; text-align:center;}
@@ -645,6 +736,24 @@
 </head>
 <body>
 <div id="app">
+  <header class="career-bar" id="careerBar" hidden>
+    <div class="cb-club" id="cbClub"></div>
+    <div class="cb-stats" id="cbStats"></div>
+    <button class="cb-gear" id="btnCareerGear" aria-label="Opciones">⚙️</button>
+    <div class="cb-menu" id="careerGearMenu" hidden>
+      <button id="btnSwitchCareer">Cambiar de carrera</button>
+      <button id="btnExitCareer">Salir al menú</button>
+    </div>
+  </header>
+  <div class="career-dock" id="careerDock" hidden>
+    <div class="continue-row"><span id="advanceWeekHint"></span><button id="btnAdvanceWeek">Continuar ▶</button></div>
+    <nav class="career-nav" id="careerNav">
+      <button data-tab="careerScreen"><span>🏠</span>Inicio<i class="nav-badge" id="navInboxBadge" hidden></i></button>
+      <button data-tab="careerTabSquad"><span>👥</span>Plantilla<i class="nav-badge" id="navSquadBadge" hidden></i></button>
+      <button data-tab="careerTabComp"><span>🏆</span>Competición</button>
+      <button data-tab="careerTabClub"><span>🏟️</span>Club</button>
+    </nav>
+  </div>
   <header class="scoreboard" id="scoreboard" hidden>
     <h1 id="titleHome" title="Volver al menú">⚽ Fútbol Táctico</h1>
     <div class="score-row">
@@ -702,36 +811,40 @@
 
   <!-- CARRERA: hub -->
   <div class="screen" id="careerScreen" hidden>
-    <h2 id="careerTitle">Mi club</h2>
-    <p class="hint" id="careerJornada"></p>
-    <p class="hint" id="careerBudget" style="font-size:16px; font-weight:bold; color:var(--gold);"></p>
-    <div class="card" id="careerFinancialAlert" hidden></div>
-    <div class="card" id="careerOffersCard" hidden></div>
-    <div class="card" id="careerSeasonSummary" hidden></div>
-    <div class="card" id="careerMatchSummary" hidden></div>
-    <div class="btn-row">
-      <button class="mode-btn small" id="btnGoStandings">Clasificación</button>
-      <button class="mode-btn small" id="btnGoRoster">Plantilla</button>
+    <div class="mgr-card mgr-next" id="cardNextMatch"></div>
+    <button class="mode-btn small" id="btnGoFriendly" hidden>🤝 Organizar amistoso</button>
+    <div class="mgr-card" id="cardInbox"></div>
+    <div class="mgr-grid">
+      <div class="mgr-card" id="cardTable"></div>
+      <div class="mgr-card" id="cardForm"></div>
     </div>
-    <div class="btn-row">
-      <button class="mode-btn small" id="btnGoHistory">Historial del club</button>
-      <button class="mode-btn small" id="btnGoCalendar">Calendario</button>
+    <details class="mgr-card mgr-round"><summary id="cardRoundTitle">Resto de la jornada</summary><div id="careerFixtureList"></div></details>
+  </div>
+
+  <!-- Secciones del menú inferior -->
+  <div class="screen" id="careerTabSquad" hidden>
+    <h2>👥 Plantilla</h2>
+    <div class="hub-list">
+      <button class="hub-item" id="btnGoRoster"><span class="hi-ico">👕</span><span class="hi-txt"><b>Primer equipo</b><small id="hubSubRoster"></small></span><span class="hi-arrow">›</span></button>
+      <button class="hub-item" id="btnHubYouth"><span class="hi-ico">🌱</span><span class="hi-txt"><b>Cantera</b><small id="hubSubYouth"></small></span><span class="hi-arrow">›</span></button>
+      <button class="hub-item" id="btnGoStaff"><span class="hi-ico">🧑‍💼</span><span class="hi-txt"><b>Personal</b><small id="hubSubStaff"></small></span><span class="hi-arrow">›</span></button>
     </div>
-    <div class="btn-row">
-      <button class="mode-btn small" id="btnGoMarket">Ojeo</button>
-      <button class="mode-btn small" id="btnGoStaff">Personal</button>
+  </div>
+  <div class="screen" id="careerTabComp" hidden>
+    <h2>🏆 Competición</h2>
+    <div class="hub-list">
+      <button class="hub-item" id="btnGoStandings"><span class="hi-ico">📊</span><span class="hi-txt"><b>Clasificación</b><small id="hubSubStandings"></small></span><span class="hi-arrow">›</span></button>
+      <button class="hub-item" id="btnGoCalendar"><span class="hi-ico">📅</span><span class="hi-txt"><b>Calendario</b><small id="hubSubCalendar"></small></span><span class="hi-arrow">›</span></button>
+      <button class="hub-item" id="btnGoHistory"><span class="hi-ico">📜</span><span class="hi-txt"><b>Historial del club</b><small id="hubSubHistory"></small></span><span class="hi-arrow">›</span></button>
     </div>
-    <div class="btn-row">
-      <button class="mode-btn small" id="btnGoFacilities">Instalaciones</button>
-      <button class="mode-btn small" id="btnGoFinance">Finanzas</button>
-    </div>
-    <button class="mode-btn small" id="btnGoFriendly">Organizar amistoso</button>
-    <div class="card"><b class="card-title">PARTIDOS DE LA JORNADA</b><div id="careerFixtureList"></div></div>
-    <p class="hint" id="advanceWeekHint"></p>
-    <button class="mode-btn primary" id="btnAdvanceWeek">Seguir ▶</button>
-    <div class="btn-row">
-      <button class="mode-btn small" id="btnSwitchCareer">Cambiar de carrera</button>
-      <button class="mode-btn small" id="btnExitCareer">Salir al menú</button>
+  </div>
+  <div class="screen" id="careerTabClub" hidden>
+    <h2>🏟️ Club</h2>
+    <div class="hub-list">
+      <button class="hub-item" id="btnGoFacilities"><span class="hi-ico">🏟️</span><span class="hi-txt"><b>Instalaciones</b><small id="hubSubFacilities"></small></span><span class="hi-arrow">›</span></button>
+      <button class="hub-item" id="btnGoFinance"><span class="hi-ico">💶</span><span class="hi-txt"><b>Finanzas</b><small id="hubSubFinance"></small></span><span class="hi-arrow">›</span></button>
+      <button class="hub-item" id="btnGoMarket"><span class="hi-ico">🔎</span><span class="hi-txt"><b>Ojeo y fichajes</b><small id="hubSubMarket"></small></span><span class="hi-arrow">›</span></button>
+      <button class="hub-item" id="btnHubFriendly"><span class="hi-ico">🤝</span><span class="hi-txt"><b>Amistosos</b><small id="hubSubFriendly"></small></span><span class="hi-arrow">›</span></button>
     </div>
   </div>
 
@@ -908,7 +1021,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=20"></script>
+<script src="sound.js?v=21"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1198,11 +1311,12 @@
 
   // ---------- Navegación de pantallas ----------
   function showScreen(name, fromHistory){
-    ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerCalendarScreen','careerFinanceScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen','careerFacilitiesScreen','careerAllFacilitiesScreen','careerFriendlyScreen','careerLineupScreen','gameScreen'].forEach(id=>{
+    ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerTabSquad','careerTabComp','careerTabClub','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerCalendarScreen','careerFinanceScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen','careerFacilitiesScreen','careerAllFacilitiesScreen','careerFriendlyScreen','careerLineupScreen','gameScreen'].forEach(id=>{
       document.getElementById(id).hidden = (id !== name);
     });
     document.getElementById('scoreboard').hidden = (name !== 'gameScreen');
     document.body.classList.toggle('in-match', name === 'gameScreen');
+    updateCareerChrome(name);
     document.body.classList.remove('match-menu-open');
     if(name !== 'gameScreen' && window.FTSound) FTSound.crowdStop();
     if(name !== 'gameScreen') exitLandscapeMode();
@@ -1256,30 +1370,42 @@
   document.getElementById('btnGoRoster').addEventListener('click', ()=>showScreen('careerRosterScreen'));
   document.getElementById('btnGoHistory').addEventListener('click', ()=>showScreen('careerHistoryScreen'));
   document.getElementById('btnGoYouth').addEventListener('click', ()=>showScreen('careerYouthScreen'));
-  document.getElementById('btnBackYouth').addEventListener('click', ()=>showScreen('careerRosterScreen'));
+  document.getElementById('btnBackYouth').addEventListener('click', ()=>showScreen('careerTabSquad'));
   document.getElementById('btnGoMarket').addEventListener('click', ()=>showScreen('careerMarketScreen'));
-  document.getElementById('btnBackMarket').addEventListener('click', ()=>showScreen('careerScreen'));
+  document.getElementById('btnBackMarket').addEventListener('click', ()=>showScreen('careerTabClub'));
   document.getElementById('btnGoStaff').addEventListener('click', ()=>showScreen('careerStaffScreen'));
-  document.getElementById('btnBackStaff').addEventListener('click', ()=>showScreen('careerScreen'));
+  document.getElementById('btnBackStaff').addEventListener('click', ()=>showScreen('careerTabSquad'));
   document.getElementById('btnBackAllFacilities').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnGoCalendar').addEventListener('click', ()=>showScreen('careerCalendarScreen'));
   document.getElementById('btnGoFinance').addEventListener('click', ()=>showScreen('careerFinanceScreen'));
-  document.getElementById('btnBackFinance').addEventListener('click', ()=>showScreen('careerScreen'));
+  document.getElementById('btnBackFinance').addEventListener('click', ()=>showScreen('careerTabClub'));
   document.getElementById('financeTabs').addEventListener('click', e=>{
     const v = e.target.dataset && e.target.dataset.view; if(!v) return;
     financeView.mode = v; renderFinanceScreen();
   });
-  document.getElementById('btnBackCalendar').addEventListener('click', ()=>showScreen('careerScreen'));
+  document.getElementById('btnBackCalendar').addEventListener('click', ()=>showScreen('careerTabComp'));
   document.getElementById('btnGoFriendly').addEventListener('click', ()=>showScreen('careerFriendlyScreen'));
   document.getElementById('btnBackFriendly').addEventListener('click', ()=>showScreen('careerScreen'));
-  document.getElementById('btnAdvanceWeek').addEventListener('click', advanceWeek);
+  // Continuar: avanza la semana y vuelve a Inicio para ver lo ocurrido
+  document.getElementById('btnAdvanceWeek').addEventListener('click', ()=>{
+    if(currentScreenName !== 'careerScreen') showScreen('careerScreen');
+    advanceWeek();
+  });
+  document.querySelectorAll('#careerNav button').forEach(b=> b.addEventListener('click', ()=> showScreen(b.dataset.tab)));
+  document.getElementById('btnCareerGear').addEventListener('click', e=>{
+    e.stopPropagation();
+    const m = document.getElementById('careerGearMenu'); m.hidden = !m.hidden;
+  });
+  document.addEventListener('click', e=>{ if(!e.target.closest('#careerBar')) document.getElementById('careerGearMenu').hidden = true; });
+  document.getElementById('btnHubYouth').addEventListener('click', ()=>showScreen('careerYouthScreen'));
+  document.getElementById('btnHubFriendly').addEventListener('click', ()=>showScreen('careerFriendlyScreen'));
   document.getElementById('btnCloseWeekModal').addEventListener('click', ()=>{ document.getElementById('weekEventsModal').hidden = true; });
   document.getElementById('btnGoFacilities').addEventListener('click', ()=>showScreen('careerFacilitiesScreen'));
-  document.getElementById('btnBackFacilities').addEventListener('click', ()=>showScreen('careerScreen'));
-  document.getElementById('btnBackStandings').addEventListener('click', ()=>showScreen('careerScreen'));
-  document.getElementById('btnBackRoster').addEventListener('click', ()=>showScreen('careerScreen'));
+  document.getElementById('btnBackFacilities').addEventListener('click', ()=>showScreen('careerTabClub'));
+  document.getElementById('btnBackStandings').addEventListener('click', ()=>showScreen('careerTabComp'));
+  document.getElementById('btnBackRoster').addEventListener('click', ()=>showScreen('careerTabSquad'));
   document.getElementById('btnEditDefaultLineup').addEventListener('click', openDefaultLineupEditor);
-  document.getElementById('btnBackHistory').addEventListener('click', ()=>showScreen('careerScreen'));
+  document.getElementById('btnBackHistory').addEventListener('click', ()=>showScreen('careerTabComp'));
   document.getElementById('btnCancelLineup').addEventListener('click', ()=>{
     if(lineupMode==='default') showScreen('careerRosterScreen');
     else if(lineupMode==='friendly') showScreen('careerFriendlyScreen');
@@ -2016,7 +2142,7 @@
 
     const events = [];
     if(forcedSale) events.push(`⚠️ ${career.financialAlert}`);
-    newOffers.forEach(o=> events.push(`💰 <b>${escapeHtml(o.buyerName)}</b> ofrece ${formatMoney(o.amount)} por ${escapeHtml(o.playerName)}. Responde desde el hub.`));
+    newOffers.forEach(o=> events.push(`💰 <b>${escapeHtml(o.buyerName)}</b> ofrece ${formatMoney(o.amount)} por ${escapeHtml(o.playerName)}. Responde desde la bandeja de entrada de Inicio.`));
     if(!seasonEnded && phaseAfter.label!==phase.label){ events.push(`📅 Ahora: <b>${phaseAfter.label}</b>`); }
     if(seasonEnded){ events.push(`📅 Empieza la Temporada ${career.season} — pretemporada.`); }
 
@@ -2156,130 +2282,202 @@
     showScreen('careerScreen');
   });
 
+  // ---------- Inicio del Modo Carrera (estilo manager) ----------
+  const CAREER_CHROME_SCREENS = ['careerScreen','careerTabSquad','careerTabComp','careerTabClub','careerStandingsScreen','careerRosterScreen',
+    'careerHistoryScreen','careerCalendarScreen','careerFinanceScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen',
+    'careerFacilitiesScreen','careerAllFacilitiesScreen','careerFriendlyScreen'];
+  const TAB_OF_SCREEN = {careerScreen:'careerScreen', careerFriendlyScreen:'careerScreen', careerAllFacilitiesScreen:'careerScreen',
+    careerTabSquad:'careerTabSquad', careerRosterScreen:'careerTabSquad', careerYouthScreen:'careerTabSquad', careerStaffScreen:'careerTabSquad',
+    careerTabComp:'careerTabComp', careerStandingsScreen:'careerTabComp', careerCalendarScreen:'careerTabComp', careerHistoryScreen:'careerTabComp',
+    careerTabClub:'careerTabClub', careerFacilitiesScreen:'careerTabClub', careerFinanceScreen:'careerTabClub', careerMarketScreen:'careerTabClub'};
+  let currentScreenName = 'menuScreen';
+  function updateCareerChrome(name){
+    if(name) currentScreenName = name;
+    const on = !!career && CAREER_CHROME_SCREENS.includes(currentScreenName);
+    document.getElementById('careerBar').hidden = !on;
+    document.getElementById('careerDock').hidden = !on;
+    document.body.classList.toggle('career-chrome', on);
+    document.getElementById('careerGearMenu').hidden = true;
+    if(!on) return;
+    const team = career.teams[userTeamIdx()];
+    const phase = weekPhaseInfo(career.week||1);
+    document.getElementById('cbClub').innerHTML = `${teamBadgeHTML(team)}<span><b>${escapeHtml(career.clubName)}</b><small>Div ${team.division} · T${career.season} · Sem ${career.week} · ${escapeHtml(phase.label)}</small></span>`;
+    const mood = fanMoodOf(team);
+    document.getElementById('cbStats').innerHTML =
+      `<span title="Presupuesto" class="${(team.budget||0)<0?'fin-neg':''}">💰 ${shortMoney(team.budget||0)} €</span>`+
+      `<span title="Reputación">⭐ ${clubReputation(team)}</span>`+
+      `<span title="Ánimo de la afición">${mood>=55?'😀':mood>=40?'🙂':'😠'} ${mood}</span>`;
+    document.querySelectorAll('#careerNav button').forEach(b=> b.classList.toggle('active', b.dataset.tab === TAB_OF_SCREEN[currentScreenName]));
+    const inbox = inboxItems().length;
+    const ib = document.getElementById('navInboxBadge'); ib.hidden = !inbox; ib.textContent = inbox;
+    const sb = document.getElementById('navSquadBadge'); sb.hidden = !career.youthReviewPending; sb.textContent = '!';
+    // Botón Continuar
+    const advanceBtn = document.getElementById('btnAdvanceWeek');
+    const advanceHint = document.getElementById('advanceWeekHint');
+    const uf = phase.hasMatch ? userFixtureThisJornada() : null;
+    if(uf && !uf.played){
+      advanceBtn.disabled = true;
+      advanceHint.textContent = 'Juega o simula tu partido primero';
+    } else {
+      advanceBtn.disabled = false;
+      advanceHint.textContent = phase.hasMatch ? 'Jornada resuelta' : `${phase.label}: sin partido`;
+    }
+    if(currentScreenName === 'careerTabSquad') renderHubSquad();
+    if(currentScreenName === 'careerTabComp') renderHubComp();
+    if(currentScreenName === 'careerTabClub') renderHubClub();
+  }
+
+  // Mensajes de la bandeja de entrada
+  function inboxItems(){
+    const items = [];
+    if(career.financialAlert) items.push({kind:'alert'});
+    (career.pendingOffers||[]).forEach(o=> items.push({kind:'offer', o}));
+    if(career.seasonSummary) items.push({kind:'season'});
+    if(career.youthReviewPending && !career.seasonSummary) items.push({kind:'youth'});
+    if(career.lastMatchSummary) items.push({kind:'xp'});
+    return items;
+  }
+  function renderInbox(){
+    const el = document.getElementById('cardInbox');
+    const items = inboxItems();
+    el.innerHTML = `<b class="card-title">📥 BANDEJA DE ENTRADA${items.length?` <span class="inbox-count">${items.length}</span>`:''}</b>`;
+    if(!items.length){ el.insertAdjacentHTML('beforeend', '<p class="hint">No tienes mensajes nuevos.</p>'); return; }
+    const addMsg = (icon, title, bodyHTML, actions)=>{
+      const m = document.createElement('div'); m.className = 'inbox-msg';
+      m.innerHTML = `<div class="im-ico">${icon}</div><div class="im-body"><b>${title}</b><div>${bodyHTML}</div><div class="im-actions"></div></div>`;
+      const act = m.querySelector('.im-actions');
+      (actions||[]).forEach(([label, primary, fn])=>{
+        const b = document.createElement('button'); b.className = 'mode-btn small' + (primary?' primary':''); b.textContent = label;
+        b.addEventListener('click', fn); act.appendChild(b);
+      });
+      el.appendChild(m);
+    };
+    items.forEach(it=>{
+      if(it.kind==='alert'){
+        addMsg('⚠️', 'Aviso financiero', escapeHtml(career.financialAlert), [['Entendido', false, ()=>{ career.financialAlert=null; persistCareers(); renderCareerScreen(); }]]);
+      } else if(it.kind==='offer'){
+        const o = it.o;
+        addMsg('💰', `Oferta de ${escapeHtml(o.buyerName)}`, `Ofrece <b style="color:var(--gold);">${formatMoney(o.amount)}</b> por ${escapeHtml(o.playerName)}.`,
+          [['Aceptar', true, ()=>respondToOffer(o.id, true)], ['Rechazar', false, ()=>respondToOffer(o.id, false)]]);
+      } else if(it.kind==='season'){
+        const sm = career.seasonSummary;
+        let body = sm.promoted ? `<span class="promo-dot"></span>¡Ascenso! Pasas a la División ${sm.divisionAfter}.`
+          : sm.relegated ? `<span class="releg-dot"></span>Descenso a la División ${sm.divisionAfter}.` : `Sigues en la División ${sm.divisionAfter}.`;
+        if(sm.retired.length) body += `<br>Se retiran: ${sm.retired.map(escapeHtml).join(', ')}<br>Se incorporan: ${sm.arrived.map(escapeHtml).join(', ')}`;
+        const acts = career.youthReviewPending
+          ? [['Revisar cantera', true, ()=> showScreen('careerYouthScreen')]]
+          : [['Cerrar', false, ()=>{ career.seasonSummary=null; persistCareers(); renderCareerScreen(); }]];
+        addMsg(sm.promoted?'🎉':sm.relegated?'📉':'🏁', `Resumen de la temporada ${sm.season}`, body, acts);
+      } else if(it.kind==='youth'){
+        addMsg('🌱', 'Revisión de cantera pendiente', 'Decide qué canteranos suben al primer equipo antes de que empiece la temporada.', [['Revisar cantera', true, ()=> showScreen('careerYouthScreen')]]);
+      } else if(it.kind==='xp'){
+        const mm = career.lastMatchSummary;
+        const lines = mm.entries.length ? mm.entries.map(e=>`<b>${escapeHtml(e.name)}</b> +${e.xp} XP${e.changes.length ? ' — ' + e.changes.map(c=>`${c.short} ${c.before}→${c.after}`).join(', ') : ''}`).join('<br>') : 'Nadie jugó ese partido.';
+        const ups = mm.entries.filter(e=>e.changes.length).length;
+        addMsg('📈', `Experiencia tras el partido contra ${escapeHtml(mm.opponent)}`,
+          `<details><summary>${mm.entries.length} jugadores · ${ups} mejoran atributos</summary><div style="margin-top:4px;">${lines}</div></details>`,
+          [['Cerrar', false, ()=>{ career.lastMatchSummary=null; persistCareers(); renderCareerScreen(); }]]);
+      }
+    });
+  }
+
+  function renderNextMatchCard(){
+    const el = document.getElementById('cardNextMatch');
+    const phase = weekPhaseInfo(career.week||1);
+    const uIdx = userTeamIdx();
+    const div = userDivision();
+    const st = computeStandingsForDivision(div);
+    const posOf = idx=>{ const i = st.findIndex(x=>x.idx===idx); return i>=0 ? i+1 : '-'; };
+    const thisWeek = phase.hasMatch ? userFixtureThisJornada() : null;
+    const next = thisWeek || career.fixtures.filter(f=>f.division===div && !f.played && (f.homeIdx===uIdx || f.awayIdx===uIdx)).sort((a,b)=>a.jornada-b.jornada)[0];
+    document.getElementById('btnGoFriendly').hidden = !phase.friendlies;
+    if(!next){
+      el.innerHTML = `<b class="card-title">PRÓXIMO PARTIDO</b><p class="hint">No quedan partidos de liga esta temporada. Pulsa Continuar para cerrar la temporada.</p>`;
+      return;
+    }
+    const home = career.teams[next.homeIdx], away = career.teams[next.awayIdx];
+    const userHome = next.homeIdx === uIdx;
+    const when = thisWeek ? (next.played ? 'Jugado esta semana' : 'Esta semana') : `Semana ${weekForJornada(next.jornada)}${phase.hasMatch?'':' · ahora: '+phase.label}`;
+    const side = (t, idx)=>`<div class="nm-team">${teamBadgeHTML(t)}<b>${escapeHtml(t.name)}</b><small>${posOf(idx)}º · ${(st.find(x=>x.idx===idx)||{pts:0}).pts} pts</small></div>`;
+    const score = next.played ? `<div class="nm-score">${next.scoreHome} - ${next.scoreAway}</div>` : `<div class="nm-vs">VS</div>`;
+    el.innerHTML = `<div class="nm-head"><b class="card-title">${next.played?'RESULTADO':'PRÓXIMO PARTIDO'}</b><span>J${next.jornada} · ${userHome?'🏠 En casa':'✈️ Fuera'} · ${when}</span></div>
+      <div class="nm-row">${side(home, next.homeIdx)}${score}${side(away, next.awayIdx)}</div><div class="nm-actions"></div>`;
+    if(thisWeek && !next.played){
+      const acts = el.querySelector('.nm-actions');
+      const play = document.createElement('button'); play.className='mode-btn primary'; play.textContent='⚽ Alineación y jugar';
+      play.addEventListener('click', ()=>openLineupScreen(next.id));
+      const sim = document.createElement('button'); sim.className='mode-btn'; sim.textContent='⏩ Simular';
+      sim.addEventListener('click', ()=>simulateUserFixture(next.id));
+      acts.appendChild(play); acts.appendChild(sim);
+    }
+    wireClubLinks(el);
+  }
+  function renderTableCard(){
+    const el = document.getElementById('cardTable');
+    const div = userDivision(), uIdx = userTeamIdx();
+    const st = computeStandingsForDivision(div);
+    const i = st.findIndex(x=>x.idx===uIdx);
+    const from = clamp(i-2, 0, Math.max(0, st.length-5)), rows = st.slice(from, from+5);
+    let h = `<b class="card-title">📊 DIVISIÓN ${div}</b><table class="mini-table"><tr><th></th><th></th><th>PJ</th><th>Pts</th></tr>`;
+    rows.forEach((r,k)=>{
+      const pos = from+k+1;
+      const cls = (r.idx===uIdx?'me ':'') + (div>1 && pos<=PROMOTED_PER_DIV ? 'promo' : (div<DIVISIONS && pos>st.length-RELEGATED_PER_DIV ? 'releg' : ''));
+      h += `<tr class="${cls}"><td>${pos}</td><td class="mt-name">${escapeHtml(r.name)}</td><td>${r.pj}</td><td><b>${r.pts}</b></td></tr>`;
+    });
+    el.innerHTML = h + '</table>';
+    el.onclick = ()=> showScreen('careerStandingsScreen');
+  }
+  function renderFormCard(){
+    const el = document.getElementById('cardForm');
+    const uIdx = userTeamIdx();
+    const played = career.fixtures.filter(f=>f.played && (f.homeIdx===uIdx || f.awayIdx===uIdx)).sort((a,b)=>a.jornada-b.jornada).slice(-5);
+    let dots = played.map(f=>{
+      const gf = f.homeIdx===uIdx ? f.scoreHome : f.scoreAway, gc = f.homeIdx===uIdx ? f.scoreAway : f.scoreHome;
+      const r = gf>gc ? 'V' : gf<gc ? 'D' : 'E';
+      const rival = career.teams[f.homeIdx===uIdx ? f.awayIdx : f.homeIdx].name;
+      return `<span class="form-dot f-${r}" title="J${f.jornada} vs ${escapeHtml(rival)}: ${gf}-${gc}">${r}</span>`;
+    }).join('');
+    if(!played.length) dots = '<span class="hint">Aún sin partidos</span>';
+    const team = career.teams[uIdx];
+    el.innerHTML = `<b class="card-title">🔥 RACHA</b><div class="form-row">${dots}</div><div class="hint" style="margin-top:8px;">Afición: <b>${fanMoodOf(team)}/100</b></div>`;
+    el.onclick = ()=> showScreen('careerCalendarScreen');
+  }
+  function renderHubSquad(){
+    const team = career.teams[userTeamIdx()];
+    const injured = team.slots.map(id=>career.players.find(p=>p.id===id)).filter(p=>p && p.injuryMatchesLeft>0).length;
+    document.getElementById('hubSubRoster').textContent = `${team.slots.length}/${MAX_SQUAD_SIZE} jugadores${injured?` · ${injured} lesionado${injured>1?'s':''}`:''}`;
+    document.getElementById('hubSubYouth').textContent = `${(career.youthPlayers||[]).length} canteranos · ${formatMoney(youthWeeklyCost(team))}/semana${career.youthReviewPending?' · ⚠️ revisión pendiente':''}`;
+    document.getElementById('hubSubStaff').textContent = `${(career.staff||[]).length} ojeador${(career.staff||[]).length===1?'':'es'} · ${formatMoney(calcStaffWageBill())}/semana`;
+  }
+  function renderHubComp(){
+    const div = userDivision(), st = computeStandingsForDivision(div), pos = st.findIndex(x=>x.idx===userTeamIdx())+1;
+    document.getElementById('hubSubStandings').textContent = `División ${div} · vas ${pos}º`;
+    const left = career.fixtures.filter(f=>f.division===div && !f.played && (f.homeIdx===userTeamIdx()||f.awayIdx===userTeamIdx())).length;
+    document.getElementById('hubSubCalendar').textContent = `${left} partido${left===1?'':'s'} por jugar`;
+    const h = career.clubHistory||[];
+    document.getElementById('hubSubHistory').textContent = h.length ? `${h.length} temporada${h.length>1?'s':''} completada${h.length>1?'s':''}` : 'Aún sin temporadas completadas';
+  }
+  function renderHubClub(){
+    const team = career.teams[userTeamIdx()], phase = weekPhaseInfo(career.week||1);
+    document.getElementById('hubSubFacilities').textContent = `Aforo ${formatInt(totalStadiumCapacity(team))} · Juveniles nv${team.facilities.youth||1} · Entrenamiento nv${team.facilities.training||1}`;
+    document.getElementById('hubSubFinance').textContent = `Presupuesto ${formatMoney(team.budget||0)}`;
+    document.getElementById('hubSubMarket').textContent = phase.transfers ? 'Mercado abierto: puedes fichar' : 'Mercado cerrado: solo ojeo';
+    const fr = document.getElementById('btnHubFriendly');
+    fr.disabled = !phase.friendlies;
+    document.getElementById('hubSubFriendly').textContent = phase.friendlies ? 'Disponibles en pretemporada' : 'Solo en pretemporada';
+  }
+
   function renderCareerScreen(){
     if(!career) return;
     if(career.week===undefined) career.week = weekForJornada(career.currentJornada);
+    renderNextMatchCard();
+    renderInbox();
+    renderTableCard();
+    renderFormCard();
     const phase = weekPhaseInfo(career.week);
-    document.getElementById('careerTitle').innerHTML = teamBadgeHTML(career.teams[userTeamIdx()]) + escapeHtml(career.clubName);
-    const maxJ = TEAMS_PER_DIVISION - 1;
-    document.getElementById('careerJornada').textContent = phase.hasMatch
-      ? `Semana ${career.week} · ${phase.label} · Temporada ${career.season} · División ${userDivision()} · Jornada ${phase.jornada} de ${maxJ}`
-      : `Semana ${career.week} · ${phase.label} · Temporada ${career.season} · División ${userDivision()}`;
-    const userTeam = career.teams[userTeamIdx()];
-    const budgetEl = document.getElementById('careerBudget');
-    budgetEl.textContent = `💰 ${formatMoney(userTeam.budget||0)} · ⭐ Reputación ${clubReputation(userTeam)}/100`;
-    budgetEl.style.color = (userTeam.budget||0) < 0 ? '#e74c3c' : 'var(--gold)';
-
-    const alertEl = document.getElementById('careerFinancialAlert');
-    if(career.financialAlert){
-      alertEl.innerHTML = `<b class="card-title">AVISO FINANCIERO</b><div>${escapeHtml(career.financialAlert)}</div>`;
-      alertEl.hidden = false;
-      const closeAlertBtn=document.createElement('button');
-      closeAlertBtn.className='mode-btn small'; closeAlertBtn.textContent='Cerrar'; closeAlertBtn.style.marginTop='8px';
-      closeAlertBtn.addEventListener('click', ()=>{ career.financialAlert=null; persistCareers(); renderCareerScreen(); });
-      alertEl.appendChild(closeAlertBtn);
-    } else {
-      alertEl.hidden = true;
-    }
-
-    const summaryEl = document.getElementById('careerSeasonSummary');
-    if(career.seasonSummary){
-      const s = career.seasonSummary;
-      let lines = [`<b class="card-title">RESUMEN TEMPORADA ${s.season}</b>`];
-      if(s.promoted) lines.push(`<div><span class="promo-dot"></span>¡Ascenso! Pasas a la División ${s.divisionAfter}.</div>`);
-      else if(s.relegated) lines.push(`<div><span class="releg-dot"></span>Descenso a la División ${s.divisionAfter}.</div>`);
-      else lines.push(`<div>Sigues en la División ${s.divisionAfter}.</div>`);
-      if(s.retired.length){
-        lines.push(`<div style="margin-top:6px;">Se retiran: ${s.retired.map(escapeHtml).join(', ')}</div>`);
-        lines.push(`<div>Se incorporan: ${s.arrived.map(escapeHtml).join(', ')}</div>`);
-      }
-      summaryEl.innerHTML = lines.join('');
-      summaryEl.hidden = false;
-      if(career.youthReviewPending){
-        const btn=document.createElement('button');
-        btn.className='mode-btn small primary'; btn.textContent='Revisar cantera'; btn.style.marginTop='8px';
-        btn.addEventListener('click', ()=> showScreen('careerYouthScreen'));
-        summaryEl.appendChild(btn);
-      } else {
-        const btn=document.createElement('button');
-        btn.className='mode-btn small'; btn.textContent='Cerrar'; btn.style.marginTop='8px';
-        btn.addEventListener('click', ()=>{ career.seasonSummary=null; persistCareers(); renderCareerScreen(); });
-        summaryEl.appendChild(btn);
-      }
-    } else {
-      summaryEl.hidden = true;
-    }
-
-    const matchSummaryEl = document.getElementById('careerMatchSummary');
-    if(career.lastMatchSummary){
-      const m = career.lastMatchSummary;
-      let lines = [`<b class="card-title">EXPERIENCIA · vs ${escapeHtml(m.opponent)}</b>`];
-      if(!m.entries.length){
-        lines.push('<div class="hint">Nadie jugó ese partido.</div>');
-      } else {
-        m.entries.forEach(e=>{
-          let line = `<div style="margin-top:5px;"><b>${escapeHtml(e.name)}</b> +${e.xp} XP`;
-          if(e.changes.length){
-            line += ' — ' + e.changes.map(c=>`${c.short} ${c.before}→${c.after}`).join(', ');
-          }
-          line += '</div>';
-          lines.push(line);
-        });
-      }
-      matchSummaryEl.innerHTML = lines.join('');
-      matchSummaryEl.hidden = false;
-      const closeBtn=document.createElement('button');
-      closeBtn.className='mode-btn small'; closeBtn.textContent='Cerrar'; closeBtn.style.marginTop='8px';
-      closeBtn.addEventListener('click', ()=>{ career.lastMatchSummary=null; persistCareers(); renderCareerScreen(); });
-      matchSummaryEl.appendChild(closeBtn);
-    } else {
-      matchSummaryEl.hidden = true;
-    }
-
-    const offersEl = document.getElementById('careerOffersCard');
-    if(career.pendingOffers && career.pendingOffers.length){
-      let lines = [`<b class="card-title">OFERTAS RECIBIDAS</b>`];
-      offersEl.innerHTML = lines.join('');
-      career.pendingOffers.forEach(o=>{
-        const row=document.createElement('div');
-        row.style.cssText='margin-top:8px; padding-top:8px; border-top:1px solid #234;';
-        row.innerHTML = `<div><b>${escapeHtml(o.buyerName)}</b> ofrece <b style="color:var(--gold);">${formatMoney(o.amount)}</b> por ${escapeHtml(o.playerName)}</div>`;
-        const btnRow=document.createElement('div'); btnRow.className='btn-row'; btnRow.style.marginTop='6px';
-        const acceptBtn=document.createElement('button'); acceptBtn.className='mode-btn small primary'; acceptBtn.textContent='Aceptar';
-        acceptBtn.addEventListener('click', ()=>respondToOffer(o.id, true));
-        const rejectBtn=document.createElement('button'); rejectBtn.className='mode-btn small'; rejectBtn.textContent='Rechazar';
-        rejectBtn.addEventListener('click', ()=>respondToOffer(o.id, false));
-        btnRow.appendChild(acceptBtn); btnRow.appendChild(rejectBtn);
-        row.appendChild(btnRow);
-        offersEl.appendChild(row);
-      });
-      offersEl.hidden = false;
-    } else {
-      offersEl.hidden = true;
-    }
-
+    document.getElementById('cardRoundTitle').textContent = phase.hasMatch ? `Resto de la jornada ${phase.jornada}` : 'Partidos de la semana';
     renderCareerFixtures();
-
-    document.getElementById('btnGoFriendly').hidden = !phase.friendlies;
-
-    const advanceBtn = document.getElementById('btnAdvanceWeek');
-    const advanceHint = document.getElementById('advanceWeekHint');
-    if(phase.hasMatch){
-      const uf = userFixtureThisJornada();
-      if(uf && !uf.played){
-        advanceBtn.disabled = true;
-        advanceHint.textContent = 'Juega o simula tu partido de esta jornada antes de continuar.';
-      } else {
-        advanceBtn.disabled = false;
-        advanceHint.textContent = 'Tu jornada está resuelta. Pulsa Seguir para pasar a la siguiente semana.';
-      }
-    } else {
-      advanceBtn.disabled = false;
-      let extra = [];
-      if(phase.friendlies) extra.push('puedes organizar amistosos');
-      if(phase.transfers) extra.push('puedes fichar jugadores en el Ojeo');
-      advanceHint.textContent = `${phase.label}: no hay partido esta semana` + (extra.length ? ' — ' + extra.join(' y ') + '.' : '.');
-    }
+    updateCareerChrome();
   }
 
   // Color del número de un atributo: rojo (bajo) → amarillo → verde (alto)
@@ -2784,7 +2982,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=20').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=21').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -4256,7 +4454,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=20').then(m=>{
+      import('./match3d.js?v=21').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
