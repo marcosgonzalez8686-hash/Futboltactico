@@ -2,7 +2,7 @@
 // No contiene reglas: recibe el estado ya calculado por index.html y avisa de los toques
 // sobre fichas o casillas para que el juego los procese igual que en el tablero 2D.
 import * as THREE from './vendor/three.module.min.js';
-import { buildStadiumShell } from './stadium3d.js?v=15';
+import { buildStadiumShell } from './stadium3d.js?v=16';
 
 const COLS = 14, ROWS = 9;
 const GOAL_COL_W = 0.62;
@@ -370,9 +370,11 @@ export function mountMatch3D(container, handlers){
   };
   const orbit = {theta: 0, phi: 0.82, radius: 15.5, target: new THREE.Vector3(0, 0, 0)};
   let camMode = 'side', camGoal = {...CAMS.side}, shakeT0 = -1;
+  let userAdjusted = false, lastFit = 1; // userAdjusted: el usuario ha girado o hecho zoom desde que eligió cámara
   function setCamera(mode){
     camMode = CAMS[mode] ? mode : 'side';
     camGoal = {...CAMS[camMode]};
+    userAdjusted = false;
     if(camGoal.theta === null) camGoal.theta = orbit.theta;
     container.querySelectorAll('[data-cam]').forEach(b=> b.classList.toggle('active', b.dataset.cam === camMode));
   }
@@ -423,13 +425,13 @@ export function mountMatch3D(container, handlers){
     const dx = e.clientX - p.x, dy = e.clientY - p.y;
     if(tapCandidate && Math.hypot(e.clientX - tapCandidate.x, e.clientY - tapCandidate.y) > 9) tapCandidate = null;
     if(pointers.size === 1 && !tapCandidate){
-      camGoal = null;
+      camGoal = null; userAdjusted = true;
       orbit.theta -= dx*0.008;
       orbit.phi -= dy*0.006;
     }
     p.x = e.clientX; p.y = e.clientY;
     if(pointers.size === 2){
-      camGoal = null;
+      camGoal = null; userAdjusted = true;
       const [a, b] = [...pointers.values()];
       const d = Math.hypot(a.x-b.x, a.y-b.y);
       if(pinchDist) orbit.radius *= pinchDist/d;
@@ -446,7 +448,7 @@ export function mountMatch3D(container, handlers){
   canvas.addEventListener('pointerup', endPointer);
   canvas.addEventListener('pointercancel', endPointer);
   canvas.addEventListener('wheel', e=>{
-    e.preventDefault(); camGoal = null; orbit.radius *= e.deltaY > 0 ? 1.08 : 0.93;
+    e.preventDefault(); camGoal = null; userAdjusted = true; orbit.radius *= e.deltaY > 0 ? 1.08 : 0.93;
   }, {passive: false});
 
   function handleTap(clientX, clientY){
@@ -734,9 +736,13 @@ export function mountMatch3D(container, handlers){
       // En pantallas estrechas se aleja un poco para que quepa el campo entero
       const fit = w/h < 1.2 ? 1.25 : 1;
       CAMS.side.radius = 15.5*fit; CAMS.top.radius = 15.5*fit*1.05;
-      // Al girar el móvil, las cámaras fijas se reencuadran solas
-      if(camMode === 'side' || camMode === 'top') camGoal = {...CAMS[camMode]};
-      else if(camGoal && CAMS[camMode].radius) camGoal.radius = CAMS[camMode].radius;
+      // Solo al girar el móvil (cambia el encuadre necesario) y si el usuario no ha tocado la cámara;
+      // los pequeños cambios de tamaño (barra del navegador) no deshacen el zoom
+      if(fit !== lastFit){
+        lastFit = fit;
+        if(!userAdjusted && (camMode === 'side' || camMode === 'top')) camGoal = {...CAMS[camMode]};
+        else if(camGoal && CAMS[camMode].radius) camGoal.radius = CAMS[camMode].radius;
+      }
     }
     return true;
   }
