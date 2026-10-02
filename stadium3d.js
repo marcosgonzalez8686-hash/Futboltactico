@@ -24,6 +24,9 @@ const SIDES = sidesFor(HALF_L, HALF_W, GAP);
 const STAND_KEYS = ['north','south','east','west'];
 const LABELS = {north:'Norte', south:'Sur', east:'Este', west:'Oeste'};
 
+// Nivel de grada: 0 = sin grada; si falta el dato (partidas antiguas) cuenta como 1
+function lv(v){ return typeof v === 'number' ? v : 1; }
+
 function standDims(level){
   const nLow = LOW_ROWS[level], nUp = UP_ROWS[level];
   const d1 = nLow*ROW_DEPTH, h1 = 0.3 + nLow*ROW_RISE;
@@ -87,6 +90,18 @@ function adBoardTexture(primary, secondary){
 function buildStand(level, len, kit, mats, opts){
   const grp = new THREE.Group();
   const dm = standDims(level);
+  grp.userData.dims = dm;
+  if(level === 0){
+    // Sin grada: solo una valla baja junto al campo
+    const n = Math.max(2, Math.round(len/0.9));
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.04, 0.04), mats.steel);
+    rail.position.set(0, 0.22, -0.2); rail.castShadow = true; grp.add(rail);
+    for(let i=0;i<=n;i++){
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.24, 0.04), mats.steel);
+      post.position.set(-len/2 + i*len/n, 0.12, -0.2); post.castShadow = true; grp.add(post);
+    }
+    return grp;
+  }
   const box = (w,h,d, mat, x,y,z)=>{
     const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
     m.position.set(x,y,z); m.castShadow = true; m.receiveShadow = true; grp.add(m); return m;
@@ -214,7 +229,7 @@ function buildExtras(levels, kit, mats, halfL, halfW, gap){
   const out = [];
   const corners = [['north','east', 1,-1], ['north','west',-1,-1], ['south','east', 1, 1], ['south','west',-1, 1]];
   corners.forEach(([a, b, sx, sz])=>{
-    const la = levels[a]||1, lb = levels[b]||1;
+    const la = lv(levels[a]), lb = lv(levels[b]);
     const da = standDims(la), db = standDims(lb);
     const x0 = halfL + gap, z0 = halfW + gap;
     if(Math.min(la, lb) >= 3){
@@ -226,9 +241,9 @@ function buildExtras(levels, kit, mats, halfL, halfW, gap){
       corner.castShadow = true; corner.receiveShadow = true; out.push(corner);
     }
   });
-  const avg = STAND_KEYS.reduce((s,k)=> s + (levels[k]||1), 0)/4;
+  const avg = STAND_KEYS.reduce((s,k)=> s + (lv(levels[k])), 0)/4;
   if(avg >= 2){
-    const reach = Math.max(...STAND_KEYS.map(k=> standDims(levels[k]||1).depth));
+    const reach = Math.max(...STAND_KEYS.map(k=> standDims(lv(levels[k])).depth));
     const h = 2.6 + avg*1.3;
     corners.forEach(([, , sx, sz])=>{
       const f = buildFloodlight(h, mats);
@@ -249,13 +264,13 @@ export function buildStadiumShell(levels, kitColors, dims){
   const sides = sidesFor(dims.halfL, dims.halfW, dims.gap);
   STAND_KEYS.forEach(k=>{
     const sd = sides[k];
-    const g = buildStand(levels[k] || 1, sd.len, kit, mats, {isEnd: k==='east' || k==='west'});
+    const g = buildStand(lv(levels[k]), sd.len, kit, mats, {isEnd: k==='east' || k==='west'});
     g.position.set(...sd.pos); g.rotation.y = sd.rot;
     group.add(g);
   });
   buildExtras(levels, kit, mats, dims.halfL, dims.halfW, dims.gap).forEach(o=> group.add(o));
   const ext = Math.max(...STAND_KEYS.map(k=>{
-    const d = standDims(levels[k]||1); return (k==='east'||k==='west' ? dims.halfL : dims.halfW) + dims.gap + d.depth + d.height*0.4;
+    const d = standDims(lv(levels[k])); return (k==='east'||k==='west' ? dims.halfL : dims.halfW) + dims.gap + d.depth + d.height*0.4;
   }));
   return {group, extent: ext, mats};
 }
@@ -372,7 +387,7 @@ export function mountStadium(container){
       const old = standGroups[k];
       if(old){ scene.remove(old); old.traverse(o=>{ if(o.geometry) o.geometry.dispose(); }); }
       const s = SIDES[k];
-      const g = buildStand(levels[k] || 1, s.len, kit, mats, {isEnd: k==='east' || k==='west'});
+      const g = buildStand(lv(levels[k]), s.len, kit, mats, {isEnd: k==='east' || k==='west'});
       g.position.set(...s.pos); g.rotation.y = s.rot;
       scene.add(g); standGroups[k] = g;
       if(animateKeys.includes(k)){ g.scale.y = 0.02; growAnims.push({g, t0: performance.now()}); }
@@ -382,7 +397,7 @@ export function mountStadium(container){
     buildExtras(levels, kit, mats, HALF_L, HALF_W, GAP).forEach(o=> extras.add(o));
     // Encuadre: la cámara se aleja según el tamaño del estadio
     const ext = Math.max(...Object.keys(SIDES).map(k=>{
-      const d = standDims(levels[k]||1); return (k==='east'||k==='west' ? HALF_L : HALF_W) + GAP + d.depth + d.height*0.4;
+      const d = standDims(lv(levels[k])); return (k==='east'||k==='west' ? HALF_L : HALF_W) + GAP + d.depth + d.height*0.4;
     }));
     fitRadius = 10 + ext*1.5;
     orbit.radius = fitRadius;
@@ -395,7 +410,7 @@ export function mountStadium(container){
     kit = {primary: (kitColors && kitColors.primary) || '#e8871e', secondary: (kitColors && kitColors.secondary) || '#2b4c7e'};
     const changed = !prevLevels || Object.keys(SIDES).some(k=> prevLevels[k] !== levels[k])
       || prevKit.primary !== kit.primary || prevKit.secondary !== kit.secondary;
-    const grown = (prevLevels && !opts.reset) ? Object.keys(SIDES).filter(k=> (levels[k]||1) > (prevLevels[k]||1)) : [];
+    const grown = (prevLevels && !opts.reset) ? Object.keys(SIDES).filter(k=> (lv(levels[k])) > (lv(prevLevels[k]))) : [];
     if(changed) rebuild(levels, grown);
     // Al ampliar una grada, la cámara gira hacia ella
     if(grown.length){
@@ -431,8 +446,8 @@ export function mountStadium(container){
       tmp.set(0, dm.height*g.scale.y + 0.5, dm.depth/2).applyMatrix4(g.matrixWorld);
       tmp.project(camera);
       const el = labelEls[k];
-      const lvl = (prevLevels && prevLevels[k]) || 1;
-      el.textContent = `${LABELS[k]} · Nv${lvl}`;
+      const lvl = prevLevels ? lv(prevLevels[k]) : 1;
+      el.textContent = lvl === 0 ? `${LABELS[k]} · sin grada` : `${LABELS[k]} · Nv${lvl}`;
       el.style.transform = `translate(-50%,-50%) translate(${(tmp.x*0.5+0.5)*w}px, ${(-tmp.y*0.5+0.5)*h}px)`;
       el.style.display = tmp.z < 1 ? '' : 'none';
     });

@@ -1213,9 +1213,11 @@
   function standSeats(level, divisionLevel){
     return Math.round(400 * divisionFactor(divisionLevel) * level);
   }
+  // Nivel de una grada: 0 = sin grada (carreras nuevas), 1..5 = ampliaciones
+  function standLevel(v){ return typeof v==='number' ? v : 1; }
   function totalStadiumCapacity(team){
     const stadium = normalizeStadium(team);
-    return STAND_KEYS.reduce((s,k)=> s + standSeats(stadium[k]||1, team.division), 0);
+    return STAND_KEYS.reduce((s,k)=> s + standSeats(standLevel(stadium[k]), team.division), 0);
   }
   function stadiumBoostFor(team){
     const baseline = STAND_KEYS.reduce((s)=> s + standSeats(1, team.division), 0);
@@ -1224,7 +1226,7 @@
   }
   function avgFacilityLevelForReputation(team){
     const stadium = normalizeStadium(team);
-    const stadiumAvg = STAND_KEYS.reduce((s,k)=> s+(stadium[k]||1), 0) / STAND_KEYS.length;
+    const stadiumAvg = STAND_KEYS.reduce((s,k)=> s+standLevel(stadium[k]), 0) / STAND_KEYS.length;
     return ((team.facilities.youth||1) + (team.facilities.training||1) + stadiumAvg) / 3;
   }
 
@@ -1391,6 +1393,8 @@
       return {youth:lvl, training:lvl, stadium:{north:lvl, south:lvl, east:lvl, west:lvl}};
     }
     const userFacilities = makeFacilities(5);
+    // Club modesto: solo una grada lateral; el resto hay que construirlo
+    userFacilities.stadium = {north:1, south:0, east:0, west:0};
     const userSquad = generateSquad(5);
     allPlayers.push(...userSquad);
     teams.push({id:uid(), name:clubName, isUser:true, division:5, slots:userSquad.map(p=>p.id), lineup:null, kitPrimary, kitSecondary, logo, formation:DEFAULT_FORMATION, budget:divisionEconomyRates(5).initialBudget, facilities:userFacilities});
@@ -2495,12 +2499,12 @@
     STAND_KEYS.forEach(k=>{
       const cell=document.createElement('div'); cell.className='stand-cell '+k;
       const fill=document.createElement('div'); fill.className='stand-fill';
-      const level = stadium[k]||1;
+      const level = standLevel(stadium[k]);
       const pct = (level/5*100)+'%';
       if(k==='north' || k==='south'){ fill.style.height = pct; }
       else { fill.style.width = pct; }
       cell.appendChild(fill);
-      const label=document.createElement('div'); label.className='stand-label'; label.textContent = 'Nv'+level;
+      const label=document.createElement('div'); label.className='stand-label'; label.textContent = level===0 ? 'Sin grada' : 'Nv'+level;
       cell.appendChild(label);
       viewEl.appendChild(cell);
     });
@@ -2509,11 +2513,13 @@
     const standsEl = document.getElementById('stadiumStandsList');
     standsEl.innerHTML = '';
     STAND_KEYS.forEach(k=>{
-      const level = stadium[k]||1;
+      const level = standLevel(stadium[k]);
       const cost = standUpgradeCost(level);
       const card=document.createElement('div'); card.className='card stand-card';
       const title=document.createElement('b'); title.className='card-title';
-      title.textContent = `${STAND_LABELS[k]} — Nivel ${level}/5 (${standSeats(level, userTeam.division).toLocaleString('es-ES')} asientos)`;
+      title.textContent = level===0
+        ? `${STAND_LABELS[k]} — Sin grada`
+        : `${STAND_LABELS[k]} — Nivel ${level}/5 (${standSeats(level, userTeam.division).toLocaleString('es-ES')} asientos)`;
       card.appendChild(title);
       const stars=document.createElement('div'); stars.style.cssText='font-size:16px; margin:4px 0 6px;';
       stars.textContent = '★'.repeat(level) + '☆'.repeat(5-level);
@@ -2524,7 +2530,7 @@
         btn.textContent='Nivel máximo';
         btn.disabled=true;
       } else {
-        btn.textContent = `Ampliar (${formatMoney(cost)})`;
+        btn.textContent = level===0 ? `Construir grada (${formatMoney(cost)})` : `Ampliar (${formatMoney(cost)})`;
         if((userTeam.budget||0) < cost) btn.disabled = true;
         btn.addEventListener('click', ()=>{
           userTeam.budget -= cost;
