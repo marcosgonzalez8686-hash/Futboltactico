@@ -176,6 +176,17 @@
     o.connect(g); g.connect(master); o.start(s); o.stop(s + 0.1);
   }
 
+  // Campanilla para el turno extra
+  function chime(){
+    if(!ready()) return;
+    const s = T(0);
+    [[988, 0], [1319, 0.09], [1760, 0.18]].forEach(([fq, dt])=>{
+      const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = fq;
+      const g = ctx.createGain(); env(g.gain, s + dt, 0.12, 0.005, 0.03, 0.35);
+      o.connect(g); g.connect(master); o.start(s + dt); o.stop(s + dt + 0.5);
+    });
+  }
+
   function setMuted(m){
     muted = !!m;
     try{ localStorage.setItem('ft_sound', muted ? '0' : '1'); }catch(e){}
@@ -201,7 +212,7 @@
   }
 
   window.FTSound = {
-    unlock, onEvent, whistle, tick, crowdStart, crowdStop, crowdDim, setMuted,
+    unlock, onEvent, whistle, tick, chime, crowdStart, crowdStop, crowdDim, setMuted,
     isMuted: ()=> muted,
   };
 })();
