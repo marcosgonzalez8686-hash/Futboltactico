@@ -602,6 +602,8 @@
   .im-body summary{cursor:pointer; color:#9fd4b8;}
   .im-actions{display:flex; gap:6px; margin-top:6px;}
   .im-actions:empty{display:none;}
+  .im-player{font-size:12px; padding:3px 0; cursor:pointer; display:flex; align-items:center; gap:4px; flex-wrap:wrap;}
+  .im-player:active{opacity:.7;}
   .im-actions .mode-btn{width:auto; padding:7px 12px; font-size:12px;}
   .mgr-grid{display:grid; grid-template-columns:3fr 2fr; gap:10px;}
   .mgr-grid .mgr-card{cursor:pointer;}
@@ -1256,7 +1258,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=28"></script>
+<script src="sound.js?v=29"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -2629,10 +2631,16 @@
     if(career.youthReviewPending && !career.seasonSummary) items.push({kind:'youth'});
     if(career.lastMatchSummary) items.push({kind:'xp'});
     ((career.scouting||{}).negotiations||[]).filter(n=>n.unread).forEach(n=> items.push({kind:'deal', n}));
+    { const nw = (career.scouting||{}).inboxNew; if(nw && !nw.read && nw.pids.some(pid=>findPlayerAnywhere(pid))) items.push({kind:'scout', nw}); }
     return items;
   }
   function renderInbox(){
     const el = document.getElementById('cardInbox');
+    el.onclick = e=>{
+      const row = e.target.closest('[data-open-report]'); if(!row) return;
+      const nw = (career.scouting||{}).inboxNew; if(nw) nw.read = true;
+      marketTab = 'reports'; showScreen('careerMarketScreen'); openReport(row.dataset.openReport);
+    };
     const items = inboxItems();
     el.innerHTML = `<b class="card-title">📥 BANDEJA DE ENTRADA${items.length?` <span class="inbox-count">${items.length}</span>`:''}</b>`;
     if(!items.length){ el.insertAdjacentHTML('beforeend', '<p class="hint">No tienes mensajes nuevos.</p>'); return; }
@@ -2665,6 +2673,18 @@
         addMsg(sm.promoted?'🎉':sm.relegated?'📉':'🏁', `Resumen de la temporada ${sm.season}`, body, acts);
       } else if(it.kind==='youth'){
         addMsg('🌱', 'Revisión de cantera pendiente', 'Decide qué canteranos suben al primer equipo antes de que empiece la temporada.', [['Revisar cantera', true, ()=> showScreen('careerYouthScreen')]]);
+      } else if(it.kind==='scout'){
+        // Resumen de los jugadores nuevos que han traído los ojeadores
+        const list = it.nw.pids.map(pid=>{ const fp = findPlayerAnywhere(pid), kn = knowledgeOf(pid); return fp && kn ? {pid, fp, kn, e: scoutEstimate(fp.p, kn)} : null; }).filter(Boolean)
+          .sort((a,b)=> b.e.cur.c - a.e.cur.c);
+        const top = list.slice(0, 3).map(x=>{
+          const team = x.fp.teamIdx>=0 ? career.teams[x.fp.teamIdx] : null, rec = recommendationFor(x.fp.p, x.e.cur.c);
+          return `<div class="im-player" data-open-report="${x.pid}">${starsHTML(starsFromRating(x.e.cur.c))} <b>${escapeHtml(x.fp.p.name)}</b> · ${ROLE_SHORT[bestRoleOf(x.fp.p).r]} · ${x.fp.p.age} años · ${team ? escapeHtml(team.name) : 'Libre'} <span class="rec ${rec.cls}">${rec.txt}</span></div>`;
+        }).join('');
+        const more = list.length > 3 ? `<div class="hint">y ${list.length-3} más…</div>` : '';
+        addMsg('🕵️', `Tus ojeadores han encontrado ${list.length} jugador${list.length===1?'':'es'} nuevo${list.length===1?'':'s'}`, top + more,
+          [['📋 Ver informes', true, ()=>{ it.nw.read = true; persistCareers(); marketTab='reports'; showScreen('careerMarketScreen'); }],
+           ['Entendido', false, ()=>{ it.nw.read = true; persistCareers(); renderCareerScreen(); }]]);
       } else if(it.kind==='deal'){
         const n = it.n, fp = findPlayerAnywhere(n.pid);
         addMsg(n.stage==='contract'?'🤝':n.stage==='counter'?'↩️':'✉️', `Fichaje de ${escapeHtml(fp?fp.p.name:'jugador')}: ${dealStageLabel(n)}`, escapeHtml(n.note||''),
@@ -3140,6 +3160,7 @@
   function progressScouting(){
     if(!career) return;
     const sc = scoutingState();
+    const newThisWeek = [];
     const ut = career.teams.find(t=>t.isUser), uIdx = career.teams.indexOf(ut);
     (career.staff||[]).forEach(s=>{
       const m = sc.missions[s.id]; if(!m) return;
@@ -3152,6 +3173,7 @@
       const reports = 1 + (s.skill>=55?1:0) + (s.skill>=80?1:0);
       fresh.slice(0, reports).forEach(p=>{
         sc.knowledge[p.id] = {k: Math.round(20 + s.skill*0.25), n1: Math.random()*2-1, n2: Math.random()*2-1, w: career.week, s: career.season, by: s.name, isNew: true};
+        newThisWeek.push(p.id);
       });
       // y un poco más de conocimiento de los jugadores marcados de su misión
       sc.shortlist.forEach(pid=>{
@@ -3160,6 +3182,11 @@
         if(m.role==='any' || bestRoleOf(f.p).r===m.role) kn.k = clamp(kn.k + Math.round(scoutProgressIncrement(s)*0.8), 0, 100);
       });
     });
+    // aviso para la bandeja de entrada (se acumula hasta que se lee)
+    if(newThisWeek.length){
+      const prev = sc.inboxNew && !sc.inboxNew.read ? sc.inboxNew.pids : [];
+      sc.inboxNew = {pids: [...prev, ...newThisWeek], read:false};
+    }
     // olvidar a jugadores que ya no existen
     Object.keys(sc.knowledge).forEach(pid=>{ if(!findPlayerAnywhere(pid)) delete sc.knowledge[pid]; });
     sc.shortlist = sc.shortlist.filter(pid=> !!findPlayerAnywhere(pid));
@@ -3237,6 +3264,7 @@
     document.getElementById('marketTabs').innerHTML = tabs.map(([k,l,b])=>`<button data-mtab="${k}" class="${marketTab===k?'active':''}">${l}${b}</button>`).join('');
     document.querySelectorAll('#marketTabs [data-mtab]').forEach(b=> b.addEventListener('click', ()=>{ marketTab = b.dataset.mtab; renderCareerMarketScreen(); }));
     const el = document.getElementById('careerMarketList');
+    if(marketTab==='reports' && sc.inboxNew && !sc.inboxNew.read){ sc.inboxNew.read = true; persistCareers(); }
     if(marketTab==='scouts') el.innerHTML = renderMissionsHTML();
     else if(marketTab==='deals') el.innerHTML = renderDealsHTML();
     else el.innerHTML = renderReportsHTML(marketTab==='short');
@@ -3579,7 +3607,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=28').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=29').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -5195,7 +5223,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=28').then(m=>{
+      import('./match3d.js?v=29').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
