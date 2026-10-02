@@ -526,7 +526,23 @@
   .br-val small{font-size:9.5px; color:#9fd4b8;} .br-val b{font-size:15px;}
 
   /* ---------- Modo Carrera estilo manager ---------- */
-  body.career-chrome #app{padding-top:58px; padding-bottom:128px;}
+  body.career-chrome #app{padding-top:80px; padding-bottom:128px;}
+  .career-bar{flex-wrap:wrap; row-gap:0;}
+  .cb-market{
+    position:absolute; left:0; right:0; top:54px; height:22px; border:none; cursor:pointer;
+    font-size:11px; font-weight:bold; letter-spacing:.2px; color:#0d1f18;
+  }
+  .cb-market.open{background:#2ecc71;}
+  .cb-market.closed{background:#3a4a42; color:#cfe8d8;}
+  .kit-rival{display:flex; align-items:center; gap:6px; font-size:12px; color:#cfe8d8; margin-bottom:8px;}
+  .kit-opts{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .kit-opt{background:#0e2118; border:2px solid #2f5c46; border-radius:12px; padding:8px 4px; color:var(--chalk); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;}
+  .kit-opt.active{border-color:var(--gold); background:rgba(255,210,63,.1); box-shadow:0 0 10px rgba(255,210,63,.25);}
+  .kit-opt b{font-size:13px;}
+  .ko-vs{display:flex; align-items:center; gap:4px;}
+  .ko-vs i{font-style:normal; font-size:10px; color:#9fd4b8;}
+  .kit-opt small{font-size:10.5px; font-weight:bold; text-align:center;}
+  .kit-opt .ko-note{color:#9fd4b8; font-weight:normal;}
   .career-bar{
     position:fixed; top:0; left:0; right:0; z-index:50; height:54px;
     display:flex; align-items:center; gap:8px; padding:0 10px;
@@ -540,7 +556,7 @@
   .cb-club small{font-size:10.5px; color:#9fd4b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .cb-stats{display:flex; gap:8px; font-size:12px; font-weight:bold; white-space:nowrap;}
   .cb-gear{background:transparent; border:none; font-size:18px; cursor:pointer; padding:4px;}
-  .cb-menu{position:absolute; top:54px; right:6px; background:#0f2a1f; border:1px solid #2f5c46; border-radius:10px; padding:6px; display:flex; flex-direction:column; gap:4px; box-shadow:0 8px 20px rgba(0,0,0,.6);}
+  .cb-menu{position:absolute; top:78px; right:6px; background:#0f2a1f; border:1px solid #2f5c46; border-radius:10px; padding:6px; display:flex; flex-direction:column; gap:4px; box-shadow:0 8px 20px rgba(0,0,0,.6);}
   .cb-menu[hidden]{display:none;}
   .cb-menu button{background:var(--panel); color:var(--chalk); border:1px solid #2f5c46; border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; text-align:left;}
   .career-dock{
@@ -914,6 +930,7 @@
   <header class="career-bar" id="careerBar" hidden>
     <div class="cb-club" id="cbClub"></div>
     <div class="cb-stats" id="cbStats"></div>
+    <button class="cb-market" id="cbMarket" aria-label="Mercado de fichajes"></button>
     <button class="cb-gear" id="btnCareerGear" aria-label="Opciones">⚙️</button>
     <div class="cb-menu" id="careerGearMenu" hidden>
       <div class="cb-diff" id="cbDiff"></div>
@@ -1156,10 +1173,11 @@
   <div class="screen" id="careerLineupScreen" hidden>
     <h2 id="lineupTitle">Alineación</h2>
     <div class="card" id="kitPickerCard">
-      <b class="card-title">CAMISETA</b>
-      <div class="btn-row">
-        <button class="mode-btn small" id="kitPrimaryBtn">Titular</button>
-        <button class="mode-btn small" id="kitSecondaryBtn">Suplente</button>
+      <b class="card-title">CAMISETAS</b>
+      <div class="kit-rival" id="kitRival"></div>
+      <div class="kit-opts">
+        <button class="kit-opt" id="kitPrimaryBtn"></button>
+        <button class="kit-opt" id="kitSecondaryBtn"></button>
       </div>
     </div>
     <div class="tac-bar">
@@ -1238,7 +1256,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=27"></script>
+<script src="sound.js?v=28"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1366,6 +1384,27 @@
     const {r,g,b} = hexToRgb(hex);
     const lum = (0.299*r + 0.587*g + 0.114*b) / 255;
     return lum > 0.6 ? '#20261f' : '#f1faee';
+  }
+  // Camisetas de un partido según la elección del usuario (misma regla que al empezar a jugar):
+  // si se parecen demasiado, el rival cambia a la suplente; jugando fuera en liga, cambias tú.
+  function resolveMatchKits(userTeam, oppTeam, choice, userIsHome, friendly){
+    let user = choice==='primary' ? userTeam.kitPrimary : userTeam.kitSecondary;
+    let opp = oppTeam.kitPrimary, forced = null;
+    if(hexDistance(opp, user) < 90){
+      if(friendly || userIsHome){ opp = oppTeam.kitSecondary; forced = 'opp'; }
+      else { user = userTeam.kitSecondary; forced = 'user'; }
+    }
+    return {user, opp, forced, dist: hexDistance(user, opp)};
+  }
+  function bestKitChoice(userTeam, oppTeam, userIsHome, friendly){
+    const a = resolveMatchKits(userTeam, oppTeam, 'primary', userIsHome, friendly);
+    const b = resolveMatchKits(userTeam, oppTeam, 'secondary', userIsHome, friendly);
+    // se prefiere la titular salvo que la suplente contraste claramente más
+    return (b.dist > a.dist + 40 && !b.forced) || (a.forced && !b.forced) ? 'secondary' : 'primary';
+  }
+  function shirtSVG(color, size){
+    const s = size || 34;
+    return `<svg viewBox="0 0 40 40" width="${s}" height="${s}" aria-hidden="true"><path d="M13 4 L5 9 L2 18 L9 20 L9 37 L31 37 L31 20 L38 18 L35 9 L27 4 Q20 10 13 4 Z" fill="${color}" stroke="rgba(0,0,0,.45)" stroke-width="1.5" stroke-linejoin="round"/><path d="M15 5 Q20 10 25 5" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.5"/></svg>`;
   }
   function hexDistance(a,b){
     const pa=hexToRgb(a), pb=hexToRgb(b);
@@ -1624,6 +1663,7 @@
   });
   document.addEventListener('click', e=>{ if(!e.target.closest('#careerBar')) document.getElementById('careerGearMenu').hidden = true; });
   document.getElementById('btnHubYouth').addEventListener('click', ()=>showScreen('careerYouthScreen'));
+  document.getElementById('cbMarket').addEventListener('click', ()=>showScreen('careerMarketScreen'));
   document.getElementById('btnHubFriendly').addEventListener('click', ()=>showScreen('careerFriendlyScreen'));
   document.getElementById('btnCloseWeekModal').addEventListener('click', ()=>{ document.getElementById('weekEventsModal').hidden = true; });
   document.getElementById('btnGoFacilities').addEventListener('click', ()=>showScreen('careerFacilitiesScreen'));
@@ -2530,6 +2570,14 @@
     careerTabComp:'careerTabComp', careerStandingsScreen:'careerTabComp', careerCalendarScreen:'careerTabComp', careerHistoryScreen:'careerTabComp',
     careerTabClub:'careerTabClub', careerFacilitiesScreen:'careerTabClub', careerFinanceScreen:'careerTabClub', careerMarketScreen:'careerTabClub'};
   let currentScreenName = 'menuScreen';
+  // Estado del mercado de fichajes y cuándo cambia
+  function marketStatus(){
+    const w = career.week||1, open = weekPhaseInfo(w).transfers;
+    let n = 0, ww = w;
+    while(n < TOTAL_SEASON_WEEKS && weekPhaseInfo(ww).transfers === open){ ww++; n++; if(ww>TOTAL_SEASON_WEEKS){ ww = 1; } }
+    const when = n<=1 ? (open ? 'cierra al acabar esta semana' : 'abre la semana que viene') : (open ? `cierra en ${n} semanas` : `abre en ${n} semanas`);
+    return {open, text: open ? `Mercado abierto · ${when}` : `Mercado cerrado · ${when}`};
+  }
   function updateCareerChrome(name){
     if(name) currentScreenName = name;
     const on = !!career && CAREER_CHROME_SCREENS.includes(currentScreenName);
@@ -2546,6 +2594,10 @@
       `<span title="Presupuesto" class="${(team.budget||0)<0?'fin-neg':''}">💰 ${shortMoney(team.budget||0)} €</span>`+
       `<span title="Reputación">⭐ ${clubReputation(team)}</span>`+
       `<span title="Ánimo de la afición">${mood>=55?'😀':mood>=40?'🙂':'😠'} ${mood}</span>`;
+    const ms = marketStatus();
+    const mk = document.getElementById('cbMarket');
+    mk.className = 'cb-market ' + (ms.open ? 'open' : 'closed');
+    mk.innerHTML = `🛒 ${ms.text}`;
     document.querySelectorAll('#careerNav button').forEach(b=> b.classList.toggle('active', b.dataset.tab === TAB_OF_SCREEN[currentScreenName]));
     const dif = careerDifficulty();
     document.getElementById('cbDiff').innerHTML = `Dificultad<br>⚽ Partidos: <b>${DIFF_LABELS[dif.match]}</b><br>💶 Finanzas: <b>${DIFF_LABELS[dif.finance]}</b>`;
@@ -3493,7 +3545,7 @@
     lineupMode = 'friendly';
     friendlyOpponentIdx = oppIdx;
     lineupFixtureId = null;
-    chosenKit = 'primary';
+    chosenKit = bestKitChoice(career.teams.find(t=>t.isUser), career.teams[oppIdx], true, true);
     activeSlotIdx = null; activeBenchPid = null;
     const validPrev = userTeam.lineup && userTeam.lineup.length===6 && userTeam.lineup.every(id=>{
       const p = career.players.find(x=>x.id===id);
@@ -3527,7 +3579,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=27').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=28').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -4018,7 +4070,7 @@
     const userTeam = career.teams[userIdx];
     lineupMode = 'match';
     lineupFixtureId = fixtureId;
-    chosenKit = 'primary';
+    { const oppT = career.teams[userIdx===f.homeIdx ? f.awayIdx : f.homeIdx]; chosenKit = bestKitChoice(userTeam, oppT, userIdx===f.homeIdx, false); }
     activeSlotIdx = null; activeBenchPid = null;
     const validPrev = userTeam.lineup && userTeam.lineup.length===6 && userTeam.lineup.every(id=>{ const p=career.players.find(x=>x.id===id); return p && userTeam.slots.includes(id) && !(p.injuryMatchesLeft>0); });
     pendingLineup = validPrev ? [...userTeam.lineup] : autoPickLineup(userTeam.slots, userTeam.formation);
@@ -4032,6 +4084,18 @@
     const validPrev = userTeam.lineup && userTeam.lineup.length===6 && userTeam.lineup.every(id=>{ const p=career.players.find(x=>x.id===id); return p && userTeam.slots.includes(id) && !(p.injuryMatchesLeft>0); });
     pendingLineup = validPrev ? [...userTeam.lineup] : autoPickLineup(userTeam.slots, userTeam.formation);
     showScreen('careerLineupScreen');
+  }
+  function renderKitPicker(userTeam, oppTeam, userIsHome, friendly){
+    document.getElementById('kitRival').innerHTML = `${shirtSVG(oppTeam.kitPrimary, 30)}${shirtSVG(oppTeam.kitSecondary, 22)}<span>Camisetas de <b>${escapeHtml(oppTeam.name)}</b>: titular y suplente</span>`;
+    [['primary','kitPrimaryBtn','Titular'],['secondary','kitSecondaryBtn','Suplente']].forEach(([choice, id, label])=>{
+      const k = resolveMatchKits(userTeam, oppTeam, choice, userIsHome, friendly);
+      const q = k.dist>=200 ? ['Se distinguen muy bien','#2ecc71'] : k.dist>=130 ? ['Se distinguen bien','#a3e635'] : ['Se parecen bastante','#f39c12'];
+      const note = k.forced==='opp' ? 'El rival jugará con la suplente' : k.forced==='user' ? 'Se parecen: jugarás con tu suplente' : '';
+      const btn = document.getElementById(id);
+      btn.className = 'kit-opt' + (chosenKit===choice ? ' active' : '');
+      btn.innerHTML = `<b>${label}</b><span class="ko-vs">${shirtSVG(k.user)}<i>vs</i>${shirtSVG(k.opp)}</span>
+        <small style="color:${q[1]}">${q[0]}</small>${note?`<small class="ko-note">${note}</small>`:''}`;
+    });
   }
   function renderLineupScreen(){
     const kitCard = document.getElementById('kitPickerCard');
@@ -4049,13 +4113,7 @@
       kitCard.hidden = false;
       confirmBtn.textContent = 'Jugar amistoso';
 
-      const kitPrimaryBtn=document.getElementById('kitPrimaryBtn'), kitSecondaryBtn=document.getElementById('kitSecondaryBtn');
-      kitPrimaryBtn.style.background = userTeam.kitPrimary;
-      kitPrimaryBtn.style.color = textColorFor(userTeam.kitPrimary);
-      kitSecondaryBtn.style.background = userTeam.kitSecondary;
-      kitSecondaryBtn.style.color = textColorFor(userTeam.kitSecondary);
-      kitPrimaryBtn.style.outline = chosenKit==='primary' ? '3px solid var(--gold)' : 'none';
-      kitSecondaryBtn.style.outline = chosenKit==='secondary' ? '3px solid var(--gold)' : 'none';
+      renderKitPicker(userTeam, oppTeam, true, true);
     } else {
       const f = career.fixtures.find(x=>x.id===lineupFixtureId);
       if(!f) return;
@@ -4067,13 +4125,7 @@
       kitCard.hidden = false;
       confirmBtn.textContent = 'Confirmar y jugar';
 
-      const kitPrimaryBtn=document.getElementById('kitPrimaryBtn'), kitSecondaryBtn=document.getElementById('kitSecondaryBtn');
-      kitPrimaryBtn.style.background = userTeam.kitPrimary;
-      kitPrimaryBtn.style.color = textColorFor(userTeam.kitPrimary);
-      kitSecondaryBtn.style.background = userTeam.kitSecondary;
-      kitSecondaryBtn.style.color = textColorFor(userTeam.kitSecondary);
-      kitPrimaryBtn.style.outline = chosenKit==='primary' ? '3px solid var(--gold)' : 'none';
-      kitSecondaryBtn.style.outline = chosenKit==='secondary' ? '3px solid var(--gold)' : 'none';
+      renderKitPicker(userTeam, oppTeam, userIdx===f.homeIdx, false);
     }
 
     // Formación con botones
@@ -4172,9 +4224,8 @@
       userTeam.lineup = [...pendingLineup];
       persistCareers();
       const oppLineup = autoPickLineup(oppTeam.slots, oppTeam.formation);
-      const userColor = chosenKit==='primary' ? userTeam.kitPrimary : userTeam.kitSecondary;
-      let oppColor = oppTeam.kitPrimary;
-      if(hexDistance(oppColor, userColor) < 90) oppColor = oppTeam.kitSecondary;
+      const kits = resolveMatchKits(userTeam, oppTeam, chosenKit, true, true);
+      const userColor = kits.user, oppColor = kits.opp;
       matchNames = {A:userTeam.name, B:oppTeam.name};
       matchContext = {type:'career_friendly', opponentIdx:friendlyOpponentIdx};
       matchKitColors = {A:userColor, B:oppColor};
@@ -4193,11 +4244,8 @@
     persistCareers();
     const oppLineup = autoPickLineup(oppTeam.slots, oppTeam.formation);
     const userIsHome = (userIdx===f.homeIdx);
-    let userColor = chosenKit==='primary' ? userTeam.kitPrimary : userTeam.kitSecondary;
-    let oppColor = oppTeam.kitPrimary;
-    if(hexDistance(oppColor, userColor) < 90){
-      if(userIsHome){ oppColor = oppTeam.kitSecondary; } else { userColor = userTeam.kitSecondary; }
-    }
+    const kits = resolveMatchKits(userTeam, oppTeam, chosenKit, userIsHome, false);
+    const userColor = kits.user, oppColor = kits.opp;
     matchNames = {A:userTeam.name, B:oppTeam.name};
     matchContext = {type:'career', fixtureId:f.id, userIsHome};
     matchKitColors = {A:userColor, B:oppColor};
@@ -5147,7 +5195,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=27').then(m=>{
+      import('./match3d.js?v=28').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
