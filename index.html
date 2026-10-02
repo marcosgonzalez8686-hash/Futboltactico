@@ -475,6 +475,32 @@
   .form-dot.f-V{background:#2ecc71;} .form-dot.f-E{background:#bdc3c7;} .form-dot.f-D{background:#e74c3c; color:#fff;}
   .mgr-round summary{cursor:pointer; font-weight:bold; font-size:13px; color:#cfe8d8;}
   .hub-list{display:flex; flex-direction:column; gap:10px;}
+  /* Dificultad */
+  .diff-picker{background:var(--panel); border:1px solid #2f5c46; border-radius:10px; padding:8px 10px;}
+  .diff-picker[hidden]{display:none;}
+  .diff-picker > b{display:block; font-size:12.5px; color:#cfe8d8; margin-bottom:6px;}
+  .diff-opts{display:grid; grid-template-columns:repeat(3,1fr); gap:6px;}
+  .diff-opts button{
+    background:#0e2118; border:2px solid #2f5c46; border-radius:10px; color:var(--chalk); padding:8px 4px; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:2px; font-weight:bold; font-size:13px;
+  }
+  .diff-opts button span{font-size:20px;}
+  .diff-opts button small{font-size:10px; color:#9fd4b8; font-weight:normal; text-align:center;}
+  .diff-opts button.active{border-color:var(--gold); background:rgba(255,210,63,.12); box-shadow:0 0 10px rgba(255,210,63,.25);}
+  #quickDiffPicker .diff-opts button:active{border-color:var(--gold);}
+  .cb-diff{font-size:11.5px; color:#9fd4b8; padding:4px 6px 6px; border-bottom:1px solid #2f5c46; margin-bottom:2px; line-height:1.5;}
+  /* Nombre del club destacado */
+  .club-name-label{font-size:14px; font-weight:bold; color:var(--gold); margin-bottom:-6px;}
+  .club-name-input{
+    font-size:18px; font-weight:bold; padding:14px; border:2px solid var(--gold); border-radius:10px;
+    background:#0b1d15; box-shadow:0 0 0 4px rgba(255,210,63,.12);
+  }
+  .club-name-input::placeholder{color:#7fa892; font-weight:normal;}
+  .club-name-input:placeholder-shown{animation:namePulse 2s ease-in-out infinite;}
+  .club-name-input:focus{outline:none; box-shadow:0 0 0 4px rgba(255,210,63,.35);}
+  @keyframes namePulse{ 0%,100%{box-shadow:0 0 0 4px rgba(255,210,63,.1);} 50%{box-shadow:0 0 0 6px rgba(255,210,63,.3);} }
+  .club-name-input.shake{animation:nameShake .45s;}
+  @keyframes nameShake{ 0%,100%{transform:translateX(0);} 20%,60%{transform:translateX(-8px);} 40%,80%{transform:translateX(8px);} }
   .offer-banner{background:rgba(255,210,63,.1); border:1px solid rgba(255,210,63,.5); border-radius:10px; padding:8px 10px; margin:6px 0; font-size:12.5px;}
   .offer-banner .ob-cmp{font-size:11px; color:#9fd4b8; margin-top:2px;}
   .player-card.pc-focus{outline:2px solid var(--gold); outline-offset:4px; border-radius:8px; animation:pcFocus 1.2s ease-out 2;}
@@ -745,6 +771,7 @@
     <div class="cb-stats" id="cbStats"></div>
     <button class="cb-gear" id="btnCareerGear" aria-label="Opciones">⚙️</button>
     <div class="cb-menu" id="careerGearMenu" hidden>
+      <div class="cb-diff" id="cbDiff"></div>
       <button id="btnSwitchCareer">Cambiar de carrera</button>
       <button id="btnExitCareer">Salir al menú</button>
     </div>
@@ -778,6 +805,14 @@
     <div id="quickSubmenu" hidden style="display:flex; flex-direction:column; gap:8px;">
       <button class="mode-btn small" id="btn2p">2 Jugadores (mismo móvil)</button>
       <button class="mode-btn small" id="btnAI">Contra la Máquina</button>
+      <div class="diff-picker" id="quickDiffPicker" hidden>
+        <b>Dificultad de la máquina</b>
+        <div class="diff-opts">
+          <button data-level="easy"><span>🙂</span>Fácil<small>Comete errores</small></button>
+          <button data-level="normal"><span>😐</span>Normal<small>Juega a lo directo</small></button>
+          <button data-level="hard"><span>😈</span>Difícil<small>Presiona y elige bien</small></button>
+        </div>
+      </div>
     </div>
     <button class="mode-btn" id="btnGoCareer">Modo Carrera</button>
     <p class="storage-note">Las carreras se guardan en este dispositivo/navegador. Si vas a cambiar de navegador o dispositivo, o quieres asegurar tu progreso, exporta una copia.</p>
@@ -802,7 +837,24 @@
   <div class="screen" id="careerCreateScreen" hidden>
     <h2>Crear club</h2>
     <p class="hint">Se generará tu plantilla de 10 jugadores (con posición y experiencia ocultas, edad visible) y una pirámide de 5 divisiones con 16 equipos cada una. Empiezas en la División 5. Cada temporada hay ascensos, descensos, jugadores que se retiran y fichajes nuevos. Antes de cada partido eliges quién juega y con qué camiseta.</p>
-    <input type="text" id="newClubName" class="text-input" placeholder="Nombre de tu club">
+    <label class="club-name-label" for="newClubName">✍️ Nombre de tu club</label>
+    <input type="text" id="newClubName" class="text-input club-name-input" placeholder="Escribe aquí el nombre de tu club" maxlength="28" autocomplete="off">
+    <div class="diff-picker" id="careerMatchDiff">
+      <b>⚽ Dificultad de los partidos</b>
+      <div class="diff-opts">
+        <button data-level="easy"><span>🙂</span>Fácil<small>Rivales que fallan más</small></button>
+        <button data-level="normal" class="active"><span>😐</span>Normal<small>Equilibrado</small></button>
+        <button data-level="hard"><span>😈</span>Difícil<small>Rivales listos</small></button>
+      </div>
+    </div>
+    <div class="diff-picker" id="careerFinanceDiff">
+      <b>💶 Dificultad económica</b>
+      <div class="diff-opts">
+        <button data-level="easy"><span>💰</span>Fácil<small>+40 % de ingresos</small></button>
+        <button data-level="normal" class="active"><span>💶</span>Normal<small>Ingresos normales</small></button>
+        <button data-level="hard"><span>🪙</span>Difícil<small>−25 % de ingresos</small></button>
+      </div>
+    </div>
     <label style="font-size:12.5px; color:#bcdccb;">Color camiseta titular</label>
     <input type="color" id="kitPrimaryInput" value="#e8871e" style="width:100%; height:44px; border:none; border-radius:6px; cursor:pointer;">
     <label style="font-size:12.5px; color:#bcdccb;">Color camiseta suplente</label>
@@ -1025,7 +1077,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=22"></script>
+<script src="sound.js?v=24"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1287,6 +1339,7 @@
   let matchKitColors = {A:null, B:null}; // colores personalizados (solo Modo Carrera)
   let matchVenueTeam = null; // club local en Modo Carrera (para el estadio 3D)
   let matchAttendance = null; // {attendance, capacity} del partido en curso (Modo Carrera)
+  let aiLevel = 'normal';     // dificultad de la máquina en el partido en curso: easy | normal | hard
   let fx3dEvents = []; // lo ocurrido desde el último dibujo, para animar a los jugadores 3D
   let actionSeq = 0, actingTeam = null, lastToastKey = ''; // para destacar el resultado de cada acción
   function fx3d(ev){
@@ -1363,7 +1416,13 @@
   // ---------- Menú ----------
   document.getElementById('btnGoQuick').addEventListener('click', ()=>{ document.getElementById('quickSubmenu').hidden=false; });
   document.getElementById('btn2p').addEventListener('click', ()=>startFriendly('2p'));
-  document.getElementById('btnAI').addEventListener('click', ()=>startFriendly('ai'));
+  document.getElementById('btnAI').addEventListener('click', ()=>{
+    const pk = document.getElementById('quickDiffPicker'); pk.hidden = !pk.hidden;
+  });
+  document.querySelectorAll('#quickDiffPicker [data-level]').forEach(b=> b.addEventListener('click', ()=>{
+    document.getElementById('quickDiffPicker').hidden = true;
+    startFriendly('ai', b.dataset.level);
+  }));
   document.getElementById('btnGoCareer').addEventListener('click', ()=>showScreen('careerSelectScreen'));
   document.getElementById('btnBackFromCareerSelect').addEventListener('click', ()=>showScreen('menuScreen'));
   document.getElementById('btnBackFromCareerCreate').addEventListener('click', ()=>showScreen('careerSelectScreen'));
@@ -1443,7 +1502,8 @@
   document.getElementById('kitSecondaryBtn').addEventListener('click', ()=>{ chosenKit='secondary'; renderLineupScreen(); });
 
 
-  function startFriendly(m){
+  function startFriendly(m, level){
+    aiLevel = level || 'normal';
     matchNames = {A:'Ámbar', B:'Azul'};
     matchContext = null;
     matchKitColors = {A:null, B:null};
@@ -1731,9 +1791,18 @@
     }
     return e;
   }
+  // Dificultad de la carrera: partidos (la máquina) y finanzas (ingresos del club)
+  const DIFF_LABELS = {easy:'Fácil', normal:'Normal', hard:'Difícil'};
+  const FINANCE_INCOME_MULT = {easy:1.4, normal:1, hard:0.75};
+  function careerDifficulty(){
+    const d = (career && career.difficulty) || {};
+    return {match: d.match || 'normal', finance: d.finance || 'normal'};
+  }
   // Mueve dinero del club del usuario y lo apunta: amount > 0 ingreso, < 0 gasto
   function userMoney(cat, amount){
     if(!amount) return;
+    // TV, taquilla y premios dependen de la dificultad económica (las ventas y los gastos no)
+    if(amount > 0 && (cat==='tv' || cat==='gate' || cat==='prizes')) amount = Math.round(amount * FINANCE_INCOME_MULT[careerDifficulty().finance]);
     const team = career.teams.find(t=>t.isUser);
     team.budget = (team.budget||0) + amount;
     const e = finEntry(career.season||1, clamp(career.week||1, 1, TOTAL_SEASON_WEEKS));
@@ -1940,8 +2009,11 @@
       return sum/ps.length;
     };
     const oh=overallOf(homeLineup), oa=overallOf(awayLineup);
-    const expHome = clamp(1 + (oh-oa)/20 + 0.3, 0.1, 4.5);
-    const expAway = clamp(1 + (oa-oh)/20, 0.1, 4.5);
+    // Si juega el usuario, la dificultad de los partidos inclina un poco la simulación
+    const bias = {easy:0.35, normal:0, hard:-0.35}[careerDifficulty().match];
+    const userSide = home.isUser ? 1 : (away.isUser ? -1 : 0);
+    const expHome = clamp(1 + (oh-oa)/20 + 0.3 + bias*userSide, 0.1, 4.5);
+    const expAway = clamp(1 + (oa-oh)/20 - bias*userSide, 0.1, 4.5);
     f.scoreHome = Math.max(0, Math.round(expHome + (Math.random()-0.5)*2));
     f.scoreAway = Math.max(0, Math.round(expAway + (Math.random()-0.5)*2));
     f.played = true;
@@ -2277,13 +2349,31 @@
 
   document.getElementById('btnStartCareer').addEventListener('click', ()=>{
     const name = document.getElementById('newClubName').value.trim();
-    if(!name){ alert('Ponle un nombre a tu club.'); return; }
+    if(!name){
+      const inp = document.getElementById('newClubName');
+      inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake');
+      inp.focus(); inp.scrollIntoView({block:'center', behavior:'smooth'});
+      return;
+    }
     if(careersList.length >= MAX_CAREERS){ alert('Ya tienes 3 carreras guardadas.'); return; }
     const kitPrimary = document.getElementById('kitPrimaryInput').value;
     const kitSecondary = document.getElementById('kitSecondaryInput').value;
     createCareer(name, kitPrimary, kitSecondary, selectedLogo);
+    // Dificultad elegida; el presupuesto inicial también depende de la económica
+    const pickLevel = id=> (document.querySelector(`#${id} button.active`)||{dataset:{level:'normal'}}).dataset.level;
+    career.difficulty = {match: pickLevel('careerMatchDiff'), finance: pickLevel('careerFinanceDiff')};
+    const ut = career.teams.find(t=>t.isUser);
+    ut.budget = Math.round(ut.budget * FINANCE_INCOME_MULT[career.difficulty.finance]);
+    persistCareers();
     document.getElementById('newClubName').value='';
     showScreen('careerScreen');
+  });
+
+  // Selectores de dificultad al crear carrera
+  ['careerMatchDiff','careerFinanceDiff'].forEach(id=>{
+    document.querySelectorAll(`#${id} [data-level]`).forEach(b=> b.addEventListener('click', ()=>{
+      document.querySelectorAll(`#${id} [data-level]`).forEach(x=> x.classList.toggle('active', x===b));
+    }));
   });
 
   // ---------- Inicio del Modo Carrera (estilo manager) ----------
@@ -2312,6 +2402,8 @@
       `<span title="Reputación">⭐ ${clubReputation(team)}</span>`+
       `<span title="Ánimo de la afición">${mood>=55?'😀':mood>=40?'🙂':'😠'} ${mood}</span>`;
     document.querySelectorAll('#careerNav button').forEach(b=> b.classList.toggle('active', b.dataset.tab === TAB_OF_SCREEN[currentScreenName]));
+    const dif = careerDifficulty();
+    document.getElementById('cbDiff').innerHTML = `Dificultad<br>⚽ Partidos: <b>${DIFF_LABELS[dif.match]}</b><br>💶 Finanzas: <b>${DIFF_LABELS[dif.finance]}</b>`;
     const inbox = inboxItems().length;
     const ib = document.getElementById('navInboxBadge'); ib.hidden = !inbox; ib.textContent = inbox;
     const sb = document.getElementById('navSquadBadge'); sb.hidden = !career.youthReviewPending; sb.textContent = '!';
@@ -3007,7 +3099,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=22').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=24').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -3651,6 +3743,7 @@
       matchContext = {type:'career_friendly', opponentIdx:friendlyOpponentIdx};
       matchKitColors = {A:userColor, B:oppColor};
       matchVenueTeam = userTeam; // el amistoso se juega en casa
+      aiLevel = careerDifficulty().match;
       matchAttendance = computeAttendance(userTeam, oppTeam, true);
       startMatch('ai', rosterFromCareerTeam(userTeam, pendingLineup), rosterFromCareerTeam(oppTeam, oppLineup), userTeam.formation, oppTeam.formation);
       return;
@@ -3673,6 +3766,7 @@
     matchContext = {type:'career', fixtureId:f.id, userIsHome};
     matchKitColors = {A:userColor, B:oppColor};
     matchVenueTeam = userIsHome ? userTeam : oppTeam; // estadio del equipo local
+    aiLevel = careerDifficulty().match;
     ensureFixtureAttendance(f);
     matchAttendance = {attendance: f.attendance, capacity: f.capacity};
     startMatch('ai', rosterFromCareerTeam(userTeam, pendingLineup), rosterFromCareerTeam(oppTeam, oppLineup), userTeam.formation, oppTeam.formation);
@@ -4010,8 +4104,9 @@
     const remaining = Math.max(0, totalSeconds - elapsed);
     const fraction = clamp(remaining/totalSeconds, 0, 1);
     const oa = overallOfPieces('A'), ob = overallOfPieces('B');
-    const expA = clamp(1 + (oa-ob)/20 + 0.3, 0.1, 4.5) * fraction;
-    const expB = clamp(1 + (ob-oa)/20, 0.1, 4.5) * fraction;
+    const simBias = mode==='ai' ? {easy:0.35, normal:0, hard:-0.35}[aiLevel] : 0;
+    const expA = clamp(1 + (oa-ob)/20 + 0.3 + simBias, 0.1, 4.5) * fraction;
+    const expB = clamp(1 + (ob-oa)/20 - simBias, 0.1, 4.5) * fraction;
     const addA = Math.max(0, Math.round(expA + (Math.random()-0.5)*2*fraction));
     const addB = Math.max(0, Math.round(expB + (Math.random()-0.5)*2*fraction));
     score.A += addA; score.B += addB;
@@ -4112,7 +4207,9 @@
     return 1 - (f/100)*0.3; // hasta -30% de efectividad a cansancio máximo
   }
   function fatiguedAttr(piece, key){
-    return Math.max(1, Math.round(piece[key] * fatiguePenaltyFactor(piece)));
+    // Contra la máquina, su equipo (B) rinde un 10 % menos en Fácil y un 6 % más en Difícil
+    const lvl = (mode==='ai' && piece.team==='B') ? ({easy:0.9, normal:1, hard:1.06}[aiLevel]||1) : 1;
+    return Math.max(1, Math.round(piece[key] * fatiguePenaltyFactor(piece) * lvl));
   }
   function afterStep(piece, wasMove, forceEnd){
     piece.fatigue = clamp((piece.fatigue||0) + fatigueIncrement(piece), 0, 100);
@@ -4238,8 +4335,143 @@
     if(mode==='ai' && turn==='B'){ setTimeout(aiTakeTurn, 700); }
   }
 
+  // ---------- IA por niveles ----------
+  // Fácil: comete errores (movimientos al azar, menos tiros y entradas). Normal: la IA de siempre.
+  // Difícil: elige tiros con buena probabilidad, pases a compañeros desmarcados, evita a los rivales al avanzar,
+  // presiona al portador, marca al delantero más peligroso y evita las entradas por detrás.
+  function estShotChance(shooter){
+    const dist = shootDistance(shooter);
+    let chance = 0.75 - 0.09*(dist-1) + normalize(fatiguedAttr(shooter,'shot'))*0.25;
+    const oppGK = pieces.find(p=>p.team!==shooter.team && p.role==='GK');
+    if(oppGK) chance -= normalize(oppGK.goalkeeping)*0.3;
+    return clamp(chance, 0.08, 0.85);
+  }
+  function estPassChance(passer, dest){
+    return clamp(0.85 - 0.05*chebyshev(passer, dest) + normalize(fatiguedAttr(passer,'pass'))*0.25, 0.3, 0.95);
+  }
+  function opponentsNear(cell, team){ return pieces.filter(p=>p.team!==team && chebyshev(p,cell)===1).length; }
+  // Puntuación de una casilla para avanzar con el balón (B ataca hacia la columna 0)
+  function attackCellScore(piece, c){
+    const goalCol = piece.team==='A' ? 13 : 0;
+    const penalty = shootRowPenalty(c.row);
+    const opp = opponentsNear(c, piece.team);
+    return -Math.abs(c.col-goalCol)*3 - (opp>=2 ? opp*1.5 : 0) - (isFinite(penalty) ? penalty*0.5 : 2);
+  }
+  function aiStepHard(){
+    const aiTeam='B';
+    const unused = pieces.filter(p=>p.team===aiTeam && !turnUsedPieceIds.has(p.id));
+    const field = unused.filter(p=>p.role!=='GK');
+    const carrier = getCarrier();
+    const ourGoalCol = 13; // B defiende la portería derecha
+    if(turnBonusPieceId){
+      const piece = pieces.find(p=>p.id===turnBonusPieceId);
+      if(piece && piece.team===aiTeam) return aiHardActWith(piece);
+      turnBonusPieceId=null;
+    }
+    if(carrier && carrier.team===aiTeam && !turnUsedPieceIds.has(carrier.id)) return aiHardActWith(carrier);
+    if(carrier && carrier.team!==aiTeam){
+      // 1) Entrada siempre que se pueda, con el mejor defensor (mejor si no es por detrás)
+      if(!turnActionUsed || tackleRetryAllowed){
+        const adj = field.filter(p=>chebyshev(p,carrier)===1)
+          .sort((a,b)=> (isTackleFromBehind(a,carrier)?1:0)-(isTackleFromBehind(b,carrier)?1:0) || fatiguedAttr(b,'defense')-fatiguedAttr(a,'defense'));
+        if(adj.length){ const d=adj[0]; turnActionUsed=true; tackleRetryAllowed=false; const r=doTackle(d, carrier); tackleRetryAllowed=r.failed; afterStep(d, false, r.foul); return true; }
+      }
+      // 2) Presión: hasta dos jugadores van a por el portador, colocándose por el lado de nuestra portería
+      const pressingNow = pieces.filter(p=>p.team===aiTeam && p.role!=='GK' && chebyshev(p,carrier)===1).length;
+      const pressers = field.filter(p=>chebyshev(p,carrier)>1).sort((a,b)=>chebyshev(a,carrier)-chebyshev(b,carrier));
+      if(pressers.length && pressingNow < 2){
+        const pr = pressers[0];
+        const moves = validMoveCells(pr).sort((a,b)=>
+          (chebyshev(a,carrier) + (a.col>=carrier.col ? 0 : 0.4)) - (chebyshev(b,carrier) + (b.col>=carrier.col ? 0 : 0.4)));
+        if(moves.length){ doMove(pr, moves[0].col, moves[0].row); afterStep(pr, true); return true; }
+      }
+      // 3) Ya hay presión: marcar al atacante rival más adelantado que esté libre
+      const threats = pieces.filter(p=>p.team!==aiTeam && p.role!=='GK' && p.id!==carrier.id).sort((a,b)=>b.col-a.col);
+      for(const t of threats){
+        if(pieces.some(p=>p.team===aiTeam && p.role!=='GK' && chebyshev(p,t)<=1)) continue;
+        const cands = field.filter(p=>chebyshev(p,carrier)>1);
+        if(!cands.length) break;
+        const m = cands.reduce((a,b)=>chebyshev(a,t)<chebyshev(b,t)?a:b);
+        const moves = validMoveCells(m).sort((a,b)=> (chebyshev(a,t) + (a.col>t.col?0:0.5)) - (chebyshev(b,t) + (b.col>t.col?0:0.5)));
+        if(moves.length){ doMove(m, moves[0].col, moves[0].row); afterStep(m, true); return true; }
+      }
+      return false;
+    }
+    // Balón suelto: va el más cercano; el segundo paso se usa para desmarcarse hacia delante
+    if(field.length){
+      const nearest = field.reduce((a,b)=>chebyshev(a,ball)<chebyshev(b,ball)?a:b);
+      if(turnUsedPieceIds.size===0 || chebyshev(nearest, ball)<=2){
+        const moves = validMoveCells(nearest).sort((a,b)=>chebyshev(a,ball)-chebyshev(b,ball));
+        if(moves.length){ doMove(nearest, moves[0].col, moves[0].row); afterStep(nearest, true); return true; }
+      }
+      const runner = field.slice().sort((a,b)=>a.col-b.col)[0];
+      const moves = validMoveCells(runner).sort((a,b)=>attackCellScore(runner,b)-attackCellScore(runner,a));
+      if(moves.length){ doMove(runner, moves[0].col, moves[0].row); afterStep(runner, true); return true; }
+    }
+    return false;
+  }
+  function aiHardActWith(piece){
+    const carrier = getCarrier();
+    const isFreeKick = freeKickPieceId===piece.id;
+    const hasBall = (carrier && carrier.id===piece.id) || isFreeKick;
+    if(!hasBall){ aiActWithPiece(piece); return true; }
+    const canAct = !turnActionUsed || chainReceiverPieceId===piece.id;
+    // Portero: pase al compañero más libre
+    if(piece.role==='GK'){
+      const t = aiPassTargets(piece).sort((a,b)=> opponentsNear(a,'B')-opponentsNear(b,'B') || chebyshev(a,piece)-chebyshev(b,piece));
+      if(t.length){ doPass(piece, {col:t[0].col,row:t[0].row}); afterStep(piece, false); return true; }
+      message='El portero no tiene a quién pasar.'; afterStep(piece, false); return true;
+    }
+    if(canAct && canShoot(piece)){
+      const sc = estShotChance(piece);
+      // chuta si la ocasión es razonable, o antes si le van a robar
+      const pressuredNow = opponentsNear(piece,'B')>0;
+      if(sc >= 0.22 || (pressuredNow && sc >= 0.14) || isFreeKick){ turnActionUsed=true; doShoot(piece); afterStep(piece, false); return true; }
+    }
+    if(canAct){
+      // Pase a un compañero más adelantado y libre, si la jugada mejora
+      const best = aiPassTargets(piece).map(t=>{
+        const ok = estPassChance(piece, t);
+        const gain = (piece.col - t.col) + (canShoot(t) ? estShotChance(t)*6 : 0) - opponentsNear(t,'B')*2;
+        return {t, score: gain*ok, ok};
+      }).filter(x=>x.ok>=0.6 && x.score>1.2).sort((a,b)=>b.score-a.score)[0];
+      const pressured = opponentsNear(piece,'B')>0;
+      if(best && (pressured || best.score>3.5 || isFreeKick)){ turnActionUsed=true; doPass(piece, {col:best.t.col,row:best.t.row}); afterStep(piece, false); return true; }
+    }
+    if(isFreeKick){
+      const any = aiPassTargets(piece);
+      if(canAct && any.length){ turnActionUsed=true; doPass(piece, {col:any[0].col,row:any[0].row}); afterStep(piece, false); return true; }
+      afterStep(piece, false); return true;
+    }
+    // Conducir hacia la portería evitando quedar pegado a rivales
+    const moves = validMoveCells(piece).sort((a,b)=>attackCellScore(piece,b)-attackCellScore(piece,a));
+    if(moves.length){ doMove(piece, moves[0].col, moves[0].row); afterStep(piece, true); return true; }
+    afterStep(piece, false); return true;
+  }
+  // Fácil: a veces se equivoca a propósito
+  function aiStepEasy(){
+    const aiTeam='B';
+    const r = Math.random();
+    const carrierNow = getCarrier();
+    // Defendiendo, a menudo no entra a robar y se mueve sin sentido
+    const defending = carrierNow && carrierNow.team!==aiTeam;
+    if(r < (defending ? 0.55 : 0.4)){
+      const cand = pieces.filter(p=>p.team===aiTeam && p.role!=='GK' && !turnUsedPieceIds.has(p.id) && (!turnBonusPieceId || p.id===turnBonusPieceId));
+      const carrier = getCarrier();
+      const pick = cand.filter(p=>!(carrier && carrier.id===p.id && freeKickPieceId===p.id));
+      if(pick.length){
+        const pc = pick[randInt(0, pick.length-1)];
+        const moves = validMoveCells(pc);
+        if(moves.length && freeKickPieceId!==pc.id){ const mv = moves[randInt(0, moves.length-1)]; doMove(pc, mv.col, mv.row); afterStep(pc, true); return true; }
+      }
+    }
+    return false;
+  }
+
   function aiTakeTurn(){
     if(matchEnded) return;
+    if(aiLevel==='hard'){ if(aiStepHard()) return; }
+    else if(aiLevel==='easy'){ if(aiStepEasy()) return; }
     const aiTeam='B';
     if(turnBonusPieceId){
       const piece = pieces.find(p=>p.id===turnBonusPieceId);
@@ -4258,7 +4490,7 @@
         }
         message='El portero no tiene a quién pasar.'; afterStep(carrier, false); return;
       }
-      if(!turnActionUsed && canShoot(carrier) && Math.random()<0.65){ turnActionUsed=true; doShoot(carrier); afterStep(carrier, false); return; }
+      if(!turnActionUsed && canShoot(carrier) && Math.random()<(aiLevel==='easy'?0.35:0.65)){ turnActionUsed=true; doShoot(carrier); afterStep(carrier, false); return; }
       if(!turnActionUsed){
         const targets = aiPassTargets(carrier).filter(t=>t.col < carrier.col);
         if(targets.length && Math.random()<0.5){
@@ -4479,7 +4711,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=22').then(m=>{
+      import('./match3d.js?v=24').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
