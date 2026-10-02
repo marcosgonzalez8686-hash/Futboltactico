@@ -1,4 +1,4 @@
-const CACHE_NAME = 'futbol-tactico-v9';
+const CACHE_NAME = 'futbol-tactico-v10';
 const ASSETS = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png', './stadium3d.js', './match3d.js', './vendor/three.module.min.js'];
 
 self.addEventListener('install', (event) => {
@@ -23,7 +23,8 @@ self.addEventListener('fetch', (event) => {
   // Solo peticiones GET del propio juego
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
   event.respondWith(
-    fetch(req)
+    // no-cache: pregunta siempre al servidor si hay versión nueva (evita mezclar ficheros viejos y nuevos)
+    fetch(req, {cache: 'no-cache'})
       .then((response) => {
         if (response.ok) {
           const copy = response.clone();
