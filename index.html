@@ -349,7 +349,7 @@
   .ball.fx{position:absolute; margin:0; z-index:6;}
 
   /* Partido en 3D */
-  .view-toggle-row{display:flex; justify-content:flex-end; margin:-2px 0 6px;}
+  .view-toggle-row{display:flex; justify-content:space-between; gap:8px; margin:-2px 0 6px;}
   .view-toggle{
     background:var(--panel); color:var(--chalk); border:1.5px solid var(--gold); border-radius:16px;
     padding:5px 12px; font-size:12px; font-weight:bold; cursor:pointer;
@@ -698,7 +698,7 @@
   <!-- PARTIDO -->
   <main class="screen" id="gameScreen" hidden style="padding-top:6px;">
     <div class="rotate-hint" id="rotateHint"><span>📱↻ Gira el móvil para jugar en horizontal: el campo se ve más grande.</span><button id="btnRotateHintClose" aria-label="Cerrar aviso">✕</button></div>
-    <div class="view-toggle-row"><button class="view-toggle" id="btnToggle3D">🎥 Ver en 3D</button></div>
+    <div class="view-toggle-row"><button class="view-toggle" id="btnSound" aria-label="Sonido">🔊</button><button class="view-toggle" id="btnToggle3D">🎥 Ver en 3D</button></div>
     <div class="board-wrap" id="boardWrap"><div id="board" class="board"></div></div>
     <div class="match3d" id="match3d" hidden>
       <div class="m3d-cams">
@@ -749,6 +749,7 @@
   </div>
 </div>
 
+<script src="sound.js?v=12"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1010,7 +1011,18 @@
   let matchKitColors = {A:null, B:null}; // colores personalizados (solo Modo Carrera)
   let matchVenueTeam = null; // club local en Modo Carrera (para el estadio 3D)
   let fx3dEvents = []; // lo ocurrido desde el último dibujo, para animar a los jugadores 3D
-  function fx3d(ev){ fx3dEvents.push(ev); }
+  function fx3d(ev){
+    fx3dEvents.push(ev);
+    // En 3D el balón sale tras el gesto del jugador: el sonido espera lo mismo
+    if(window.FTSound) FTSound.onEvent(ev, view3dOn ? 0.17 : 0);
+  }
+  // Equipo local (su afición es la que anima en el estadio)
+  function homeTeamLetter(){ return (matchContext && matchContext.type==='career' && !matchContext.userIsHome) ? 'B' : 'A'; }
+  function crowdLevelForMatch(){
+    if(!matchVenueTeam) return 0.5;
+    const st = normalizeStadium(matchVenueTeam);
+    return STAND_KEYS.reduce((s,k)=> s + standLevel(st[k]), 0) / 20;
+  }
 
   const boardEl = document.getElementById('board');
   const panelEl = document.getElementById('actionPanel');
@@ -1026,6 +1038,7 @@
     });
     document.getElementById('scoreboard').hidden = (name !== 'gameScreen');
     document.body.classList.toggle('in-match', name === 'gameScreen');
+    if(name !== 'gameScreen' && window.FTSound) FTSound.crowdStop();
     if(name==='careerSelectScreen') renderCareerSelectScreen();
     if(name==='careerCreateScreen'){ selectedLogo = LOGO_EMOJIS[0]; renderLogoGrid(); }
     if(name==='careerScreen') renderCareerScreen();
@@ -2487,7 +2500,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=11').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=12').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -3058,6 +3071,7 @@
     const pid = defender.pid;
     const who = defender.name || `el ${defender.role}`;
     const cardCount = pid ? (yellowCardsByPid[pid] = (yellowCardsByPid[pid]||0) + 1) : 1;
+    fx3d({type:'card', id:defender.id});
     if(cardCount>=2){
       message = `¡Falta en el regate y segunda amarilla, ROJA para ${who}! Expulsado el resto del partido.`;
       sendOffPiece(defender);
@@ -3164,6 +3178,7 @@
         const pid = defender.pid;
         const who = defender.name || `el ${defender.role}`;
         const cardCount = pid ? (yellowCardsByPid[pid] = (yellowCardsByPid[pid]||0) + 1) : 1;
+        fx3d({type:'card', id:defender.id});
         if(cardCount>=2){
           message = `¡Segunda amarilla, ROJA para ${who}! Expulsado el resto del partido.`;
           sendOffPiece(defender);
@@ -3222,9 +3237,11 @@
     }
   }
   function triggerHalftimeCelebration(){
+    if(window.FTSound) FTSound.whistle('half');
     showCelebration('¡DESCANSO!', 'half-flash', 'popup-half', 900);
   }
   function triggerFulltimeCelebration(){
+    if(window.FTSound){ FTSound.whistle('end'); FTSound.crowdDim(); }
     showCelebration('¡FINAL!', 'full-flash', 'popup-full', 1300);
   }
   function overallOfPieces(team){
@@ -3263,7 +3280,7 @@
       if(shooter.pid) matchStats[shooter.pid] = (matchStats[shooter.pid]||0)+1;
       score[shooter.team]++;
       shotFx = {fromCol:shooter.col, fromRow:shooter.row, goalCol: shooter.team==='A' ? COLS_TOTAL-1 : 0, goalRow: clamp(shooter.row,3,5)};
-      fx3d({type:'goal', id:shooter.id, team:shooter.team, gkId: oppGK ? oppGK.id : null});
+      fx3d({type:'goal', id:shooter.id, team:shooter.team, gkId: oppGK ? oppGK.id : null, homeScored: shooter.team===homeTeamLetter()});
       message = `¡GOOOL de ${teamName(shooter.team)}!`;
       triggerGoalCelebration(shooter.team);
       const conceding = shooter.team==='A' ? 'B' : 'A';
@@ -3534,7 +3551,9 @@
     }
     if(selected && selected.id===piece.id){ selected=null; actionMode=null; render(); return; }
     if(piece.team===turn && (mode==='2p' || turn==='A')){
-      selected=piece; actionMode=null; message=''; render();
+      selected=piece; actionMode=null; message='';
+      if(window.FTSound) FTSound.tick();
+      render();
     }
   }
   function clickCell(col,row){
@@ -3704,7 +3723,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=11').then(m=>{
+      import('./match3d.js?v=12').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
@@ -3725,6 +3744,17 @@
     render();
   }
   document.getElementById('btnToggle3D').addEventListener('click', ()=> set3DMode(!view3dOn));
+  const btnSound = document.getElementById('btnSound');
+  function updateSoundBtn(){
+    const off = !window.FTSound || FTSound.isMuted();
+    btnSound.textContent = off ? '🔇' : '🔊';
+    btnSound.title = off ? 'Activar sonido' : 'Silenciar';
+  }
+  btnSound.addEventListener('click', ()=>{
+    if(!window.FTSound) return;
+    FTSound.unlock(); FTSound.setMuted(!FTSound.isMuted()); updateSoundBtn();
+  });
+  updateSoundBtn();
   // Aviso de girar el móvil: se puede cerrar y no vuelve a salir
   try{ if(localStorage.getItem('ft_rotate_hint_off')==='1') document.body.classList.add('rotate-hint-off'); }catch(e){}
   document.getElementById('btnRotateHintClose').addEventListener('click', ()=>{
@@ -3973,6 +4003,7 @@
     message='¡Comienza el partido! Elige una ficha.';
     showScreen('gameScreen');
     skipMoveFx = true; shotFx = null;
+    if(window.FTSound){ FTSound.crowdStart(crowdLevelForMatch()); FTSound.whistle('start', 0.6); }
     if(view3dOn && !match3dView){ view3dOn = false; updateViewToggle(); render(); set3DMode(true); return; }
     updateViewToggle();
     render();
