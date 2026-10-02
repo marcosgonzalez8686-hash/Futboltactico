@@ -553,8 +553,25 @@
 
   .view-toggle .lbl-s{display:none;}
 
+  /* Tablet en horizontal: los controles flotantes, más grandes */
+  @media (orientation: landscape) and (pointer: coarse) and (min-height: 650px){
+    body.in-match .view-toggle{padding:7px 14px !important; font-size:15px !important;}
+    body.in-match header.scoreboard{padding:7px 16px !important; gap:14px !important;}
+    body.in-match .score-team{font-size:13px !important; padding:4px 10px !important;}
+    body.in-match .score-num{font-size:22px !important;}
+    body.in-match .turn-indicator{font-size:14px !important;}
+    body.in-match #selectedPlayerInfo{width:190px !important; top:58px !important;}
+    body.in-match .pc-head b{font-size:14px !important;}
+    body.in-match .pc-attr b{font-size:17px !important;}
+    body.in-match .pc-attr span{font-size:12px !important;}
+    body.in-match .action-btn{padding:13px 20px !important; font-size:16px !important; min-width:130px !important;}
+    body.in-match .match-menu-btn{padding:7px 15px !important; font-size:20px !important;}
+    body.in-match .m3d-cams button{padding:7px 13px !important; font-size:13px !important;}
+    body.in-match #message{font-size:14px !important;}
+    body.in-match #boardWrap .board{width:min(calc(100dvh * 13.24 / 9 - 8px), calc(100vw - 420px)) !important;}
+  }
   /* Partido a pantalla completa en horizontal: el campo ocupa toda la pantalla y el resto flota encima */
-  @media (orientation: landscape) and (max-height: 600px){
+  @media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse){
     body.in-match{overflow:hidden;}
     body.in-match #app{max-width:none; min-height:0;}
     body.in-match #gameScreen{padding:0;}
@@ -1077,7 +1094,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=24"></script>
+<script src="sound.js?v=25"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -3099,7 +3116,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=24').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=25').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -4711,7 +4728,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=24').then(m=>{
+      import('./match3d.js?v=25').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
