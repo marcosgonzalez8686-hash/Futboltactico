@@ -397,6 +397,49 @@
   .fx-att{display:block; font-size:11px; color:#9fd4b8; margin-top:2px; font-weight:normal;}
   .match-crowd{color:#8ecbff;}
 
+  /* ---------- Ojeo y fichajes ---------- */
+  .market-tabs{flex-wrap:wrap;}
+  .market-tabs button{position:relative; font-size:12px; padding:8px 4px;}
+  .tab-badge{position:absolute; top:-6px; right:-4px; background:#e74c3c; color:#fff; font-style:normal; font-size:10px; border-radius:9px; padding:0 5px; line-height:16px;}
+  .tab-badge.muted{background:#3a6b52;}
+  .mission-card{margin-bottom:10px;}
+  .mc-head{display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap;}
+  .mc-head span{font-size:11px; color:#9fd4b8;}
+  .mc-now{font-size:12px; margin:4px 0 8px; color:#cfe8d8;}
+  .mc-row{display:grid; grid-template-columns:72px 1fr; gap:6px; align-items:center; margin:5px 0;}
+  .mc-row > span{font-size:11px; color:#9fd4b8;}
+  .stars{position:relative; display:inline-block; font-size:13px; white-space:nowrap; line-height:1; font-family:Arial, sans-serif;}
+  .stars .st-bg{color:rgba(255,255,255,.18);}
+  .stars .st-fg{position:absolute; left:0; top:0; overflow:hidden; color:#ffd23f;}
+  .star-to{font-size:9.5px; color:#9fd4b8; margin-left:4px; white-space:nowrap;}
+  .rep-row{display:flex; align-items:center; gap:8px; padding:9px 4px; border-bottom:1px solid rgba(255,255,255,.06); cursor:pointer;}
+  .rep-row:active{background:rgba(255,255,255,.04);}
+  .rep-star{background:none; border:none; color:#ffd23f; font-size:22px; cursor:pointer; padding:0 2px; opacity:.6;}
+  .rep-star.on{opacity:1;}
+  .rep-main{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px;}
+  .rep-main b{font-size:13.5px;}
+  .rep-main small{font-size:11px; color:#9fd4b8; display:flex; align-items:center; gap:4px; flex-wrap:wrap;}
+  .rep-main .team-badge{transform:scale(.8);}
+  .rep-side{text-align:right; display:flex; flex-direction:column;}
+  .rep-side b{font-size:13px;} .rep-side small{font-size:10px; color:#9fd4b8;}
+  .new-dot{font-style:normal; font-size:9px; background:#e74c3c; color:#fff; border-radius:6px; padding:0 4px; vertical-align:2px;}
+  .rec{font-size:10.5px; font-weight:bold; border-radius:6px; padding:1px 6px;}
+  .rec-xi{background:rgba(46,204,113,.18); color:#5ee08f;} .rec-rot{background:rgba(244,208,63,.16); color:#f4d03f;} .rec-no{background:rgba(231,76,60,.15); color:#ff8b80;}
+  .deal-tag{font-size:10.5px; background:#1c4433; color:#cfe8d8; border-radius:6px; padding:1px 6px;}
+  .deal-card{margin-bottom:10px;}
+  .deal-card.unread{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold) inset;}
+  .deal-card .mode-btn{width:auto;}
+  .rp-stars{display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; padding:10px 12px 4px; text-align:center;}
+  .rp-stars span{display:block; font-size:10px; color:#9fd4b8; margin-bottom:2px;}
+  .rp-stars .stars{font-size:16px;}
+  .rp-stars .star-to{display:block; margin:2px 0 0;}
+  .rp-know{margin:4px 12px 0;}
+  .rp-pad{padding:0 12px;}
+  .rp-attrs{padding:8px 12px 0;}
+  .offer-ctl{display:flex; align-items:center; justify-content:center; gap:6px; margin:6px 0 2px;}
+  .offer-ctl button{background:#1c4433; color:var(--chalk); border:none; border-radius:8px; padding:7px 9px; font-size:12px; font-weight:bold; cursor:pointer;}
+  .offer-ctl b{min-width:96px; text-align:center; font-size:16px; color:var(--gold);}
+
   /* ---------- Plantilla y táctica estilo manager ---------- */
   .chip-row{display:flex; gap:5px; flex-wrap:wrap; align-items:center;}
   .chip-row > span{font-size:11px; color:#9fd4b8; margin-right:2px;}
@@ -1042,10 +1085,10 @@
   </div>
 
   <div class="screen" id="careerMarketScreen" hidden>
-    <h2>Ojeo</h2>
+    <h2>🔎 Ojeo y fichajes</h2>
     <p class="hint" id="marketHint"></p>
-    <p class="hint">Tus ojeadores van descubriendo prospectos poco a poco. Cuanta más gente asignes y más tiempo pase, más se conocerá de cada uno.</p>
-    <div class="card"><div id="careerMarketList"></div></div>
+    <div class="fin-tabs market-tabs" id="marketTabs"></div>
+    <div id="careerMarketList"></div>
     <button class="mode-btn" id="btnBackMarket">« Volver</button>
   </div>
 
@@ -1195,7 +1238,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=26"></script>
+<script src="sound.js?v=27"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1494,6 +1537,7 @@
     updateCareerChrome(name);
     document.body.classList.remove('match-menu-open');
     if(name !== 'careerRosterScreen' && profilePid) closePlayerProfile();
+    if(name !== 'careerMarketScreen' && typeof reportPid !== 'undefined' && reportPid){ reportPid = null; document.getElementById('playerProfileModal').hidden = true; }
     if(name !== 'gameScreen' && window.FTSound) FTSound.crowdStop();
     if(name !== 'gameScreen') exitLandscapeMode();
     if(name==='careerSelectScreen') renderCareerSelectScreen();
@@ -1589,7 +1633,10 @@
   document.getElementById('btnEditDefaultLineup').addEventListener('click', openDefaultLineupEditor);
   document.querySelectorAll('#sqSort [data-sort]').forEach(b=> b.addEventListener('click', ()=>{ rosterSort = b.dataset.sort; renderCareerRoster(); }));
   document.querySelectorAll('#sqFilter [data-filter]').forEach(b=> b.addEventListener('click', ()=>{ rosterFilter = b.dataset.filter; renderCareerRoster(); }));
-  document.getElementById('playerProfileModal').addEventListener('click', e=>{ if(e.target.id==='playerProfileModal'){ closePlayerProfile(); renderCareerRoster(); } });
+  document.getElementById('playerProfileModal').addEventListener('click', e=>{
+    if(e.target.id!=='playerProfileModal') return;
+    if(reportPid) closeReport(); else { closePlayerProfile(); renderCareerRoster(); }
+  });
   document.getElementById('btnBackHistory').addEventListener('click', ()=>showScreen('careerTabComp'));
   document.getElementById('btnCancelLineup').addEventListener('click', ()=>{
     if(lineupMode==='default') showScreen('careerRosterScreen');
@@ -1802,6 +1849,7 @@
     };
   }
   function calcWage(p){
+    if(p.contractWage) return p.contractWage; // sueldo negociado al ficharlo
     const overall = overallRating(p);
     const base = overall * 10;
     const ageFactor = clamp(1 - Math.abs(p.age-27)*0.02, 0.5, 1.15);
@@ -1838,14 +1886,7 @@
     else div = Math.random()<0.85 ? randInt(4,5) : randInt(2,3); // rara joya inalcanzable
     return generateRandomPlayer(role, div);
   }
-  const SCOUTING_POOL_SIZE = 10;
   const SCOUT_LIMIT = 3;
-  function makeScoutingEntry(clubRep){
-    return { id:uid(), player: generateProspectPlayer(clubRep), progress:0, assignedScoutId:null };
-  }
-  function generateScoutingPool(clubRep){
-    return Array.from({length:SCOUTING_POOL_SIZE}, ()=> makeScoutingEntry(clubRep));
-  }
   function generateScoutCandidate(){
     const skill = randInt(20,90);
     const wage = Math.round(80 + skill*4);
@@ -1867,23 +1908,6 @@
   function scoutingNoiseFor(progress){
     const lvl = scoutingFogLevel(progress);
     return {full:0, high:6, low:16, none:99}[lvl];
-  }
-  function progressScouting(){
-    if(!career || !career.scoutingPool) return;
-    career.scoutingPool.forEach(entry=>{
-      if(!entry.assignedScoutId) return;
-      const scout = career.staff.find(s=>s.id===entry.assignedScoutId);
-      if(!scout) { entry.assignedScoutId=null; return; }
-      entry.progress = clamp(entry.progress + scoutProgressIncrement(scout), 0, 100);
-    });
-  }
-  function refillScoutingPool(){
-    if(!career) return;
-    const userTeam = career.teams.find(t=>t.isUser);
-    const rep = clubReputation(userTeam);
-    while(career.scoutingPool.length < SCOUTING_POOL_SIZE){
-      career.scoutingPool.push(makeScoutingEntry(rep));
-    }
   }
   function calcStaffWageBill(){
     if(!career || !career.staff) return 0;
@@ -2048,7 +2072,7 @@
       fixtures: buildSeasonFixtures(teams),
       currentJornada:1, season:1, week:1, seasonSummary:null,
       youthPlayers: generateYouthSquad(5, userFacilities.youth), youthReviewPending:false,
-      scoutingPool: generateScoutingPool(clubReputation(teams[0])), staff:[], staffCandidates: generateStaffCandidates(5), financialAlert:null,
+      scouting: newScoutingState(), staff:[], staffCandidates: generateStaffCandidates(5), financialAlert:null,
       pendingOffers:[], clubHistory:[],
     };
     careersList.push(newCareer);
@@ -2210,6 +2234,7 @@
           const keepId = p.id;
           Object.keys(p).forEach(k=>{ delete p[k]; });
           Object.assign(p, fresh, {id:keepId});
+          if(career.scouting){ delete career.scouting.knowledge[keepId]; career.scouting.shortlist = career.scouting.shortlist.filter(x=>x!==keepId); }
           if(team && team.isUser){ retiredNames.push(oldName); arrivedNames.push(p.name); }
         }
       }
@@ -2227,6 +2252,7 @@
     career.currentJornada = 1;
     career.week = 1;
     career.fixtures = buildSeasonFixtures(career.teams);
+    { const sc = scoutingState(); sc.freeAgents.forEach(p=> p.age++); sc.freeAgents = sc.freeAgents.filter(p=> p.age<34 && Math.random()<0.6); }
     refillScoutingPool();
     career.seasonSummary = {
       season: career.season-1,
@@ -2306,6 +2332,7 @@
     trainYouthPlayers();
     progressInjuries();
     progressScouting();
+    processNegotiationsWeek();
     refillScoutingPool();
     payWeeklyWages();
     if(phase.hasMatch){ processMatchdayRevenue(career.currentJornada); }
@@ -2409,10 +2436,15 @@
         if(c.financialAlert===undefined){ c.financialAlert = null; persistCareers(); }
         if(!c.staff) c.staff = [];
         if(!c.staffCandidates) c.staffCandidates = generateStaffCandidates(5);
-        if(!c.scoutingPool){
-          const uT = c.teams.find(t=>t.isUser);
-          c.scoutingPool = generateScoutingPool(clubReputation(uT));
-          delete c.transferMarket;
+        if(!c.scouting){
+          // del sistema antiguo de prospectos: pasan a ser jugadores libres ya ojeados
+          c.scouting = {missions:{}, knowledge:{}, shortlist:[], negotiations:[], freeAgents:[]};
+          (c.scoutingPool||[]).forEach(e=>{
+            if(!e.player) return;
+            c.scouting.freeAgents.push(e.player);
+            if(e.progress>0) c.scouting.knowledge[e.player.id] = {k:e.progress, n1:Math.random()*2-1, n2:Math.random()*2-1, by:'tu ojeador', isNew:false};
+          });
+          delete c.scoutingPool; delete c.transferMarket;
           persistCareers();
         }
         if(!c.weekPhaseMigrated){
@@ -2427,7 +2459,7 @@
           const assignIfMissing = (p)=>{ if(p && p.stamina===undefined){ p.stamina = randInt(20,80); changed=true; } };
           c.players.forEach(assignIfMissing);
           if(c.youthPlayers) c.youthPlayers.forEach(assignIfMissing);
-          if(c.scoutingPool) c.scoutingPool.forEach(entry=> assignIfMissing(entry.player));
+          if(c.scouting) c.scouting.freeAgents.forEach(assignIfMissing);
           if(changed) persistCareers();
         })();
         career=c; showScreen('careerScreen');
@@ -2544,6 +2576,7 @@
     if(career.seasonSummary) items.push({kind:'season'});
     if(career.youthReviewPending && !career.seasonSummary) items.push({kind:'youth'});
     if(career.lastMatchSummary) items.push({kind:'xp'});
+    ((career.scouting||{}).negotiations||[]).filter(n=>n.unread).forEach(n=> items.push({kind:'deal', n}));
     return items;
   }
   function renderInbox(){
@@ -2580,6 +2613,10 @@
         addMsg(sm.promoted?'🎉':sm.relegated?'📉':'🏁', `Resumen de la temporada ${sm.season}`, body, acts);
       } else if(it.kind==='youth'){
         addMsg('🌱', 'Revisión de cantera pendiente', 'Decide qué canteranos suben al primer equipo antes de que empiece la temporada.', [['Revisar cantera', true, ()=> showScreen('careerYouthScreen')]]);
+      } else if(it.kind==='deal'){
+        const n = it.n, fp = findPlayerAnywhere(n.pid);
+        addMsg(n.stage==='contract'?'🤝':n.stage==='counter'?'↩️':'✉️', `Fichaje de ${escapeHtml(fp?fp.p.name:'jugador')}: ${dealStageLabel(n)}`, escapeHtml(n.note||''),
+          [['📝 Ver negociación', true, ()=>{ marketTab='deals'; showScreen('careerMarketScreen'); }]]);
       } else if(it.kind==='xp'){
         const mm = career.lastMatchSummary;
         const lines = mm.entries.length ? mm.entries.map(e=>`<b>${escapeHtml(e.name)}</b> +${e.xp} XP${e.changes.length ? ' — ' + e.changes.map(c=>`${c.short} ${c.before}→${c.after}`).join(', ') : ''}`).join('<br>') : 'Nadie jugó ese partido.';
@@ -2671,7 +2708,9 @@
     const team = career.teams[userTeamIdx()], phase = weekPhaseInfo(career.week||1);
     document.getElementById('hubSubFacilities').textContent = `Aforo ${formatInt(totalStadiumCapacity(team))} · Juveniles nv${team.facilities.youth||1} · Entrenamiento nv${team.facilities.training||1}`;
     document.getElementById('hubSubFinance').textContent = `Presupuesto ${formatMoney(team.budget||0)}`;
-    document.getElementById('hubSubMarket').textContent = phase.transfers ? 'Mercado abierto: puedes fichar' : 'Mercado cerrado: solo ojeo';
+    const scs = career.scouting || {knowledge:{}, negotiations:[]};
+    const nRep = Object.keys(scs.knowledge||{}).length, nNeg = (scs.negotiations||[]).filter(n=>!['closed','signed'].includes(n.stage)).length;
+    document.getElementById('hubSubMarket').textContent = `${phase.transfers ? 'Mercado abierto' : 'Mercado cerrado'} · ${nRep} informe${nRep===1?'':'s'}${nNeg?` · ${nNeg} negociación${nNeg>1?'es':''}`:''}`;
     const fr = document.getElementById('btnHubFriendly');
     fr.disabled = !phase.friendlies;
     document.getElementById('hubSubFriendly').textContent = phase.friendlies ? 'Disponibles en pretemporada' : 'Solo en pretemporada';
@@ -2970,149 +3009,357 @@
     if(v>=25) return {text:'Medio-bajo', color:'#e8871e'};
     return {text:'Bajo', color:'#c0392b'};
   }
-  function renderScoutingCard(entry){
-    const p = entry.player;
-    const card = document.createElement('div'); card.className='player-card';
-    const head = document.createElement('div'); head.className='player-card-head';
-    const identified = entry.progress > 0;
-    const posLabels = {GK:'Portero', DF:'Defensa', MF:'Centrocampista', FW:'Delantero'};
-    head.innerHTML = identified
-      ? `<b>${escapeHtml(p.name)} <span style="font-weight:normal;color:#9fd4b8;font-size:11px;">(${posLabels[p.hiddenPos]||'?'})</span></b><span>${p.age} años</span>`
-      : `<b>Prospecto sin identificar</b><span>???</span>`;
-    card.appendChild(head);
-
-    const barWrap=document.createElement('div'); barWrap.style.cssText='margin:2px 0 10px;';
-    barWrap.innerHTML = `<div style="font-size:10.5px;color:#9fd4b8;margin-bottom:2px;">Informe de ojeo: ${entry.progress}%</div>
-      <div class="attr-bar-track"><div class="attr-bar-fill" style="width:${entry.progress}%;background:var(--gold);"></div></div>`;
-    card.appendChild(barWrap);
-
-    const fog = scoutingFogLevel(entry.progress);
-    if(fog==='none'){
-      const p2=document.createElement('p'); p2.className='hint'; p2.textContent='Todavía no hay datos sobre sus cualidades. Necesita más tiempo de ojeo.';
-      card.appendChild(p2);
-    } else if(fog==='low'){
-      ATTRS.forEach(a=>{
-        const q = qualitativeLabel(p[a.key]);
-        const row=document.createElement('div'); row.style.cssText='display:flex;justify-content:space-between;font-size:12px;padding:2px 0;';
-        row.innerHTML = `<span style="color:#9fd4b8;">${a.label}</span><span style="color:${q.color};font-weight:bold;">${q.text}</span>`;
-        card.appendChild(row);
-      });
-    } else if(fog==='high'){
-      const noise = scoutingNoiseFor(entry.progress);
-      ATTRS.forEach(a=>{
-        const v=p[a.key];
-        const row=document.createElement('div'); row.style.cssText='display:flex;justify-content:space-between;font-size:12px;padding:2px 0;';
-        row.innerHTML = `<span style="color:#9fd4b8;">${a.label}</span><span style="color:var(--chalk);font-weight:bold;">${clamp(v-noise,1,99)}-${clamp(v+noise,1,99)}</span>`;
-        card.appendChild(row);
-      });
-    } else {
-      ATTRS.forEach(a=>{
-        const v=p[a.key];
-        const row=document.createElement('div'); row.className='attr-bar-row';
-        const label=document.createElement('div'); label.className='abr-label'; label.textContent=a.short;
-        const track=document.createElement('div'); track.className='attr-bar-track';
-        const fill=document.createElement('div'); fill.className='attr-bar-fill';
-        fill.style.width=v+'%'; fill.style.background=attrBarColor(v);
-        track.appendChild(fill);
-        const val=document.createElement('div'); val.className='abr-val'; val.textContent=v;
-        row.appendChild(label); row.appendChild(track); row.appendChild(val);
-        card.appendChild(row);
-      });
+  // ---------- Ojeo y fichajes (misiones, informes, seguimiento y negociaciones) ----------
+  const FREE_AGENTS_SIZE = 8;
+  function newScoutingState(){ return {missions:{}, knowledge:{}, shortlist:[], negotiations:[], freeAgents:[]}; }
+  function scoutingState(){
+    if(!career.scouting) career.scouting = newScoutingState();
+    const sc = career.scouting;
+    ['missions','knowledge'].forEach(k=>{ if(!sc[k]) sc[k] = {}; });
+    ['shortlist','negotiations','freeAgents'].forEach(k=>{ if(!sc[k]) sc[k] = []; });
+    return sc;
+  }
+  function defaultMission(){ return {role:'any', maxAge:99, divs:[3,4,5], free:true}; }
+  // Dónde está un jugador: en un club rival, libre o en tu plantilla
+  function findPlayerAnywhere(pid){
+    const p = career.players.find(x=>x.id===pid);
+    if(p){ const teamIdx = career.teams.findIndex(t=>t.slots.includes(pid)); return {p, teamIdx, free:false}; }
+    const fa = scoutingState().freeAgents.find(x=>x.id===pid);
+    return fa ? {p:fa, teamIdx:-1, free:true} : null;
+  }
+  // Jugadores libres: siempre hay unos cuantos sin equipo
+  function refillScoutingPool(){
+    if(!career) return;
+    const sc = scoutingState();
+    const rep = clubReputation(career.teams.find(t=>t.isUser));
+    while(sc.freeAgents.length < FREE_AGENTS_SIZE){
+      const p = generateProspectPlayer(rep);
+      p.age = clamp(p.age + randInt(0,4), 18, 36);
+      sc.freeAgents.push(p);
     }
-    return card;
   }
-  function assignScoutToEntry(entryId, scoutId){
-    career.scoutingPool.forEach(e=>{ if(e.assignedScoutId===scoutId) e.assignedScoutId=null; });
-    const entry = career.scoutingPool.find(e=>e.id===entryId);
-    if(entry) entry.assignedScoutId = scoutId || null;
-    persistCareers();
-    renderCareerMarketScreen();
+  // Estrellas: escala absoluta de la liga (≈25 → 1★ … ≈85 → 5★)
+  function starsFromRating(r){ return clamp(Math.round(((r-10)/15)*2)/2, 0.5, 5); }
+  function potentialRating(p){
+    const room = p.age<=19 ? 32 : p.age<=21 ? 26 : p.age<=24 ? 17 : p.age<=27 ? 8 : 2;
+    const g = (p.hiddenGrowth!==undefined ? p.hiddenGrowth : 50)/99;
+    return bestRoleOf(p).v + room * (0.3 + g*0.9);
   }
-  function signProspect(entryId){
-    const entry = career.scoutingPool.find(e=>e.id===entryId);
-    if(!entry) return;
-    const userTeam = career.teams.find(t=>t.isUser);
-    if(!weekPhaseInfo(career.week||1).transfers) return;
-    const p = entry.player;
-    const price = calcMarketValue(p);
-    if((userTeam.budget||0) < price) return;
-    if(userTeam.slots.length >= MAX_SQUAD_SIZE) return;
-    if(!canSignPlayer(userTeam, p)) return;
-    userMoney('signings', -price);
-    userTeam.slots.push(p.id);
-    career.players.push(p);
-    career.scoutingPool = career.scoutingPool.filter(e=>e.id!==entryId);
-    refillScoutingPool();
-    persistCareers();
-    renderCareerMarketScreen();
+  function knowledgeOf(pid){ return scoutingState().knowledge[pid] || null; }
+  // Valoración estimada por el ojeador: cuanto menos se le conoce, más error y más amplia la horquilla
+  function scoutEstimate(p, kn){
+    const k = kn ? kn.k : 0, unc = (100-k)/100;
+    const est = (real, noise)=> { const c = real + noise*unc*12; return {c, lo: c - unc*14, hi: c + unc*14}; };
+    return {cur: est(bestRoleOf(p).v, kn ? kn.n1 : 0), pot: est(potentialRating(p), kn ? kn.n2 : 0)};
   }
-  function renderCareerMarketScreen(){
-    const userTeam = career.teams.find(t=>t.isUser);
-    refillScoutingPool();
-    const hintEl = document.getElementById('marketHint');
-    const el = document.getElementById('careerMarketList');
-    el.innerHTML='';
-    const blocked = (userTeam.budget||0) < 0;
-    const rep = clubReputation(userTeam);
-    const phase = weekPhaseInfo(career.week||1);
-    const windowOpen = phase.transfers;
-    hintEl.innerHTML = `Presupuesto: <b style="color:${blocked?'#e74c3c':'var(--gold)'};">${formatMoney(userTeam.budget||0)}</b> · Plantilla: ${userTeam.slots.length}/${MAX_SQUAD_SIZE} · Reputación: <b>${rep}/100</b>` +
-      (blocked ? '<br><span style="color:#e74c3c;">Números rojos: no puedes fichar hasta equilibrar las cuentas.</span>' : '') +
-      (!windowOpen ? '<br><span style="color:#e74c3c;">Mercado cerrado esta semana: solo se puede fichar en pretemporada (semanas 1-3) o en el parón (semanas 10-12). Puedes seguir investigando prospectos mientras tanto.</span>' : '');
+  // Cinco estrellas rellenas hasta el valor (admite medias sin depender de símbolos especiales)
+  function starsHTML(v){ return `<span class="stars" aria-label="${String(v).replace('.',',')} de 5"><span class="st-bg">★★★★★</span><span class="st-fg" style="width:${(v/5*100).toFixed(0)}%">★★★★★</span></span>`; }
+  const fmtStar = v=> String(v).replace('.',',');
+  function starRangeHTML(e){
+    const lo = starsFromRating(e.lo), hi = starsFromRating(e.hi), c = starsFromRating(e.c);
+    return starsHTML(c) + (lo===hi ? '' : `<small class="star-to">${fmtStar(lo)}–${fmtStar(hi)}</small>`);
+  }
+  // Recomendación: comparado con quien juega ahora en su mejor puesto en tu once
+  function recommendationFor(p, estCur){
+    const ut = career.teams.find(t=>t.isUser);
+    const role = bestRoleOf(p).r;
+    const xi = getEffectiveLineup(ut), roles = slotRolesForFormation(ut.formation);
+    const inRole = xi.map((id,i)=>({id, r:roles[i]})).filter(x=>x.r===role && x.id).map(x=>slotScore(career.players.find(q=>q.id===x.id), role));
+    const squadRole = ut.slots.map(id=>career.players.find(q=>q.id===id)).filter(Boolean).map(q=>slotScore(q, role)).sort((a,b)=>b-a);
+    const weakestXI = inRole.length ? Math.min(...inRole) : 0;
+    if(estCur > weakestXI + 1) return {cls:'rec-xi', txt:'Sería titular'};
+    if(estCur >= (squadRole[Math.min(2, squadRole.length-1)]||0) - 2) return {cls:'rec-rot', txt:'Rotación'};
+    return {cls:'rec-no', txt:'No mejora tu equipo'};
+  }
+  function wageDemand(p, fromTeam){
+    const ut = career.teams.find(t=>t.isUser);
+    const fromDiv = fromTeam ? fromTeam.division : ut.division;
+    const step = clamp(ut.division - fromDiv, 0, 4); // bajar de categoría se paga
+    return Math.round(calcWage(p) * (1.1 + step*0.3) / 10) * 10;
+  }
+  function askingFee(p, team){
+    let fee = calcMarketValue(p);
+    if(getEffectiveLineup(team).includes(p.id)) fee *= 1.35;           // titular en su equipo
+    if((team.budget||0) > fee*6) fee *= 1.15;                          // club con dinero: no necesita vender
+    return Math.round(fee/500)*500;
+  }
 
-    career.scoutingPool.forEach(entry=>{
-      const card = renderScoutingCard(entry);
-
-      const assignRow=document.createElement('div'); assignRow.className='slot-row';
-      const label=document.createElement('label'); label.textContent='Ojeador';
-      const select=document.createElement('select');
-      const optNone=document.createElement('option'); optNone.value=''; optNone.textContent='— Sin asignar —';
-      if(!entry.assignedScoutId) optNone.selected=true;
-      select.appendChild(optNone);
-      career.staff.forEach(s=>{
-        const opt=document.createElement('option'); opt.value=s.id;
-        opt.textContent = `${s.name} (habilidad ${s.skill})`;
-        if(entry.assignedScoutId===s.id) opt.selected=true;
-        select.appendChild(opt);
+  // Avance semanal: los ojeadores cumplen sus misiones y siguen a los jugadores marcados
+  function progressScouting(){
+    if(!career) return;
+    const sc = scoutingState();
+    const ut = career.teams.find(t=>t.isUser), uIdx = career.teams.indexOf(ut);
+    (career.staff||[]).forEach(s=>{
+      const m = sc.missions[s.id]; if(!m) return;
+      const pool = [];
+      career.teams.forEach((t,ti)=>{ if(ti===uIdx || !m.divs.includes(t.division)) return; t.slots.forEach(id=>{ const p=career.players.find(x=>x.id===id); if(p) pool.push(p); }); });
+      if(m.free) sc.freeAgents.forEach(p=> pool.push(p));
+      const fits = pool.filter(p=> p.age<=m.maxAge && (m.role==='any' || bestRoleOf(p).r===m.role));
+      // primero los que aún no conoce; luego mejora los informes que ya tiene
+      const fresh = fits.filter(p=>!sc.knowledge[p.id]).sort(()=>Math.random()-0.5);
+      const reports = 1 + (s.skill>=55?1:0) + (s.skill>=80?1:0);
+      fresh.slice(0, reports).forEach(p=>{
+        sc.knowledge[p.id] = {k: Math.round(20 + s.skill*0.25), n1: Math.random()*2-1, n2: Math.random()*2-1, w: career.week, s: career.season, by: s.name, isNew: true};
       });
-      if(!career.staff.length){ optNone.textContent='— Sin ojeadores contratados —'; }
-      select.addEventListener('change', ()=> assignScoutToEntry(entry.id, select.value||null));
-      assignRow.appendChild(label); assignRow.appendChild(select);
-      card.appendChild(assignRow);
-
-      const p = entry.player;
-      const truePrice = calcMarketValue(p);
-      const fog = scoutingFogLevel(entry.progress);
-      const priceLine=document.createElement('div'); priceLine.style.cssText='font-size:12px;margin-top:6px;color:#9fd4b8;';
-      if(fog==='none'){
-        priceLine.textContent = 'Precio: desconocido';
-      } else if(fog==='full'){
-        priceLine.innerHTML = `Precio: <b style="color:var(--gold);">${formatMoney(truePrice)}</b>`;
-      } else {
-        priceLine.innerHTML = `Precio estimado: <b style="color:var(--gold);">${formatMoney(Math.round(truePrice*0.7/1000)*1000)} - ${formatMoney(Math.round(truePrice*1.3/1000)*1000)}</b>`;
-      }
-      card.appendChild(priceLine);
-
-      const canOffer = entry.progress>=60;
-      const willingToSign = canSignPlayer(userTeam, p);
-      const btnRow=document.createElement('div'); btnRow.className='btn-row'; btnRow.style.marginTop='6px';
-      const buyBtn=document.createElement('button'); buyBtn.className='mode-btn small primary';
-      buyBtn.textContent = !windowOpen ? 'Mercado cerrado' : (canOffer ? `Fichar (${formatMoney(truePrice)})` : 'Necesita más ojeo');
-      if(!windowOpen || !canOffer || blocked || (userTeam.budget||0)<truePrice || userTeam.slots.length>=MAX_SQUAD_SIZE || !willingToSign) buyBtn.disabled=true;
-      buyBtn.addEventListener('click', ()=> signProspect(entry.id));
-      btnRow.appendChild(buyBtn);
-      card.appendChild(btnRow);
-      if(canOffer && !willingToSign){
-        const warn=document.createElement('p'); warn.className='hint'; warn.style.color='#e74c3c';
-        warn.textContent='No está interesado en un club de tu reputación.';
-        card.appendChild(warn);
-      }
-      el.appendChild(card);
+      // y un poco más de conocimiento de los jugadores marcados de su misión
+      sc.shortlist.forEach(pid=>{
+        const kn = sc.knowledge[pid], f = findPlayerAnywhere(pid);
+        if(!kn || !f) return;
+        if(m.role==='any' || bestRoleOf(f.p).r===m.role) kn.k = clamp(kn.k + Math.round(scoutProgressIncrement(s)*0.8), 0, 100);
+      });
     });
+    // olvidar a jugadores que ya no existen
+    Object.keys(sc.knowledge).forEach(pid=>{ if(!findPlayerAnywhere(pid)) delete sc.knowledge[pid]; });
+    sc.shortlist = sc.shortlist.filter(pid=> !!findPlayerAnywhere(pid));
+  }
+  // Respuestas de los clubes a las ofertas de la semana
+  function processNegotiationsWeek(){
+    const sc = scoutingState();
+    sc.negotiations.forEach(n=>{
+      const f = findPlayerAnywhere(n.pid);
+      if(!f || (f.teamIdx>=0 && career.teams[f.teamIdx].isUser)){ n.stage='closed'; n.note='El jugador ya no está disponible.'; return; }
+      if(n.stage==='offer'){
+        const team = career.teams[f.teamIdx];
+        const ask = askingFee(f.p, team);
+        const minSquad = team.slots.length <= MIN_SQUAD_SIZE + 1;
+        n.respWeek = (career.week||1) + 1; n.unread = true;
+        if(minSquad){ n.stage='rejected'; n.note = `${team.name} no quiere vender: tiene la plantilla muy corta.`; }
+        else if(n.fee >= ask){ n.stage='contract'; n.note = `${team.name} acepta ${formatMoney(n.fee)}. Ahora negocia el contrato con el jugador.`; }
+        else if(n.fee >= ask*0.8){ n.stage='counter'; n.counter = ask; n.note = `${team.name} pide ${formatMoney(ask)}.`; }
+        else { n.stage='rejected'; n.note = `${team.name} rechaza la oferta: la considera insuficiente.`; }
+      }
+    });
+    // las negociaciones viejas cerradas se limpian
+    sc.negotiations = sc.negotiations.filter(n=> !(['closed','rejected','signed','refused'].includes(n.stage) && (career.week||1) - (n.respWeek||0) > 3));
+  }
+  function transferWindowOpenFor(n){ return weekPhaseInfo(career.week||1).transfers || (n && n.respWeek === career.week); }
+  function makeOffer(pid, fee){
+    const sc = scoutingState();
+    sc.negotiations = sc.negotiations.filter(n=> !(n.pid===pid && ['offer','counter','rejected','closed','refused'].includes(n.stage)));
+    const f = findPlayerAnywhere(pid);
+    if(f.free){ sc.negotiations.push({id:uid(), pid, stage:'contract', fee:0, free:true, note:'Jugador libre: sin traspaso. Negocia su contrato.', respWeek:career.week}); }
+    else sc.negotiations.push({id:uid(), pid, stage:'offer', fee, note:`Oferta enviada: ${formatMoney(fee)}. Respuesta la semana que viene.`, week:career.week});
+    if(!sc.shortlist.includes(pid)) sc.shortlist.push(pid);
+    persistCareers();
+  }
+  // Cerrar el fichaje: el jugador decide y, si acepta, se hace el traspaso
+  function finishSigning(n){
+    const f = findPlayerAnywhere(n.pid); if(!f){ n.stage='closed'; return; }
+    const ut = career.teams.find(t=>t.isUser);
+    const p = f.p, from = f.teamIdx>=0 ? career.teams[f.teamIdx] : null;
+    const wage = wageDemand(p, from), bonus = n.free ? wage*4 : 0, cost = n.fee + bonus;
+    if(!transferWindowOpenFor(n)){ n.note = 'El mercado está cerrado: no se puede cerrar el fichaje ahora.'; return; }
+    if(ut.slots.length >= MAX_SQUAD_SIZE){ n.note = `Tu plantilla está llena (${MAX_SQUAD_SIZE}).`; return; }
+    if((ut.budget||0) < cost){ n.note = `No tienes presupuesto suficiente (necesitas ${formatMoney(cost)}).`; return; }
+    if(!canSignPlayer(ut, p)){ n.stage='refused'; n.respWeek = career.week; n.note = `${p.name} no quiere fichar por un club de tu nivel (reputación ${clubReputation(ut)}).`; persistCareers(); return; }
+    userMoney('signings', -cost);
+    if(from){
+      from.budget = (from.budget||0) + n.fee;
+      from.slots = from.slots.filter(id=>id!==p.id); from.lineup = null;
+      // el club vendedor ficha un sustituto del mismo puesto
+      const sub = generateRandomPlayer(bestRoleOf(p).r, from.division);
+      career.players.push(sub); from.slots.push(sub.id);
+    } else {
+      const sc = scoutingState(); sc.freeAgents = sc.freeAgents.filter(x=>x.id!==p.id);
+      career.players.push(p);
+    }
+    p.contractWage = wage; p.transferListed = false;
+    const used = new Set(ut.slots.map(id=>(career.players.find(x=>x.id===id)||{}).squadNumber));
+    for(let num=1; num<=MAX_SQUAD_SIZE; num++){ if(!used.has(num)){ p.squadNumber = num; break; } }
+    ut.slots.push(p.id);
+    n.stage = 'signed'; n.respWeek = career.week; n.note = `¡${p.name} ficha por tu club! Sueldo ${formatMoney(wage)}/semana.`;
+    persistCareers();
   }
 
-  // ---------- Personal (ojeadores) ----------
-  let pendingFireScoutId = null;
+  // ---------- Pantalla de fichajes ----------
+  var marketTab = 'scouts', reportFilterRole = 'any', reportSort = 'cur', reportPid = null, offerDraft = null; // var: showScreen los consulta
+  function renderCareerMarketScreen(){
+    const sc = scoutingState(); refillScoutingPool();
+    const ut = career.teams.find(t=>t.isUser), phase = weekPhaseInfo(career.week||1);
+    document.getElementById('marketHint').innerHTML = `💰 ${formatMoney(ut.budget||0)} · 👥 ${ut.slots.length}/${MAX_SQUAD_SIZE} · ⭐ Reputación ${clubReputation(ut)} · `+
+      (phase.transfers ? '<span class="fin-pos">Mercado abierto</span>' : '<span class="fin-neg">Mercado cerrado</span> <small>(abre en pretemporada y en el parón)</small>');
+    const known = Object.keys(sc.knowledge).filter(pid=>findPlayerAnywhere(pid));
+    const newCount = known.filter(pid=>sc.knowledge[pid].isNew).length;
+    const negOpen = sc.negotiations.filter(n=>!['closed','signed'].includes(n.stage));
+    const tabs = [['scouts','🔎 Ojeo',''],['reports','📋 Informes', newCount?`<i class="tab-badge">${newCount}</i>`:''],['short','⭐ Seguimiento', sc.shortlist.length?`<i class="tab-badge muted">${sc.shortlist.length}</i>`:''],['deals','📝 Negociaciones', negOpen.some(n=>n.unread)?`<i class="tab-badge">!</i>`:'']];
+    document.getElementById('marketTabs').innerHTML = tabs.map(([k,l,b])=>`<button data-mtab="${k}" class="${marketTab===k?'active':''}">${l}${b}</button>`).join('');
+    document.querySelectorAll('#marketTabs [data-mtab]').forEach(b=> b.addEventListener('click', ()=>{ marketTab = b.dataset.mtab; renderCareerMarketScreen(); }));
+    const el = document.getElementById('careerMarketList');
+    if(marketTab==='scouts') el.innerHTML = renderMissionsHTML();
+    else if(marketTab==='deals') el.innerHTML = renderDealsHTML();
+    else el.innerHTML = renderReportsHTML(marketTab==='short');
+    wireMarket(el);
+  }
+  function renderMissionsHTML(){
+    const sc = scoutingState();
+    if(!(career.staff||[]).length) return `<div class="card"><p class="hint">No tienes ojeadores. Contrata alguno en <b>Plantilla → Personal</b> para que busque jugadores.</p><button class="mode-btn small primary" data-go-staff="1">Ir a Personal</button></div>`;
+    return career.staff.map(s=>{
+      const m = sc.missions[s.id];
+      const chip = (attr, val, label, on)=> `<button data-mission="${s.id}" data-k="${attr}" data-v="${val}" class="${on?'active':''}">${label}</button>`;
+      const mm = m || defaultMission();
+      return `<div class="card mission-card">
+        <div class="mc-head"><b>🕵️ ${escapeHtml(s.name)}</b><span>Habilidad ${starsHTML(starsFromRating(10 + s.skill*0.75))} · ${1 + (s.skill>=55?1:0) + (s.skill>=80?1:0)} informe(s)/semana</span></div>
+        ${m ? `<div class="mc-now">Buscando: <b>${m.role==='any'?'cualquier puesto':ROLE_NAME[m.role]}</b>${m.maxAge<99?`, hasta ${m.maxAge} años`:''}, en ${m.divs.map(d=>'D'+d).join(' ')}${m.free?' + libres':''}</div>` : `<div class="mc-now fin-neg">Sin misión: no está buscando a nadie.</div>`}
+        <div class="mc-row"><span>Puesto</span><div class="chip-row">${chip('role','any','Cualquiera',mm.role==='any')}${['GK','DF','MF','FW'].map(r=>chip('role',r,ROLE_SHORT[r],mm.role===r)).join('')}</div></div>
+        <div class="mc-row"><span>Edad máx.</span><div class="chip-row">${[[21,'21'],[24,'24'],[28,'28'],[99,'Sin límite']].map(([v,l])=>chip('maxAge',v,l,mm.maxAge===v)).join('')}</div></div>
+        <div class="mc-row"><span>Divisiones</span><div class="chip-row">${[1,2,3,4,5].map(d=>chip('div',d,'D'+d,mm.divs.includes(d))).join('')}${chip('free',1,'Libres',mm.free)}</div></div>
+        <div class="btn-row" style="margin-top:6px;">${m ? `<button class="mode-btn small" data-mission-stop="${s.id}">Parar misión</button>` : `<button class="mode-btn small primary" data-mission-start="${s.id}">Empezar misión</button>`}</div>
+      </div>`;
+    }).join('') + `<p class="hint">Cada semana, al pulsar Continuar, los ojeadores traen informes nuevos y mejoran los de los jugadores que sigues ⭐.</p>`;
+  }
+  function reportRows(onlyShort){
+    const sc = scoutingState();
+    let ids = Object.keys(sc.knowledge).filter(pid=>findPlayerAnywhere(pid));
+    if(onlyShort) ids = sc.shortlist.filter(pid=>sc.knowledge[pid] && findPlayerAnywhere(pid));
+    let rows = ids.map(pid=>{
+      const f = findPlayerAnywhere(pid), kn = sc.knowledge[pid], e = scoutEstimate(f.p, kn);
+      return {pid, f, kn, e, role: bestRoleOf(f.p).r, team: f.teamIdx>=0 ? career.teams[f.teamIdx] : null, deal: sc.negotiations.find(n=>n.pid===pid && !['closed'].includes(n.stage))};
+    });
+    if(reportFilterRole!=='any') rows = rows.filter(r=>r.role===reportFilterRole);
+    const key = {cur:r=>-r.e.cur.c, pot:r=>-r.e.pot.c, age:r=>r.f.p.age, value:r=>calcMarketValue(r.f.p), know:r=>-r.kn.k}[reportSort];
+    rows.sort((a,b)=>key(a)-key(b));
+    return rows;
+  }
+  function renderReportsHTML(onlyShort){
+    const rows = reportRows(onlyShort);
+    const filters = `<div class="chip-row" id="repRole">${[['any','Todos'],['GK','POR'],['DF','DEF'],['MF','MED'],['FW','DEL']].map(([k,l])=>`<button data-rrole="${k}" class="${reportFilterRole===k?'active':''}">${l}</button>`).join('')}</div>
+      <div class="chip-row" id="repSort"><span>Ordenar:</span>${[['cur','Calidad'],['pot','Potencial'],['age','Edad'],['value','Valor'],['know','Conocimiento']].map(([k,l])=>`<button data-rsort="${k}" class="${reportSort===k?'active':''}">${l}</button>`).join('')}</div>`;
+    if(!rows.length) return filters + `<div class="card"><p class="hint">${onlyShort ? 'Aún no sigues a ningún jugador. Pulsa ☆ en un informe para seguirlo.' : 'Todavía no hay informes. Da una misión a tus ojeadores y pulsa Continuar.'}</p></div>`;
+    return filters + `<div class="card sq-card">` + rows.map(r=>{
+      const p = r.f.p, rec = recommendationFor(p, r.e.cur.c), sl = scoutingState().shortlist.includes(r.pid);
+      const dealTag = r.deal ? `<span class="deal-tag">📝 ${dealStageLabel(r.deal)}</span>` : '';
+      return `<div class="rep-row" data-report="${r.pid}">
+        <button class="rep-star ${sl?'on':''}" data-shortlist="${r.pid}" aria-label="Seguir">${sl?'★':'☆'}</button>
+        <div class="rep-main"><b>${escapeHtml(p.name)}${r.kn.isNew?' <i class="new-dot">NUEVO</i>':''}</b>
+          <small>${r.team ? `${teamBadgeHTML(r.team)}${escapeHtml(r.team.name)} · D${r.team.division}` : '🆓 Libre'} · ${p.age} años · <span class="role-tag r-${r.role}">${ROLE_SHORT[r.role]}</span></small>
+          <small>Calidad ${starRangeHTML(r.e.cur)} · Potencial ${starRangeHTML(r.e.pot)}</small>
+          <small><span class="rec ${rec.cls}">${rec.txt}</span> ${dealTag}</small></div>
+        <div class="rep-side"><b>${r.team ? shortMoney(calcMarketValue(p))+' €' : 'Libre'}</b><small>${r.kn.k}% conocido</small></div>
+      </div>`;
+    }).join('') + `</div>`;
+  }
+  function dealStageLabel(n){
+    return {offer:'Oferta enviada', counter:'Contraoferta', contract:'Contrato', rejected:'Rechazada', refused:'No quiere venir', signed:'Fichado', closed:'Cerrada'}[n.stage] || n.stage;
+  }
+  function renderDealsHTML(){
+    const sc = scoutingState();
+    if(!sc.negotiations.length) return `<div class="card"><p class="hint">No tienes negociaciones. Abre un informe y pulsa "Hacer oferta".</p></div>`;
+    return sc.negotiations.slice().reverse().map(n=>{
+      const f = findPlayerAnywhere(n.pid);
+      const name = f ? f.p.name : 'Jugador';
+      const from = f && f.teamIdx>=0 ? career.teams[f.teamIdx] : null;
+      return `<div class="card deal-card ${n.unread?'unread':''}" data-deal="${n.id}">
+        <div class="mc-head"><b>${escapeHtml(name)}</b><span class="deal-tag">${dealStageLabel(n)}</span></div>
+        <div class="hint">${from ? `${teamBadgeHTML(from)}${escapeHtml(from.name)}` : (n.free ? '🆓 Jugador libre' : '')}${n.fee?` · Oferta ${formatMoney(n.fee)}`:''}</div>
+        <p style="margin:6px 0 4px; font-size:12.5px;">${escapeHtml(n.note||'')}</p>
+        <div class="btn-row">${dealActionsHTML(n, f)}</div></div>`;
+    }).join('');
+  }
+  function dealActionsHTML(n, f){
+    if(!f) return '';
+    if(n.stage==='counter') return `<button class="mode-btn small primary" data-deal-accept-counter="${n.id}">Aceptar ${formatMoney(n.counter)}</button><button class="mode-btn small" data-deal-cancel="${n.id}">Retirarse</button>`;
+    if(n.stage==='contract'){
+      const from = f.teamIdx>=0 ? career.teams[f.teamIdx] : null, wage = wageDemand(f.p, from);
+      const bonus = n.free ? wage*4 : 0;
+      return `<button class="mode-btn small primary" data-deal-sign="${n.id}">✍️ Firmar: ${formatMoney(wage)}/sem${bonus?` + prima ${formatMoney(bonus)}`:''}</button><button class="mode-btn small" data-deal-cancel="${n.id}">Retirarse</button>`;
+    }
+    if(n.stage==='rejected' || n.stage==='refused') return `<button class="mode-btn small" data-report-open="${n.pid}">Ver informe</button><button class="mode-btn small" data-deal-cancel="${n.id}">Quitar</button>`;
+    if(n.stage==='offer') return `<button class="mode-btn small" data-deal-cancel="${n.id}">Retirar oferta</button>`;
+    return `<button class="mode-btn small" data-deal-cancel="${n.id}">Quitar</button>`;
+  }
+  function wireMarket(el){
+    const sc = scoutingState();
+    const on = (sel, fn)=> el.querySelectorAll(sel).forEach(b=> b.addEventListener('click', e=>{ e.stopPropagation(); fn(b); }));
+    on('[data-go-staff]', ()=> showScreen('careerStaffScreen'));
+    on('[data-mission]', b=>{
+      const sid = b.dataset.mission, m = sc.missions[sid] || (sc._draft = sc._draft || {}, sc._draft[sid] = sc._draft[sid] || defaultMission());
+      const k = b.dataset.k, v = b.dataset.v;
+      if(k==='role') m.role = v;
+      if(k==='maxAge') m.maxAge = Number(v);
+      if(k==='div'){ const d = Number(v); m.divs = m.divs.includes(d) ? m.divs.filter(x=>x!==d) : [...m.divs, d].sort(); if(!m.divs.length) m.divs = [d]; }
+      if(k==='free') m.free = !m.free;
+      persistCareers(); renderCareerMarketScreen();
+    });
+    on('[data-mission-start]', b=>{ const sid = b.dataset.missionStart; sc.missions[sid] = (sc._draft && sc._draft[sid]) || defaultMission(); if(sc._draft) delete sc._draft[sid]; persistCareers(); renderCareerMarketScreen(); });
+    on('[data-mission-stop]', b=>{ delete sc.missions[b.dataset.missionStop]; persistCareers(); renderCareerMarketScreen(); });
+    on('[data-rrole]', b=>{ reportFilterRole = b.dataset.rrole; renderCareerMarketScreen(); });
+    on('[data-rsort]', b=>{ reportSort = b.dataset.rsort; renderCareerMarketScreen(); });
+    on('[data-shortlist]', b=>{ toggleShortlist(b.dataset.shortlist); renderCareerMarketScreen(); });
+    el.querySelectorAll('[data-report]').forEach(r=> r.addEventListener('click', ()=> openReport(r.dataset.report)));
+    on('[data-report-open]', b=> openReport(b.dataset.reportOpen));
+    on('[data-deal-accept-counter]', b=>{ const n = sc.negotiations.find(x=>x.id===b.dataset.dealAcceptCounter); if(n){ n.fee = n.counter; n.stage='contract'; n.respWeek = career.week; n.note = 'Traspaso acordado. Ahora negocia el contrato con el jugador.'; persistCareers(); renderCareerMarketScreen(); } });
+    on('[data-deal-sign]', b=>{ const n = sc.negotiations.find(x=>x.id===b.dataset.dealSign); if(n){ finishSigning(n); renderCareerMarketScreen(); updateCareerChrome(); } });
+    on('[data-deal-cancel]', b=>{ sc.negotiations = sc.negotiations.filter(x=>x.id!==b.dataset.dealCancel); persistCareers(); renderCareerMarketScreen(); });
+    el.querySelectorAll('.deal-card.unread').forEach(c=>{ const n = sc.negotiations.find(x=>x.id===c.dataset.deal); if(n) n.unread = false; });
+    if(marketTab==='deals') persistCareers();
+  }
+  function toggleShortlist(pid){
+    const sc = scoutingState();
+    sc.shortlist = sc.shortlist.includes(pid) ? sc.shortlist.filter(x=>x!==pid) : [...sc.shortlist, pid];
+    persistCareers();
+  }
+
+  // ---------- Informe del ojeador (ventana) ----------
+  function openReport(pid){ reportPid = pid; offerDraft = null; const kn = knowledgeOf(pid); if(kn){ kn.isNew = false; persistCareers(); } renderReport(); document.getElementById('playerProfileModal').hidden = false; }
+  function closeReport(){ reportPid = null; document.getElementById('playerProfileModal').hidden = true; renderCareerMarketScreen(); }
+  function renderReport(){
+    const sc = scoutingState(), f = findPlayerAnywhere(reportPid), kn = knowledgeOf(reportPid);
+    const body = document.getElementById('playerProfileBody');
+    if(!f || !kn){ closeReport(); return; }
+    const p = f.p, team = f.teamIdx>=0 ? career.teams[f.teamIdx] : null, e = scoutEstimate(p, kn), rec = recommendationFor(p, e.cur.c);
+    const br = bestRoleOf(p), color = team ? (team.kitPrimary||'#3a6b52') : '#3a6b52';
+    const deal = sc.negotiations.find(n=>n.pid===p.id && n.stage!=='closed');
+    const wage = wageDemand(p, team), sl = sc.shortlist.includes(p.id);
+    let h = `<div class="pp-head" style="--kit:${color}; --kit-text:${textColorFor(color)}">
+        <div class="pp-num">${team ? team.logo||'⚽' : '🆓'}</div>
+        <div class="pp-id"><b>${escapeHtml(p.name)}</b><span>${p.age} años · ${ROLE_NAME[br.r]} · ${team ? escapeHtml(team.name)+' (D'+team.division+')' : 'Sin equipo'}</span><span>Informe de ${escapeHtml(kn.by||'tu ojeador')} · ${kn.k}% conocido</span></div>
+        <button class="pp-close" id="rpClose" aria-label="Cerrar">✕</button></div>
+      <div class="rp-stars"><div><span>Calidad actual</span>${starRangeHTML(e.cur)}</div><div><span>Potencial</span>${starRangeHTML(e.pot)}</div><div><span>Para tu equipo</span><b class="rec ${rec.cls}">${rec.txt}</b></div></div>
+      <div class="pp-fit-track rp-know"><div style="width:${kn.k}%; background:var(--gold)"></div></div>
+      <div class="pp-money"><div><span>${team?'Valor':'Traspaso'}</span><b>${team?formatMoney(calcMarketValue(p)):'Gratis'}</b></div><div><span>Pediría de sueldo</span><b>${formatMoney(wage)}/sem</b></div><div><span>Reputación</span><b class="${canSignPlayer(career.teams.find(t=>t.isUser), p)?'fin-pos':'fin-neg'}">${playerReputation(p)}</b></div></div>`;
+    // Atributos: más detalle cuanto más se le conoce
+    const fog = scoutingFogLevel(kn.k);
+    if(fog==='full' || fog==='high'){
+      const noise = scoutingNoiseFor(kn.k);
+      const show = a=> fog==='full' ? `${p[a.key]}` : `${clamp(p[a.key]-noise,1,99)}-${clamp(p[a.key]+noise,1,99)}`;
+      h += `<div class="pc-grid pp-attrs rp-attrs">${ATTRS.map(a=>`<div class="pc-attr"><span>${a.short}</span><b style="color:${divColor(p[a.key],'attr', team?team.division:undefined)}">${show(a)}</b></div>`).join('')}</div>`;
+    } else if(fog==='low'){
+      h += `<div class="pc-grid pp-attrs rp-attrs">${ATTRS.map(a=>{ const q = qualitativeLabel(p[a.key]*1.6); return `<div class="pc-attr"><span>${a.short}</span><b style="color:${q.color}; font-size:11px;">${q.text}</b></div>`; }).join('')}</div>`;
+    } else h += `<p class="hint rp-pad">Aún no hay datos de sus atributos: síguelo ⭐ para que tus ojeadores lo estudien.</p>`;
+    // Acciones
+    const ut = career.teams.find(t=>t.isUser), open = weekPhaseInfo(career.week||1).transfers;
+    h += `<div class="rp-pad">`;
+    if(deal){
+      h += `<div class="offer-banner"><b>📝 ${dealStageLabel(deal)}</b><div style="margin-top:2px;">${escapeHtml(deal.note||'')}</div><div class="btn-row" style="margin-top:6px;">${dealActionsHTML(deal, f)}</div></div>`;
+    } else if(team){
+      const ask = askingFee(p, team);
+      if(!offerDraft) offerDraft = Math.round(calcMarketValue(p)/500)*500;
+      h += `<b class="card-title">HACER OFERTA AL CLUB</b>
+        <div class="offer-ctl"><button data-od="-1000">−1k</button><button data-od="-250">−250</button><b id="odVal">${formatMoney(offerDraft)}</b><button data-od="250">+250</button><button data-od="1000">+1k</button></div>
+        <div class="hint" style="text-align:center;">Valor de mercado ${formatMoney(calcMarketValue(p))}${getEffectiveLineup(team).includes(p.id)?' · es titular en su equipo (pedirán más)':''}</div>
+        <button class="mode-btn primary" id="rpOffer" ${!open||offerDraft>(ut.budget||0)?'disabled':''}>Enviar oferta</button>
+        ${!open?'<p class="hint">El mercado está cerrado: podrás hacer ofertas en pretemporada o en el parón.</p>':''}`;
+    } else {
+      h += `<button class="mode-btn primary" id="rpFree" ${!open?'disabled':''}>Negociar contrato (jugador libre)</button>${!open?'<p class="hint">El mercado está cerrado.</p>':''}`;
+    }
+    h += `<div class="btn-row" style="margin:8px 0 12px;"><button class="mode-btn small" id="rpShort">${sl?'★ Dejar de seguir':'☆ Seguir'}</button></div></div>`;
+    body.innerHTML = h;
+    body.querySelector('#rpClose').addEventListener('click', closeReport);
+    body.querySelector('#rpShort').addEventListener('click', ()=>{ toggleShortlist(p.id); renderReport(); });
+    body.querySelectorAll('[data-od]').forEach(b=> b.addEventListener('click', ()=>{ offerDraft = Math.max(500, offerDraft + Number(b.dataset.od)); renderReport(); }));
+    const ob = body.querySelector('#rpOffer'); if(ob) ob.addEventListener('click', ()=>{ makeOffer(p.id, offerDraft); marketTab = 'deals'; renderReport(); });
+    const fb = body.querySelector('#rpFree'); if(fb) fb.addEventListener('click', ()=>{ makeOffer(p.id, 0); renderReport(); });
+    // acciones de la negociación dentro del informe
+    body.querySelectorAll('[data-deal-accept-counter],[data-deal-sign],[data-deal-cancel],[data-report-open]').forEach(b=> b.addEventListener('click', ()=>{
+      const n = sc.negotiations.find(x=> x.id===(b.dataset.dealAcceptCounter||b.dataset.dealSign||b.dataset.dealCancel));
+      if(b.dataset.dealAcceptCounter && n){ n.fee = n.counter; n.stage='contract'; n.respWeek = career.week; n.note='Traspaso acordado. Ahora negocia el contrato con el jugador.'; persistCareers(); }
+      if(b.dataset.dealSign && n){ finishSigning(n); updateCareerChrome(); }
+      if(b.dataset.dealCancel){ sc.negotiations = sc.negotiations.filter(x=>x.id!==b.dataset.dealCancel); persistCareers(); }
+      if(findPlayerAnywhere(p.id) && !career.teams.find(t=>t.isUser).slots.includes(p.id)) renderReport(); else closeReport();
+    }));
+  }
+
+  var pendingFireScoutId = null; // ojeador pendiente de confirmar el despido
   function hireScout(candidateId){
     if(career.staff.length >= SCOUT_LIMIT) return;
     const idx = career.staffCandidates.findIndex(c=>c.id===candidateId);
@@ -3136,15 +3383,15 @@
     }
     career.staff.forEach(s=>{
       const row=document.createElement('div'); row.className='player-item';
-      const busy = career.scoutingPool.some(e=>e.assignedScoutId===s.id);
-      row.innerHTML = `<div class="player-info"><b>${escapeHtml(s.name)}</b><span>Habilidad ${s.skill} · Salario ${formatMoney(s.wage)}/jornada · ${busy?'Investigando':'Disponible'}</span></div>`;
+      const busy = !!(career.scouting && career.scouting.missions[s.id]);
+      row.innerHTML = `<div class="player-info"><b>${escapeHtml(s.name)}</b><span>Habilidad ${s.skill} · Salario ${formatMoney(s.wage)}/jornada · ${busy?'En una misión de ojeo':'Sin misión'}</span></div>`;
       const actions=document.createElement('div'); actions.className='player-actions';
       const isPending = pendingFireScoutId===s.id;
       const fireBtn=document.createElement('button'); fireBtn.className='icon-btn danger';
       fireBtn.textContent = isPending ? '¿Seguro?' : 'Despedir';
       fireBtn.addEventListener('click', ()=>{
         if(!isPending){ pendingFireScoutId=s.id; renderCareerStaffScreen(); return; }
-        career.scoutingPool.forEach(e=>{ if(e.assignedScoutId===s.id) e.assignedScoutId=null; });
+        if(career.scouting) delete career.scouting.missions[s.id];
         career.staff = career.staff.filter(x=>x.id!==s.id);
         pendingFireScoutId = null;
         persistCareers();
@@ -3280,7 +3527,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=26').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=27').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -4900,7 +5147,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=26').then(m=>{
+      import('./match3d.js?v=27').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
