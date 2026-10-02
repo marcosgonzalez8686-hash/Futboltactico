@@ -381,31 +381,98 @@
     .rotate-hint button{background:transparent; border:none; color:#9fd4b8; font-size:16px; cursor:pointer; padding:0 4px;}
   }
 
-  /* Partido en horizontal: campo a la izquierda ocupando el alto, controles a la derecha */
+  /* Ficha compacta del jugador seleccionado: números con color de rojo (bajo) a verde (alto) */
+  .pcard{background:var(--panel); border:1px solid #2f5c46; border-radius:10px; padding:8px 10px;}
+  .pc-head{display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap;}
+  .pc-head b{font-size:13.5px;}
+  .pc-head span{font-size:11px; color:#9fd4b8;}
+  .pc-fat{font-size:11px; color:#9fd4b8; margin:3px 0 6px;}
+  .pc-grid{display:grid; grid-template-columns:repeat(4, 1fr); gap:4px;}
+  .pc-attr{display:flex; justify-content:space-between; align-items:baseline; background:rgba(0,0,0,.25); border-radius:6px; padding:3px 7px;}
+  .pc-attr span{font-size:10.5px; color:#9fd4b8; font-weight:600;}
+  .pc-attr b{font-size:15px; font-weight:900; text-shadow:0 1px 2px rgba(0,0,0,.5);}
+  .match-menu-btn{display:none;}
+  .view-toggle .lbl-s{display:none;}
+
+  /* Partido a pantalla completa en horizontal: el campo ocupa toda la pantalla y el resto flota encima */
   @media (orientation: landscape) and (max-height: 600px){
-    body.in-match #app{
-      max-width:none; min-height:0; display:grid; align-items:start;
-      grid-template-columns: auto minmax(220px, 1fr); column-gap:10px; padding:0 8px 0 6px;
+    body.in-match{overflow:hidden;}
+    body.in-match #app{max-width:none; min-height:0;}
+    body.in-match #gameScreen{padding:0;}
+    body.in-match #boardWrap{
+      position:fixed; inset:0; z-index:1; margin:0; display:flex; align-items:center; justify-content:center;
+      background:radial-gradient(ellipse at center, #143a2a, #0a1a12 75%);
     }
-    body.in-match #gameScreen{display:contents;}
-    body.in-match #gameScreen > *{grid-column:2; margin-left:0; margin-right:0;}
-    body.in-match #boardWrap, body.in-match #match3d{
-      grid-column:1; grid-row:1 / span 30; position:sticky; top:6px; margin:6px 0;
-    }
-    body.in-match #boardWrap .board{width:min(calc((100dvh - 18px) * 13.24 / 9), 66vw);}
+    /* deja hueco a los lados para la ficha del jugador y los botones */
+    body.in-match #boardWrap .board{width:min(calc(100dvh * 13.24 / 9 - 8px), calc(100vw - 300px)); border-width:2px;}
     body.in-match #match3d{
-      aspect-ratio:auto; max-height:none;
-      height:min(calc(100dvh - 12px), calc(66vw * 9 / 13.24));
-      width:min(calc((100dvh - 12px) * 13.24 / 9), 66vw);
+      position:fixed; inset:0; z-index:1; margin:0; width:100vw; height:100dvh; max-height:none;
+      aspect-ratio:auto; border:none; border-radius:0;
     }
-    body.in-match header.scoreboard{grid-column:2; padding:6px 8px 6px; border-bottom-width:2px; margin-top:4px; border-radius:8px;}
+    body.in-match .m3d-cams{top:auto; bottom:8px; left:8px; right:auto; justify-content:flex-start;}
+    body.in-match .m3d-cams button{padding:4px 8px; font-size:10.5px;}
+    /* Marcador flotante arriba en el centro */
+    body.in-match header.scoreboard{
+      position:fixed; top:6px; left:50%; transform:translateX(-50%); z-index:40;
+      display:flex; align-items:center; gap:10px; padding:4px 10px; border:none; border-radius:14px;
+      background:rgba(8,20,14,.82); box-shadow:0 4px 14px rgba(0,0,0,.5); white-space:nowrap;
+    }
     body.in-match header.scoreboard h1{display:none;}
-    body.in-match .score-team{font-size:11px; padding:4px 8px; min-width:64px;}
-    body.in-match .score-num{font-size:19px;}
-    body.in-match .turn-indicator{margin-top:4px; font-size:12px;}
-    body.in-match .view-toggle-row{justify-content:center; margin:6px 0;}
-    body.in-match .action-btn{padding:8px 12px; font-size:13px;}
-    body.in-match .footer-row button{padding:5px 9px; font-size:11px;}
+    body.in-match .score-row{gap:6px;}
+    body.in-match .score-team{font-size:10px; padding:2px 7px; min-width:0; display:flex; align-items:center; gap:6px; border-radius:8px;}
+    body.in-match .score-num{font-size:17px; display:inline;}
+    body.in-match .score-sep{font-size:16px;}
+    body.in-match .turn-indicator{margin:0; font-size:11px;}
+    /* Botones de vista arriba a la izquierda */
+    body.in-match .view-toggle-row{position:fixed; top:6px; left:6px; z-index:40; margin:0; gap:5px; justify-content:flex-start;}
+    body.in-match .view-toggle{padding:4px 9px; font-size:11px; background:rgba(8,20,14,.82);}
+    body.in-match .view-toggle .lbl{display:none;}
+    body.in-match .view-toggle .lbl-s{display:inline;}
+    /* Ficha del jugador en el lateral izquierdo */
+    body.in-match #selectedPlayerInfo{
+      position:fixed; left:6px; top:44px; z-index:35; width:142px; max-height:calc(100dvh - 90px); overflow:auto;
+    }
+    body.in-match .pcard{background:rgba(8,20,14,.84); padding:6px 8px;}
+    body.in-match .pc-head{display:block;}
+    body.in-match .pc-head b{display:block; font-size:12px;}
+    body.in-match .pc-head span{font-size:10px;}
+    body.in-match .pc-grid{grid-template-columns:1fr 1fr; gap:3px;}
+    body.in-match .pc-attr{padding:2px 6px;}
+    body.in-match .pc-attr b{font-size:14px;}
+    /* Acciones en columna a la derecha */
+    body.in-match #actionPanel{
+      position:fixed; right:8px; top:50%; transform:translateY(-50%); z-index:35; margin:0;
+      flex-direction:column; flex-wrap:nowrap; min-height:0; gap:6px;
+    }
+    body.in-match .action-btn{padding:9px 14px; font-size:13px; box-shadow:0 3px 10px rgba(0,0,0,.5); min-width:96px;}
+    /* Mensaje abajo en el centro */
+    body.in-match #message{
+      position:fixed; bottom:8px; left:50%; transform:translateX(-50%); z-index:35; min-height:0;
+      max-width:60vw; background:rgba(8,20,14,.8); border-radius:12px; padding:3px 12px; font-size:12px;
+    }
+    body.in-match #message:empty{display:none;}
+    body.in-match .action-toast{top:22% !important;}
+    /* Menú (reglas, cambios, simular, salir) tras el botón ☰ */
+    body.in-match .match-menu-btn{
+      display:block; position:fixed; top:6px; right:6px; z-index:41;
+      background:rgba(8,20,14,.82); color:var(--chalk); border:1.5px solid var(--gold); border-radius:14px;
+      padding:4px 11px; font-size:15px; cursor:pointer;
+    }
+    body.in-match .footer-row{
+      display:none; position:fixed; top:40px; right:6px; z-index:41; flex-direction:column; align-items:stretch;
+      background:rgba(8,20,14,.94); border:1px solid #2f5c46; border-radius:10px; padding:8px; gap:6px;
+    }
+    body.in-match.match-menu-open .footer-row{display:flex;}
+    body.in-match .footer-row button{font-size:12px; padding:7px 12px; color:var(--chalk);}
+    body.in-match .rules.open{
+      position:fixed; z-index:42; top:40px; left:50%; transform:translateX(-50%); width:min(560px, 80vw);
+      max-height:calc(100dvh - 60px); overflow:auto; box-shadow:0 8px 24px rgba(0,0,0,.6);
+    }
+    body.in-match #subsWindow:not([hidden]){
+      position:fixed; z-index:42; top:40px; left:50%; transform:translateX(-50%); width:min(520px, 80vw);
+      max-height:calc(100dvh - 60px); overflow:auto; background:var(--panel); border-radius:10px; padding:8px;
+      box-shadow:0 8px 24px rgba(0,0,0,.6);
+    }
   }
 
   .action-panel{
@@ -770,6 +837,7 @@
       • El <b>portero</b> nunca se mueve, ni chuta, ni roba: solo puede recibir y pasar el balón. Su nivel de Portería (no su posición) es lo único que afecta a la probabilidad de encajar gol.<br>
       • Cada turno suma 30 segundos. Cada parte dura 45 minutos + un descuento aleatorio (1 a 6 minutos) que se anuncia al llegar.
     </div>
+    <button class="match-menu-btn" id="btnMatchMenu" aria-label="Menú del partido">☰</button>
     <div class="footer-row">
       <button id="btnRules">Reglas</button>
       <button id="btnOpenSubs" hidden>Cambios</button>
@@ -788,7 +856,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=14"></script>
+<script src="sound.js?v=15"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1078,6 +1146,7 @@
     });
     document.getElementById('scoreboard').hidden = (name !== 'gameScreen');
     document.body.classList.toggle('in-match', name === 'gameScreen');
+    document.body.classList.remove('match-menu-open');
     if(name !== 'gameScreen' && window.FTSound) FTSound.crowdStop();
     if(name !== 'gameScreen') exitLandscapeMode();
     if(name==='careerSelectScreen') renderCareerSelectScreen();
@@ -2048,6 +2117,11 @@
     }
   }
 
+  // Color del número de un atributo: rojo (bajo) → amarillo → verde (alto)
+  function attrNumColor(v){
+    const k = clamp((v - 25) / 60, 0, 1);
+    return `hsl(${Math.round(k*120)}, 80%, 58%)`;
+  }
   function attrBarColor(v){
     if(v>=75) return '#27ae60';
     if(v>=55) return '#d4af37';
@@ -2541,7 +2615,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=14').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=15').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -3752,7 +3826,7 @@
   }
   function updateViewToggle(){
     const btn = document.getElementById('btnToggle3D');
-    btn.textContent = view3dOn ? '🗺️ Ver tablero 2D' : '🎥 Ver en 3D';
+    btn.innerHTML = view3dOn ? '🗺️<span class="lbl"> Ver tablero 2D</span><span class="lbl-s"> 2D</span>' : '🎥<span class="lbl"> Ver en 3D</span><span class="lbl-s"> 3D</span>';
     document.getElementById('boardWrap').hidden = view3dOn;
     document.getElementById('match3d').hidden = !view3dOn;
   }
@@ -3765,7 +3839,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=14').then(m=>{
+      import('./match3d.js?v=15').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
@@ -3792,7 +3866,7 @@
   const isTouch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
   btnLandscape.hidden = !(canLockOrientation && isTouch);
   function inFullscreen(){ return !!document.fullscreenElement; }
-  function updateLandscapeBtn(){ btnLandscape.textContent = inFullscreen() ? '✕ Salir horizontal' : '↻ Horizontal'; }
+  function updateLandscapeBtn(){ btnLandscape.innerHTML = inFullscreen() ? '✕<span class="lbl"> Salir horizontal</span>' : '↻<span class="lbl"> Horizontal</span>'; }
   async function enterLandscapeMode(){
     try{
       if(!inFullscreen()) await document.documentElement.requestFullscreen({navigationUI:'hide'});
@@ -3809,6 +3883,7 @@
     if(inFullscreen()) document.exitFullscreen().catch(()=>{});
   }
   btnLandscape.addEventListener('click', ()=>{ if(inFullscreen()) exitLandscapeMode(); else enterLandscapeMode(); });
+  updateLandscapeBtn();
   document.addEventListener('fullscreenchange', ()=>{
     if(!inFullscreen()){ try{ screen.orientation.unlock(); }catch(e){} }
     updateLandscapeBtn();
@@ -4003,15 +4078,15 @@
     const roleNames = {GK:'Portero', DF:'Defensa', MF:'Centrocampista', FW:'Delantero'};
     const numLabel = p.number ? `#${p.number} ` : '';
     const title = p.name ? `${numLabel}${p.name}` : `${numLabel}${roleNames[p.role]||p.role} sin nombre`;
-    let html = `<div class="player-card"><div class="player-card-head"><b>${escapeHtml(title)}</b><span>${roleNames[p.role]||p.role} · ${teamName(p.team)}</span></div>`;
+    let html = `<div class="pcard"><div class="pc-head"><b>${escapeHtml(title)}</b><span>${roleNames[p.role]||p.role} · ${escapeHtml(teamName(p.team))}</span></div>`;
     const fatigue = p.fatigue||0;
     const fatigueColor = fatigue>=70 ? '#e74c3c' : (fatigue>=35 ? '#f4d03f' : '#2ecc71');
-    html += `<div style="font-size:10.5px;color:#9fd4b8;margin:2px 0 6px;">Cansancio: <b style="color:${fatigueColor};">${fatigue}%</b>${fatigue>=70 ? ' — considera hacer un cambio' : ''}</div>`;
+    html += `<div class="pc-fat">Cansancio: <b style="color:${fatigueColor};">${fatigue}%</b>${fatigue>=70 ? ' — haz un cambio' : ''}</div><div class="pc-grid">`;
     ATTRS.forEach(a=>{
       const v = p[a.key];
-      html += `<div class="attr-bar-row"><div class="abr-label">${a.short}</div><div class="attr-bar-track"><div class="attr-bar-fill" style="width:${v}%;background:${attrBarColor(v)}"></div></div><div class="abr-val">${v}</div></div>`;
+      html += `<div class="pc-attr"><span>${a.short}</span><b style="color:${attrNumColor(v)}">${v}</b></div>`;
     });
-    html += `</div>`;
+    html += `</div></div>`;
     el.innerHTML = html;
   }
   function performSubstitution(outPid, inPid){
@@ -4134,6 +4209,11 @@
     render();
   }
 
+  document.getElementById('btnMatchMenu').addEventListener('click', ()=> document.body.classList.toggle('match-menu-open'));
+  // Al elegir una opción del menú se cierra (salvo Reglas y Cambios, que abren su ventana)
+  document.querySelector('#gameScreen .footer-row').addEventListener('click', e=>{
+    if(e.target.tagName==='BUTTON' && e.target.id!=='btnRules' && e.target.id!=='btnOpenSubs') document.body.classList.remove('match-menu-open');
+  });
   document.getElementById('btnRules').addEventListener('click', ()=>{
     document.getElementById('rulesBox').classList.toggle('open');
   });
