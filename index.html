@@ -970,6 +970,8 @@
   let matchEnded = false;
   let matchKitColors = {A:null, B:null}; // colores personalizados (solo Modo Carrera)
   let matchVenueTeam = null; // club local en Modo Carrera (para el estadio 3D)
+  let fx3dEvents = []; // lo ocurrido desde el último dibujo, para animar a los jugadores 3D
+  function fx3d(ev){ fx3dEvents.push(ev); }
 
   const boardEl = document.getElementById('board');
   const panelEl = document.getElementById('actionPanel');
@@ -2997,6 +2999,7 @@
     return out;
   }
   function doDribble(carrier, defender, targetCol, targetRow){
+    fx3d({type:'dribble', id:carrier.id});
     const chance = clamp(0.5 + normalize(fatiguedAttr(carrier,'dribble'))*0.3 - normalize(fatiguedAttr(defender,'defense'))*0.2 - normalize(fatiguedAttr(defender,'strength'))*0.05, 0.1, 0.9);
     if(Math.random() < chance){
       carrier.col = targetCol; carrier.row = targetRow;
@@ -3009,6 +3012,7 @@
       message = 'Regate fallido: el rival se queda con el balón.';
       return;
     }
+    fx3d({type:'fall', id:carrier.id});
     pushApart(defender, carrier);
     freeKickPieceId = carrier.id;
     const pid = defender.pid;
@@ -3070,6 +3074,7 @@
     else { message='Ficha movida.'; }
   }
   function doPass(passer, destCell){
+    fx3d({type:'kick', id:passer.id});
     const dist = chebyshev(passer, destCell);
     const chance = clamp(0.85 - 0.05*dist + normalize(fatiguedAttr(passer,'pass'))*0.25, 0.3, 0.95);
     if(Math.random() < chance){
@@ -3102,6 +3107,7 @@
     if(inPlayBounds(nc,nr) && !getPieceAt(nc,nr)){ piece.col = nc; piece.row = nr; }
   }
   function doTackle(defender, carrier){
+    fx3d({type:'tackle', id:defender.id, targetId:carrier.id});
     const chance = clamp(0.45 + normalize(fatiguedAttr(defender,'defense'))*0.25 + normalize(fatiguedAttr(defender,'strength'))*0.1 - normalize(fatiguedAttr(carrier,'dribble'))*0.25, 0.1, 0.9);
     if(Math.random() < chance){
       ball.col = defender.col; ball.row = defender.row;
@@ -3111,6 +3117,7 @@
     const fromBehind = isTackleFromBehind(defender, carrier);
     const foulChance = fromBehind ? 0.55 : 0.25;
     if(Math.random() < foulChance){
+      fx3d({type:'fall', id:carrier.id});
       pushApart(defender, carrier);
       freeKickPieceId = carrier.id;
       if(fromBehind){
@@ -3216,6 +3223,7 @@
       if(shooter.pid) matchStats[shooter.pid] = (matchStats[shooter.pid]||0)+1;
       score[shooter.team]++;
       shotFx = {fromCol:shooter.col, fromRow:shooter.row, goalCol: shooter.team==='A' ? COLS_TOTAL-1 : 0, goalRow: clamp(shooter.row,3,5)};
+      fx3d({type:'goal', id:shooter.id, team:shooter.team, gkId: oppGK ? oppGK.id : null});
       message = `¡GOOOL de ${teamName(shooter.team)}!`;
       triggerGoalCelebration(shooter.team);
       const conceding = shooter.team==='A' ? 'B' : 'A';
@@ -3223,10 +3231,12 @@
       goalJustScored = true;
     } else if(oppGK){
       ball.col = oppGK.col; ball.row = oppGK.row;
+      fx3d({type:'kick', id:shooter.id, power:true}); fx3d({type:'save', id:oppGK.id});
       message = '¡Atajada del portero!';
     } else {
       const free = findFreeCellNear(shooter.col, shooter.row);
       ball.col = free.col; ball.row = free.row;
+      fx3d({type:'kick', id:shooter.id, power:true});
       message = '¡Tiro fuera! (portería sin guardián) Balón suelto.';
     }
   }
@@ -3610,7 +3620,7 @@
   let view3dOn = false, match3dView = null, match3dLoading = false, match3dVenueKey = '';
   try{ view3dOn = localStorage.getItem('ft_view3d') === '1'; }catch(e){}
   function defaultKit(team){ return team==='A' ? '#e8871e' : '#2b4c7e'; }
-  function push3DState(hl, goalFx, isNewMatch){
+  function push3DState(hl, goalFx, isNewMatch, events){
     if(!match3dView) return;
     // Estadio: el del club local en Modo Carrera; uno genérico en partido rápido
     const venueLevels = matchVenueTeam ? {...normalizeStadium(matchVenueTeam)} : {north:2, south:2, east:2, west:2};
@@ -3624,11 +3634,12 @@
       reset: isNewMatch,
       goalFx,
       hl,
-      ball: {col: ball.col, row: ball.row, carried: !!carrier, carrierTeam: carrier ? carrier.team : null},
+      events,
+      ball: {col: ball.col, row: ball.row, carried: !!carrier, carrierTeam: carrier ? carrier.team : null, carrierId: carrier ? carrier.id : null},
       pieces: pieces.map(p=>{
         const kit = matchKitColors[p.team] || defaultKit(p.team);
         return {
-          id: p.id, team: p.team, role: p.role, col: p.col, row: p.row,
+          id: p.id, team: p.team, role: p.role, col: p.col, row: p.row, seed: p.pid || p.id, fatigue: p.fatigue || 0,
           label: p.number ? String(p.number) : p.role[0],
           kit, text: matchKitColors[p.team] ? textColorFor(kit) : (p.team==='A' ? '#291200' : '#eef4ff'),
           selected: !!(selected && selected.id===p.id),
@@ -3761,7 +3772,8 @@
     } else {
       animateFromPrevious(ballEl, prevPos['ball'], 1, d=> Math.min(560, 140 + d*55));
     }
-    if(view3dOn) push3DState(hl3d, goalFx, isNewMatch);
+    const events3d = fx3dEvents; fx3dEvents = [];
+    if(view3dOn) push3DState(hl3d, goalFx, isNewMatch, events3d);
 
     document.getElementById('scoreA').textContent=score.A;
     document.getElementById('scoreB').textContent=score.B;
