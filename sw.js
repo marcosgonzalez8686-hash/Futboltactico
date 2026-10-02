@@ -1,5 +1,5 @@
-const CACHE_NAME = 'futbol-tactico-v4';
-const ASSETS = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
+const CACHE_NAME = 'futbol-tactico-v5';
+const ASSETS = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png', './stadium3d.js', './vendor/three.module.min.js'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

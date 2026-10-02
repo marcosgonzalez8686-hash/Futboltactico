@@ -165,6 +165,24 @@
     font-size:8.5px; font-weight:bold; color:#fff; text-shadow:0 1px 2px #000; pointer-events:none;
   }
   .stand-card{ margin-bottom:10px; }
+  /* Estadio 3D */
+  .stadium3d{
+    position:relative; width:100%; aspect-ratio:1.35/1; margin:8px 0 14px; border-radius:10px; overflow:hidden;
+    background:linear-gradient(180deg,#14324a 0%,#1d4a5e 45%,#0e2118 100%);
+    border:2px solid #2f5c46; touch-action:none;
+  }
+  .stadium3d[hidden], .stadium-view[hidden]{display:none;}
+  .stadium3d canvas{display:block; width:100%; height:100%;}
+  .st3d-labels{position:absolute; inset:0; pointer-events:none;}
+  .st3d-labels span{
+    position:absolute; left:0; top:0; white-space:nowrap; font-size:10.5px; font-weight:bold;
+    background:rgba(13,31,24,.72); color:var(--chalk); padding:2px 6px; border-radius:8px;
+    border:1px solid rgba(255,210,63,.5);
+  }
+  .st3d-hint{
+    position:absolute; left:0; right:0; bottom:6px; text-align:center; font-size:10.5px; color:#cfe8d8;
+    text-shadow:0 1px 2px #000; pointer-events:none; transition:opacity .4s;
+  }
   .stand-card .btn-row{ margin-top:6px; }
   .player-card:last-child{border-bottom:none;}
   .player-card-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;}
@@ -552,6 +570,7 @@
   <div class="screen" id="careerAllFacilitiesScreen" hidden>
     <h2 id="clubViewTitle">Instalaciones del club</h2>
     <div id="allFacilitiesList"></div>
+    <div class="stadium3d" id="stadium3dClub" hidden></div>
     <button class="mode-btn" id="btnBackAllFacilities">« Volver</button>
   </div>
 
@@ -569,6 +588,7 @@
     <div id="careerFacilitiesList"></div>
     <b class="card-title">ESTADIO</b>
     <p class="hint" id="stadiumHint"></p>
+    <div class="stadium3d" id="stadium3dUser" hidden></div>
     <div class="stadium-view" id="stadiumView"></div>
     <div id="stadiumStandsList"></div>
     <button class="mode-btn" id="btnBackFacilities">« Volver</button>
@@ -2315,6 +2335,8 @@
       Estadio: ${cap.toLocaleString('es-ES')} asientos`;
     card.appendChild(line);
     el.appendChild(card);
+    // Cambiar de club no debe animarse como una ampliación
+    showStadium3D('stadium3dClub', t, null, true);
   }
 
   let viewingFriendlyDivision = null;
@@ -2357,6 +2379,33 @@
     pendingLineup = validPrev ? [...userTeam.lineup] : autoPickLineup(userTeam.slots, userTeam.formation);
     showScreen('careerLineupScreen');
   }
+  // ---------- Estadio 3D (se carga solo al abrir Instalaciones) ----------
+  let stadium3dModule = null, stadium3dFailed = false;
+  const stadium3dViews = {};
+  function webglAvailable(){
+    try{ const c=document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); }
+    catch(e){ return false; }
+  }
+  // Muestra el estadio del equipo en 3D; si no se puede (sin WebGL o sin el módulo) deja visible el plano 2D
+  function showStadium3D(containerId, team, fallbackEl, reset){
+    const el = document.getElementById(containerId);
+    if(!el || stadium3dFailed || !webglAvailable()){ if(el) el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; return; }
+    const levels = {...normalizeStadium(team)};
+    const kit = {primary: team.kitPrimary, secondary: team.kitSecondary};
+    const apply = ()=>{
+      try{
+        el.hidden = false; if(fallbackEl) fallbackEl.hidden = true;
+        if(!stadium3dViews[containerId]) stadium3dViews[containerId] = stadium3dModule.mountStadium(el);
+        stadium3dViews[containerId].update(levels, kit, {reset});
+      } catch(e){
+        stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false;
+      }
+    };
+    if(stadium3dModule){ apply(); return; }
+    import('./stadium3d.js').then(m=>{ stadium3dModule = m; apply(); })
+      .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
+  }
+
   function renderCareerFacilitiesScreen(){
     const userTeam = career.teams.find(t=>t.isUser);
     if(!userTeam.facilities) userTeam.facilities = {youth:1, training:1};
@@ -2416,6 +2465,7 @@
       cell.appendChild(label);
       viewEl.appendChild(cell);
     });
+    showStadium3D('stadium3dUser', userTeam, viewEl, false);
 
     const standsEl = document.getElementById('stadiumStandsList');
     standsEl.innerHTML = '';
