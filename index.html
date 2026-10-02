@@ -348,6 +348,27 @@
   }
   .ball.fx{position:absolute; margin:0; z-index:6;}
 
+  /* Partido en 3D */
+  .view-toggle-row{display:flex; justify-content:flex-end; margin:-2px 0 6px;}
+  .view-toggle{
+    background:var(--panel); color:var(--chalk); border:1.5px solid var(--gold); border-radius:16px;
+    padding:5px 12px; font-size:12px; font-weight:bold; cursor:pointer;
+  }
+  .view-toggle:disabled{opacity:.6; cursor:wait;}
+  .match3d{
+    position:relative; width:100%; aspect-ratio:1/1; max-height:64vh; margin:0 auto 10px; border-radius:10px; overflow:hidden;
+    background:linear-gradient(180deg,#14324a 0%,#1d4a5e 40%,#0e2118 100%);
+    border:2px solid #2f5c46; touch-action:none;
+  }
+  .match3d[hidden], .board-wrap[hidden]{display:none;}
+  .match3d canvas{display:block; width:100%; height:100%;}
+  .m3d-cams{position:absolute; left:6px; right:6px; top:6px; display:flex; gap:5px; justify-content:center; flex-wrap:wrap; pointer-events:none;}
+  .m3d-cams button{
+    pointer-events:auto; background:rgba(13,31,24,.78); color:var(--chalk); border:1px solid rgba(255,210,63,.45);
+    border-radius:14px; padding:4px 10px; font-size:11px; font-weight:bold; cursor:pointer;
+  }
+  .m3d-cams button.active{background:var(--gold); color:#0d1f18; border-color:var(--gold);}
+
   .action-panel{
     display:flex; flex-wrap:wrap; gap:8px; justify-content:center; min-height:44px; margin-bottom:8px;
   }
@@ -638,7 +659,16 @@
 
   <!-- PARTIDO -->
   <main class="screen" id="gameScreen" hidden style="padding-top:6px;">
-    <div class="board-wrap"><div id="board" class="board"></div></div>
+    <div class="view-toggle-row"><button class="view-toggle" id="btnToggle3D">🎥 Ver en 3D</button></div>
+    <div class="board-wrap" id="boardWrap"><div id="board" class="board"></div></div>
+    <div class="match3d" id="match3d" hidden>
+      <div class="m3d-cams">
+        <button data-cam="side">Lateral</button>
+        <button data-cam="top">Arriba</button>
+        <button data-cam="behind">Detrás</button>
+        <button data-cam="ball">Balón</button>
+      </div>
+    </div>
     <div id="actionPanel" class="action-panel"></div>
     <div id="message" class="message"></div>
     <div id="selectedPlayerInfo"></div>
@@ -939,6 +969,7 @@
   let stoppageHalf2 = 0;    // minutos de descuento de la 2ª parte
   let matchEnded = false;
   let matchKitColors = {A:null, B:null}; // colores personalizados (solo Modo Carrera)
+  let matchVenueTeam = null; // club local en Modo Carrera (para el estadio 3D)
 
   const boardEl = document.getElementById('board');
   const panelEl = document.getElementById('actionPanel');
@@ -1057,6 +1088,7 @@
     matchNames = {A:'Ámbar', B:'Azul'};
     matchContext = null;
     matchKitColors = {A:null, B:null};
+    matchVenueTeam = null;
     startMatch(m, genericRoster(), genericRoster());
   }
   function genericRoster(){ return SLOT_ROLES.map(()=>({...NEUTRAL, name:null, id:null})); }
@@ -2807,6 +2839,7 @@
       matchNames = {A:userTeam.name, B:oppTeam.name};
       matchContext = {type:'career_friendly', opponentIdx:friendlyOpponentIdx};
       matchKitColors = {A:userColor, B:oppColor};
+      matchVenueTeam = userTeam; // el amistoso se juega en casa
       startMatch('ai', rosterFromCareerTeam(userTeam, pendingLineup), rosterFromCareerTeam(oppTeam, oppLineup), userTeam.formation, oppTeam.formation);
       return;
     }
@@ -2827,6 +2860,7 @@
     matchNames = {A:userTeam.name, B:oppTeam.name};
     matchContext = {type:'career', fixtureId:f.id, userIsHome};
     matchKitColors = {A:userColor, B:oppColor};
+    matchVenueTeam = userIsHome ? userTeam : oppTeam; // estadio del equipo local
     startMatch('ai', rosterFromCareerTeam(userTeam, pendingLineup), rosterFromCareerTeam(oppTeam, oppLineup), userTeam.formation, oppTeam.formation);
   }
   function rosterFromCareerTeam(team, lineupIds){
@@ -3566,9 +3600,80 @@
     if(net) setTimeout(()=>{ net.classList.add('net-hit'); }, 500);
   }
 
+  // ---------- Partido en 3D ----------
+  let view3dOn = false, match3dView = null, match3dLoading = false, match3dVenueKey = '';
+  try{ view3dOn = localStorage.getItem('ft_view3d') === '1'; }catch(e){}
+  function defaultKit(team){ return team==='A' ? '#e8871e' : '#2b4c7e'; }
+  function push3DState(hl, goalFx, isNewMatch){
+    if(!match3dView) return;
+    // Estadio: el del club local en Modo Carrera; uno genérico en partido rápido
+    const venueLevels = matchVenueTeam ? {...normalizeStadium(matchVenueTeam)} : {north:2, south:2, east:2, west:2};
+    const venueKit = matchVenueTeam
+      ? {primary: matchVenueTeam.kitPrimary, secondary: matchVenueTeam.kitSecondary}
+      : {primary: matchKitColors.A || defaultKit('A'), secondary: matchKitColors.B || defaultKit('B')};
+    const venueKey = JSON.stringify([venueLevels, venueKit]);
+    if(venueKey !== match3dVenueKey){ match3dVenueKey = venueKey; match3dView.setVenue(venueLevels, venueKit); }
+    const carrier = getCarrier();
+    match3dView.update({
+      reset: isNewMatch,
+      goalFx,
+      hl,
+      ball: {col: ball.col, row: ball.row, carried: !!carrier, carrierTeam: carrier ? carrier.team : null},
+      pieces: pieces.map(p=>{
+        const kit = matchKitColors[p.team] || defaultKit(p.team);
+        return {
+          id: p.id, team: p.team, role: p.role, col: p.col, row: p.row,
+          label: p.number ? String(p.number) : p.role[0],
+          kit, text: matchKitColors[p.team] ? textColorFor(kit) : (p.team==='A' ? '#291200' : '#eef4ff'),
+          selected: !!(selected && selected.id===p.id),
+          idle: !matchEnded && p.team!==turn,
+          yellow: !!(p.pid && yellowCardsByPid[p.pid]>=1),
+        };
+      }),
+    });
+  }
+  function updateViewToggle(){
+    const btn = document.getElementById('btnToggle3D');
+    btn.textContent = view3dOn ? '🗺️ Ver tablero 2D' : '🎥 Ver en 3D';
+    document.getElementById('boardWrap').hidden = view3dOn;
+    document.getElementById('match3d').hidden = !view3dOn;
+  }
+  function set3DMode(on){
+    if(on && !webglAvailable()){
+      message = 'Este dispositivo no permite gráficos 3D. Se mantiene el tablero 2D.'; render(); return;
+    }
+    if(on && !match3dView){
+      if(match3dLoading) return;
+      match3dLoading = true;
+      const btn = document.getElementById('btnToggle3D');
+      btn.disabled = true; btn.textContent = 'Cargando 3D…';
+      import('./match3d.js').then(m=>{
+        match3dView = m.mountMatch3D(document.getElementById('match3d'), {
+          onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
+          onCell: (c,r)=> clickCell(c,r),
+        });
+        match3dLoading = false; btn.disabled = false;
+        set3DMode(true);
+      }).catch(()=>{
+        match3dLoading = false; btn.disabled = false;
+        view3dOn = false; updateViewToggle();
+        message = 'No se ha podido cargar la vista 3D. Se mantiene el tablero 2D.'; render();
+      });
+      return;
+    }
+    view3dOn = on;
+    try{ localStorage.setItem('ft_view3d', on ? '1' : '0'); }catch(e){}
+    updateViewToggle();
+    if(on){ match3dVenueKey = ''; skipMoveFx = true; } // al entrar en 3D se colocan las fichas sin animación
+    render();
+  }
+  document.getElementById('btnToggle3D').addEventListener('click', ()=> set3DMode(!view3dOn));
+
   function render(){
+    const isNewMatch = skipMoveFx;
     const prevPos = skipMoveFx ? {} : captureBoardPositions();
     skipMoveFx = false;
+    const hl3d = {move:[], pass:[], dribble:[], shoot:[]};
     const goalFx = shotFx; shotFx = null;
     boardEl.innerHTML='';
     boardEl.insertAdjacentHTML('beforeend', PITCH_SVG);
@@ -3598,18 +3703,18 @@
           if(shootZone){
             const penalty = shootRowPenalty(row);
             if(isFinite(penalty) && Math.abs(col-shootZone.goalCol)<=(shootZone.range-penalty)){
-              cell.classList.add('highlight-shoot-zone');
+              cell.classList.add('highlight-shoot-zone'); hl3d.shoot.push([col,row]);
             }
           }
         }
         if(actionMode==='move' && selected && validMoveCells(selected).some(c=>c.col===col && c.row===row)){
-          cell.classList.add('highlight-move');
+          cell.classList.add('highlight-move'); hl3d.move.push([col,row]);
         }
         if(actionMode==='pass' && selected && passTargetCells(selected).some(c=>c.col===col && c.row===row)){
-          cell.classList.add('highlight-pass');
+          cell.classList.add('highlight-pass'); hl3d.pass.push([col,row]);
         }
         if(actionMode==='dribble' && selected && dribbleTargetCells(selected).some(c=>c.col===col && c.row===row)){
-          cell.classList.add('highlight-dribble');
+          cell.classList.add('highlight-dribble'); hl3d.dribble.push([col,row]);
         }
         boardEl.appendChild(cell);
       }
@@ -3650,6 +3755,7 @@
     } else {
       animateFromPrevious(ballEl, prevPos['ball'], 1, d=> Math.min(560, 140 + d*55));
     }
+    if(view3dOn) push3DState(hl3d, goalFx, isNewMatch);
 
     document.getElementById('scoreA').textContent=score.A;
     document.getElementById('scoreB').textContent=score.B;
@@ -3803,6 +3909,8 @@
     message='¡Comienza el partido! Elige una ficha.';
     showScreen('gameScreen');
     skipMoveFx = true; shotFx = null;
+    if(view3dOn && !match3dView){ view3dOn = false; updateViewToggle(); render(); set3DMode(true); return; }
+    updateViewToggle();
     render();
   }
 

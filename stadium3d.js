@@ -11,12 +11,17 @@ const GAP = 0.9;                            // distancia de la línea a la prime
 const ROW_DEPTH = 0.32, ROW_RISE = 0.17, UPPER_RISE = 0.24;
 const LOW_ROWS = [0, 3, 5, 7, 8, 9];
 const UP_ROWS  = [0, 0, 0, 0, 5, 8];
-const SIDES = {
-  south: {len: PITCH_L + 2*GAP, pos: [0, 0,  HALF_W + GAP], rot: 0},
-  north: {len: PITCH_L + 2*GAP, pos: [0, 0, -HALF_W - GAP], rot: Math.PI},
-  east:  {len: PITCH_W + 2*GAP, pos: [ HALF_L + GAP, 0, 0], rot: Math.PI/2},
-  west:  {len: PITCH_W + 2*GAP, pos: [-HALF_L - GAP, 0, 0], rot: -Math.PI/2},
-};
+// Posición de las 4 gradas alrededor de un campo de semilados halfL (eje X) y halfW (eje Z)
+function sidesFor(halfL, halfW, gap){
+  return {
+    south: {len: 2*halfL + 2*gap, pos: [0, 0,  halfW + gap], rot: 0},
+    north: {len: 2*halfL + 2*gap, pos: [0, 0, -halfW - gap], rot: Math.PI},
+    east:  {len: 2*halfW + 2*gap, pos: [ halfL + gap, 0, 0], rot: Math.PI/2},
+    west:  {len: 2*halfW + 2*gap, pos: [-halfL - gap, 0, 0], rot: -Math.PI/2},
+  };
+}
+const SIDES = sidesFor(HALF_L, HALF_W, GAP);
+const STAND_KEYS = ['north','south','east','west'];
 const LABELS = {north:'Norte', south:'Sur', east:'Este', west:'Oeste'};
 
 function standDims(level){
@@ -79,7 +84,7 @@ function adBoardTexture(primary, secondary){
 }
 
 // Construye una grada en coordenadas locales: a lo largo de X, hacia fuera en +Z, arriba en +Y
-function buildStand(level, len, kit, mats){
+function buildStand(level, len, kit, mats, opts){
   const grp = new THREE.Group();
   const dm = standDims(level);
   const box = (w,h,d, mat, x,y,z)=>{
@@ -144,7 +149,7 @@ function buildStand(level, len, kit, mats){
     }
   }
   // Videomarcador en las gradas de fondo a nivel 5
-  if(level === 5 && len < PITCH_L){
+  if(level === 5 && opts && opts.isEnd){
     const scr = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.9, 0.08), mats.screen);
     scr.position.set(0, dm.height + 0.75, dm.depth + 0.15); scr.rotation.x = 0; grp.add(scr);
     const frame = new THREE.Mesh(new THREE.BoxGeometry(2.35, 1.05, 0.06), mats.steel);
@@ -190,6 +195,71 @@ function buildFloodlight(height, mats){
   return g;
 }
 
+function makeMats(){
+  return {
+    wall: new THREE.MeshLambertMaterial({color: 0x8d9497}),
+    concrete: new THREE.MeshLambertMaterial({color: 0x5d6569}),
+    roof: new THREE.MeshLambertMaterial({color: 0xe3e7ea, side: THREE.DoubleSide, transparent: true, opacity: 0.55, depthWrite: false}),
+    steel: new THREE.MeshLambertMaterial({color: 0xb7bec4}),
+    light: new THREE.MeshBasicMaterial({color: 0xfffbe6}),
+    windows: new THREE.MeshBasicMaterial({color: 0xffd98a}),
+    screen: new THREE.MeshBasicMaterial({color: 0x1a4cff}),
+    fan: new THREE.MeshLambertMaterial({color: 0xffffff}),
+    adTex: null,
+  };
+}
+
+// Esquinas cerradas y torres de focos según el conjunto del estadio
+function buildExtras(levels, kit, mats, halfL, halfW, gap){
+  const out = [];
+  const corners = [['north','east', 1,-1], ['north','west',-1,-1], ['south','east', 1, 1], ['south','west',-1, 1]];
+  corners.forEach(([a, b, sx, sz])=>{
+    const la = levels[a]||1, lb = levels[b]||1;
+    const da = standDims(la), db = standDims(lb);
+    const x0 = halfL + gap, z0 = halfW + gap;
+    if(Math.min(la, lb) >= 3){
+      // Esquina cerrada: bloque con la altura de la grada más baja
+      const h = Math.min(da.height, db.height)*0.85;
+      const corner = new THREE.Mesh(new THREE.BoxGeometry(db.depth, h, da.depth),
+        new THREE.MeshLambertMaterial({color: shade(kit.primary, 0.6)}));
+      corner.position.set(sx*(x0 + db.depth/2), h/2, sz*(z0 + da.depth/2));
+      corner.castShadow = true; corner.receiveShadow = true; out.push(corner);
+    }
+  });
+  const avg = STAND_KEYS.reduce((s,k)=> s + (levels[k]||1), 0)/4;
+  if(avg >= 2){
+    const reach = Math.max(...STAND_KEYS.map(k=> standDims(levels[k]||1).depth));
+    const h = 2.6 + avg*1.3;
+    corners.forEach(([, , sx, sz])=>{
+      const f = buildFloodlight(h, mats);
+      f.position.set(sx*(halfL + gap + reach*0.7 + 0.6), 0, sz*(halfW + gap + reach*0.7 + 0.6));
+      f.lookAt(0, 0, 0);
+      out.push(f);
+    });
+  }
+  return out;
+}
+
+// Gradas, esquinas y focos listos para rodear otro campo (lo usa el partido en 3D)
+export function buildStadiumShell(levels, kitColors, dims){
+  const kit = {primary: (kitColors && kitColors.primary) || '#e8871e', secondary: (kitColors && kitColors.secondary) || '#2b4c7e'};
+  const mats = makeMats();
+  mats.adTex = adBoardTexture(kit.primary, kit.secondary);
+  const group = new THREE.Group();
+  const sides = sidesFor(dims.halfL, dims.halfW, dims.gap);
+  STAND_KEYS.forEach(k=>{
+    const sd = sides[k];
+    const g = buildStand(levels[k] || 1, sd.len, kit, mats, {isEnd: k==='east' || k==='west'});
+    g.position.set(...sd.pos); g.rotation.y = sd.rot;
+    group.add(g);
+  });
+  buildExtras(levels, kit, mats, dims.halfL, dims.halfW, dims.gap).forEach(o=> group.add(o));
+  const ext = Math.max(...STAND_KEYS.map(k=>{
+    const d = standDims(levels[k]||1); return (k==='east'||k==='west' ? dims.halfL : dims.halfW) + dims.gap + d.depth + d.height*0.4;
+  }));
+  return {group, extent: ext, mats};
+}
+
 export function mountStadium(container){
   const canvas = document.createElement('canvas');
   container.appendChild(canvas);
@@ -219,17 +289,7 @@ export function mountStadium(container){
   sun.shadow.bias = -0.0015;
   scene.add(sun);
 
-  const mats = {
-    wall: new THREE.MeshLambertMaterial({color: 0x8d9497}),
-    concrete: new THREE.MeshLambertMaterial({color: 0x5d6569}),
-    roof: new THREE.MeshLambertMaterial({color: 0xe3e7ea, side: THREE.DoubleSide, transparent: true, opacity: 0.55, depthWrite: false}),
-    steel: new THREE.MeshLambertMaterial({color: 0xb7bec4}),
-    light: new THREE.MeshBasicMaterial({color: 0xfffbe6}),
-    windows: new THREE.MeshBasicMaterial({color: 0xffd98a}),
-    screen: new THREE.MeshBasicMaterial({color: 0x1a4cff}),
-    fan: new THREE.MeshLambertMaterial({color: 0xffffff}),
-    adTex: null,
-  };
+  const mats = makeMats();
 
   // Suelo, pista alrededor y césped
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshLambertMaterial({color: 0x24312a}));
@@ -312,38 +372,14 @@ export function mountStadium(container){
       const old = standGroups[k];
       if(old){ scene.remove(old); old.traverse(o=>{ if(o.geometry) o.geometry.dispose(); }); }
       const s = SIDES[k];
-      const g = buildStand(levels[k] || 1, s.len, kit, mats);
+      const g = buildStand(levels[k] || 1, s.len, kit, mats, {isEnd: k==='east' || k==='west'});
       g.position.set(...s.pos); g.rotation.y = s.rot;
       scene.add(g); standGroups[k] = g;
       if(animateKeys.includes(k)){ g.scale.y = 0.02; growAnims.push({g, t0: performance.now()}); }
     });
     // Esquinas y focos según el conjunto del estadio
     extras.children.slice().forEach(o=>{ extras.remove(o); o.traverse(c=>{ if(c.geometry) c.geometry.dispose(); }); });
-    const corners = [['north','east', 1,-1], ['north','west',-1,-1], ['south','east', 1, 1], ['south','west',-1, 1]];
-    corners.forEach(([a, b, sx, sz])=>{
-      const la = levels[a]||1, lb = levels[b]||1;
-      const da = standDims(la), db = standDims(lb);
-      const x0 = HALF_L + GAP, z0 = HALF_W + GAP;
-      if(Math.min(la, lb) >= 3){
-        // Esquina cerrada: bloque con la altura de la grada más baja
-        const h = Math.min(da.height, db.height)*0.85;
-        const corner = new THREE.Mesh(new THREE.BoxGeometry(db.depth, h, da.depth),
-          new THREE.MeshLambertMaterial({color: shade(kit.primary, 0.6)}));
-        corner.position.set(sx*(x0 + db.depth/2), h/2, sz*(z0 + da.depth/2));
-        corner.castShadow = true; corner.receiveShadow = true; extras.add(corner);
-      }
-    });
-    const avg = Object.keys(SIDES).reduce((s,k)=> s + (levels[k]||1), 0)/4;
-    if(avg >= 2){
-      const reach = Math.max(...Object.keys(SIDES).map(k=> standDims(levels[k]||1).depth));
-      const h = 2.6 + avg*1.3;
-      corners.forEach(([, , sx, sz])=>{
-        const f = buildFloodlight(h, mats);
-        f.position.set(sx*(HALF_L + GAP + reach*0.7 + 0.6), 0, sz*(HALF_W + GAP + reach*0.7 + 0.6));
-        f.lookAt(0, 0, 0);
-        extras.add(f);
-      });
-    }
+    buildExtras(levels, kit, mats, HALF_L, HALF_W, GAP).forEach(o=> extras.add(o));
     // Encuadre: la cámara se aleja según el tamaño del estadio
     const ext = Math.max(...Object.keys(SIDES).map(k=>{
       const d = standDims(levels[k]||1); return (k==='east'||k==='west' ? HALF_L : HALF_W) + GAP + d.depth + d.height*0.4;
