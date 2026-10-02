@@ -203,60 +203,125 @@
     box-shadow:0 6px 18px rgba(0,0,0,.4);
   }
   .cell{position:relative;}
-  .cell.stripe-a{background:var(--pitch-dark);}
-  .cell.stripe-b{background:var(--pitch-light);}
-  .cell.goal{background:repeating-linear-gradient(45deg, #0c2018, #0c2018 4px, #143a2a 4px, #143a2a 8px);}
-  .cell.goal-side{opacity:0.55;}
+  /* Césped segado: franjas verticales con un leve degradado */
+  .cell.stripe-a{background:linear-gradient(180deg,#1f4d37,#1b4532 50%,#1f4d37);}
+  .cell.stripe-b{background:linear-gradient(180deg,#2a6446,#265c40 50%,#2a6446);}
+  .cell.goal{background:linear-gradient(180deg,#123224,#0f2b1f);}
+  .cell.goal-side{opacity:1;}
   .cell.goal-mouth{
     background:
-      repeating-linear-gradient(0deg, rgba(241,250,238,.35) 0 1px, transparent 1px 9px),
-      repeating-linear-gradient(90deg, rgba(241,250,238,.35) 0 1px, transparent 1px 9px),
-      #0c2018;
-    box-shadow: inset 0 0 0 2px rgba(241,250,238,.8);
+      repeating-linear-gradient(45deg, rgba(241,250,238,.28) 0 1px, transparent 1px 6px),
+      repeating-linear-gradient(-45deg, rgba(241,250,238,.28) 0 1px, transparent 1px 6px),
+      linear-gradient(90deg,#0b1d15,#10291e);
   }
-  .cell.goal-mouth.goal-left{ border-right:4px solid var(--chalk); }
-  .cell.goal-mouth.goal-right{ border-left:4px solid var(--chalk); }
+  .cell.goal-mouth.goal-right{
+    background:
+      repeating-linear-gradient(45deg, rgba(241,250,238,.28) 0 1px, transparent 1px 6px),
+      repeating-linear-gradient(-45deg, rgba(241,250,238,.28) 0 1px, transparent 1px 6px),
+      linear-gradient(270deg,#0b1d15,#10291e);
+  }
+  .cell.goal-mouth.net-hit{animation:netHit .55s ease-out;}
+  @keyframes netHit{
+    0%{ filter:brightness(1); }
+    25%{ filter:brightness(2.2); transform:scaleX(1.18); }
+    60%{ transform:scaleX(.94); }
+    100%{ filter:brightness(1); transform:none; }
+  }
   .cell.playable{cursor:pointer;}
-  .cell.centerline{border-right:2px dashed rgba(241,250,238,.35);}
+  /* Líneas del campo (SVG superpuesto, no recibe clics) */
+  .pitch-lines{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:1;}
   .cell.highlight-move::after{
-    content:''; position:absolute; inset:14%; border-radius:50%;
-    background:rgba(255,210,63,.55); border:2px solid var(--gold);
+    content:''; position:absolute; inset:30%; border-radius:50%; z-index:2;
+    background:rgba(255,210,63,.32); border:2px solid rgba(255,210,63,.95);
+    box-shadow:0 0 8px rgba(255,210,63,.55);
+    animation:hlPulse 1.4s ease-in-out infinite;
   }
   .cell.highlight-pass::after{
-    content:''; position:absolute; inset:28%; border-radius:50%;
-    background:rgba(124,252,148,.4); border:2px solid #7CFC94;
+    content:''; position:absolute; inset:27%; border-radius:50%; z-index:2;
+    background:radial-gradient(circle, #7CFC94 0 14%, rgba(124,252,148,.18) 16%);
+    border:2px dashed #7CFC94;
+    animation:hlPulse 1.4s ease-in-out infinite;
   }
   .cell.highlight-dribble::after{
-    content:''; position:absolute; inset:24%; border-radius:50%;
-    background:rgba(255,140,26,.45); border:2px solid #ff8c1a;
+    content:''; position:absolute; inset:24%; border-radius:50%; z-index:2;
+    background:rgba(255,140,26,.3); border:2px solid #ff8c1a;
+    box-shadow:0 0 8px rgba(255,140,26,.6);
+    animation:hlPulse 1.1s ease-in-out infinite;
+  }
+  @keyframes hlPulse{
+    0%,100%{ transform:scale(.9); opacity:.85; }
+    50%{ transform:scale(1.05); opacity:1; }
   }
   .cell.highlight-shoot-zone{
-    box-shadow: inset 0 0 0 999px rgba(231,76,60,.16);
+    box-shadow: inset 0 0 0 999px rgba(231,76,60,.2);
   }
 
+  /* Fichas: estilo chapa/camiseta con el color del equipo en --kit */
   .piece{
-    position:relative; width:78%; height:78%; margin:11%;
+    --kit:#888;
+    position:relative; width:80%; height:80%; margin:10%;
     border-radius:50%; display:flex; align-items:center; justify-content:center;
-    font-weight:bold; font-size:clamp(10px,2.6vw,14px); cursor:pointer;
-    border:2px solid rgba(0,0,0,.35); z-index:2;
-    box-shadow:0 2px 4px rgba(0,0,0,.4);
-    transition:transform .1s;
+    font-family:'Arial Black','Segoe UI',sans-serif;
+    font-weight:900; font-size:clamp(10px,2.7vw,14px); cursor:pointer;
+    background-color:var(--kit);
+    background-image:
+      radial-gradient(circle at 32% 26%, rgba(255,255,255,.55), rgba(255,255,255,0) 45%),
+      radial-gradient(circle at 50% 115%, rgba(0,0,0,.38), rgba(0,0,0,0) 62%);
+    border:2px solid rgba(255,255,255,.75);
+    box-shadow:0 0 0 1.5px rgba(0,0,0,.45), 0 4px 5px -1px rgba(0,0,0,.55), inset 0 -2px 3px rgba(0,0,0,.25);
+    text-shadow:0 1px 1px rgba(0,0,0,.25);
+    z-index:2;
+    transition:transform .12s, filter .25s;
   }
-  .piece.team-a{background:var(--team-a); color:#291200;}
-  .piece.team-b{background:var(--team-b); color:#eef4ff;}
-  .piece.selected{outline:3px solid var(--gold); transform:scale(1.08); z-index:4;}
-  .piece.role-GK{border-radius:10px;}
+  .piece.team-a{--kit:var(--team-a); color:#291200;}
+  .piece.team-b{--kit:var(--team-b); color:#eef4ff;}
+  .piece.idle-team{filter:saturate(.7) brightness(.86);}
+  .piece.selected{
+    outline:3px solid var(--gold); outline-offset:1px; transform:scale(1.1); z-index:4;
+    animation:selPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes selPulse{
+    0%,100%{ box-shadow:0 0 0 1.5px rgba(0,0,0,.45), 0 4px 5px -1px rgba(0,0,0,.55), 0 0 0 0 rgba(255,210,63,.6); }
+    50%{ box-shadow:0 0 0 1.5px rgba(0,0,0,.45), 0 4px 5px -1px rgba(0,0,0,.55), 0 0 0 7px rgba(255,210,63,0); }
+  }
+  /* Portero: cuadrado redondeado y rayas diagonales para distinguirlo */
+  .piece.role-GK{
+    border-radius:28%;
+    background-image:
+      radial-gradient(circle at 32% 26%, rgba(255,255,255,.5), rgba(255,255,255,0) 45%),
+      repeating-linear-gradient(135deg, rgba(255,255,255,.16) 0 3px, rgba(255,255,255,0) 3px 7px),
+      radial-gradient(circle at 50% 115%, rgba(0,0,0,.38), rgba(0,0,0,0) 62%);
+    border-color:rgba(255,236,160,.9);
+  }
   .card-badge{
-    position:absolute; top:-3px; right:-3px; width:10px; height:13px;
+    position:absolute; top:-4px; right:-4px; width:9px; height:12px;
     background:#f4d03f; border:1px solid #7a6100; border-radius:2px; z-index:5;
+    transform:rotate(12deg); box-shadow:0 1px 2px rgba(0,0,0,.5);
   }
 
   .ball{
     position:relative; width:34%; height:34%; margin:33%;
-    border-radius:50%; background:radial-gradient(circle at 35% 30%, #fff, #e8dfc0 60%, #b8ac7e);
-    border:1.5px solid #4a3f22; z-index:3; pointer-events:none;
-    box-shadow:0 1px 3px rgba(0,0,0,.5);
+    border-radius:50%;
+    background:
+      radial-gradient(circle at 34% 28%, rgba(255,255,255,.95), rgba(255,255,255,0) 40%),
+      radial-gradient(circle at 52% 54%, #1e1e1e 0 20%, transparent 22%),
+      radial-gradient(circle at 60% 65%, #fbfbf7, #c4c1b2);
+    border:1px solid #2a2a2a; z-index:3; pointer-events:none;
+    box-shadow:0 2px 3px rgba(0,0,0,.55);
   }
+  /* Balón en posesión: a los pies del jugador */
+  .ball.carried{width:36%; height:36%; margin:58% 0 6% 62%;}
+  /* Balón suelto: halo para localizarlo rápido */
+  .ball.loose::after{
+    content:''; position:absolute; inset:-55%; border-radius:50%;
+    border:2px solid rgba(255,255,255,.55);
+    animation:looseRing 1.3s ease-out infinite;
+  }
+  @keyframes looseRing{
+    0%{ transform:scale(.5); opacity:.9; }
+    100%{ transform:scale(1.25); opacity:0; }
+  }
+  .ball.fx{position:absolute; margin:0; z-index:6;}
 
   .action-panel{
     display:flex; flex-wrap:wrap; gap:8px; justify-content:center; min-height:44px; margin-bottom:8px;
@@ -3053,6 +3118,7 @@
     if(Math.random() < chance){
       if(shooter.pid) matchStats[shooter.pid] = (matchStats[shooter.pid]||0)+1;
       score[shooter.team]++;
+      shotFx = {fromCol:shooter.col, fromRow:shooter.row, goalCol: shooter.team==='A' ? COLS_TOTAL-1 : 0, goalRow: clamp(shooter.row,3,5)};
       message = `¡GOOOL de ${teamName(shooter.team)}!`;
       triggerGoalCelebration(shooter.team);
       const conceding = shooter.team==='A' ? 'B' : 'A';
@@ -3353,8 +3419,102 @@
   }
   function setActionMode(m){ actionMode=m; render(); }
 
+  // ---------- Aspecto visual del partido ----------
+  // Líneas del campo en unidades de casilla: ancho 13.24 (0.62 + 12 + 0.62) x alto 9.
+  const PITCH_SVG = (()=>{
+    const x0=0.62, x1=12.62, mid=6.62, cy=4.5, H=9;
+    const ln='stroke="rgba(241,250,238,.62)" stroke-width="1.6" vector-effect="non-scaling-stroke" fill="none"';
+    const spot='fill="rgba(241,250,238,.75)"';
+    let mow='';
+    for(let r=0;r<H;r+=2) mow += `<rect x="${x0}" y="${r}" width="12" height="1" fill="rgba(255,255,255,.035)"/>`;
+    const side = (gx, dir)=>{
+      const boxX = dir>0 ? gx : gx-2, smallX = dir>0 ? gx : gx-0.8;
+      const spotX = gx + dir*1.45, arcX = gx + dir*2, dy=0.84;
+      return `<rect x="${boxX}" y="1.5" width="2" height="6" ${ln}/>`
+        + `<rect x="${smallX}" y="2.6" width="0.8" height="3.8" ${ln}/>`
+        + `<circle cx="${spotX}" cy="${cy}" r="0.07" ${spot}/>`
+        + `<path d="M ${arcX} ${cy-dy} A 1 1 0 0 ${dir>0?1:0} ${arcX} ${cy+dy}" ${ln}/>`
+        // Postes y larguero de la portería
+        + `<path d="M ${gx} 3 L ${gx-dir*0.5} 3 L ${gx-dir*0.5} 6 L ${gx} 6" stroke="#f1faee" stroke-width="3" vector-effect="non-scaling-stroke" fill="none" stroke-linejoin="round"/>`;
+    };
+    return `<svg class="pitch-lines" viewBox="0 0 13.24 9" preserveAspectRatio="none" aria-hidden="true">`
+      + `<defs><radialGradient id="pitchVignette" cx="50%" cy="50%" r="70%"><stop offset="60%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity=".35"/></radialGradient></defs>`
+      + mow
+      + `<rect x="${x0}" y="0.04" width="12" height="8.92" ${ln}/>`
+      + `<line x1="${mid}" y1="0" x2="${mid}" y2="${H}" ${ln}/>`
+      + `<circle cx="${mid}" cy="${cy}" r="1.3" ${ln}/>`
+      + `<circle cx="${mid}" cy="${cy}" r="0.08" ${spot}/>`
+      + side(x0, 1) + side(x1, -1)
+      + `<path d="M ${x0} 0.4 A 0.36 0.36 0 0 0 ${x0+0.36} 0.04 M ${x0+0.36} 8.96 A 0.36 0.36 0 0 0 ${x0} 8.6 M ${x1-0.36} 0.04 A 0.36 0.36 0 0 0 ${x1} 0.4 M ${x1} 8.6 A 0.36 0.36 0 0 0 ${x1-0.36} 8.96" ${ln}/>`
+      + `<rect x="0" y="0" width="13.24" height="9" fill="url(#pitchVignette)"/>`
+      + `</svg>`;
+  })();
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let shotFx = null;      // tiro que acaba en gol: {fromCol, fromRow, goalCol, goalRow}
+  let skipMoveFx = false; // al empezar partido no se animan las fichas desde el partido anterior
+
+  // Posiciones (relativas al tablero) de las fichas y el balón antes de redibujar
+  function captureBoardPositions(){
+    const out = {};
+    const br = boardEl.getBoundingClientRect();
+    if(!br.width) return out;
+    boardEl.querySelectorAll('[data-fx-id]').forEach(n=>{
+      const r = n.getBoundingClientRect();
+      out[n.dataset.fxId] = {x:r.left-br.left, y:r.top-br.top};
+    });
+    return out;
+  }
+  // Anima cada elemento desde su posición anterior hasta la nueva (técnica FLIP)
+  function animateFromPrevious(el, prev, baseScale, durationFor){
+    if(reduceMotion || !prev) return;
+    const br = boardEl.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    const dx = prev.x - (r.left-br.left), dy = prev.y - (r.top-br.top);
+    if(Math.abs(dx)<1 && Math.abs(dy)<1) return;
+    const cellPx = br.height/ROWS || 1;
+    const dist = Math.hypot(dx,dy)/cellPx;
+    const sc = baseScale || 1;
+    el.animate([
+      {transform:`translate(${dx}px, ${dy}px) scale(${sc})`},
+      {transform:`translate(0px, 0px) scale(${sc})`}
+    ], {duration:durationFor(dist), easing:'cubic-bezier(.22,.8,.3,1)'});
+  }
+  function cellCenterPx(col,row){
+    const cell = boardEl.querySelector(`.cell[data-c="${col}"][data-r="${row}"]`);
+    const br = boardEl.getBoundingClientRect();
+    if(!cell) return null;
+    const r = cell.getBoundingClientRect();
+    return {x:r.left-br.left+r.width/2, y:r.top-br.top+r.height/2, size:r.height};
+  }
+  // Balón que vuela hasta la red cuando se marca gol
+  function playGoalShotFx(fx){
+    if(reduceMotion) return;
+    const from = cellCenterPx(fx.fromCol, fx.fromRow), to = cellCenterPx(fx.goalCol, fx.goalRow);
+    if(!from || !to) return;
+    const size = from.size*0.34;
+    const b = document.createElement('div');
+    b.className = 'ball fx';
+    b.style.width = size+'px'; b.style.height = size+'px';
+    b.style.left = (to.x-size/2)+'px'; b.style.top = (to.y-size/2)+'px';
+    boardEl.appendChild(b);
+    const dx = from.x-to.x, dy = from.y-to.y;
+    const anim = b.animate([
+      {transform:`translate(${dx}px, ${dy}px) scale(1)`, opacity:1},
+      {transform:`translate(${dx*0.5}px, ${dy*0.5 - from.size*0.6}px) scale(1.35)`, opacity:1, offset:0.5},
+      {transform:'translate(0px, 0px) scale(.9)', opacity:1, offset:0.85},
+      {transform:'translate(0px, 0px) scale(.8)', opacity:0}
+    ], {duration:620, easing:'ease-in'});
+    anim.onfinish = ()=> b.remove();
+    const net = boardEl.querySelector(`.cell[data-c="${fx.goalCol}"][data-r="${fx.goalRow}"]`);
+    if(net) setTimeout(()=>{ net.classList.add('net-hit'); }, 500);
+  }
+
   function render(){
+    const prevPos = skipMoveFx ? {} : captureBoardPositions();
+    skipMoveFx = false;
+    const goalFx = shotFx; shotFx = null;
     boardEl.innerHTML='';
+    boardEl.insertAdjacentHTML('beforeend', PITCH_SVG);
     let shootZone = null;
     if(selected && selected.role!=='GK'){
       const carrier = getCarrier();
@@ -3367,6 +3527,7 @@
         const cell=document.createElement('div');
         cell.style.gridColumn=(col+1); cell.style.gridRow=(row+1);
         cell.classList.add('cell');
+        cell.dataset.c=col; cell.dataset.r=row;
         if(col===0 || col===COLS_TOTAL-1){
           cell.classList.add('goal');
           const isMouth = row>=3 && row<=5;
@@ -3376,7 +3537,6 @@
         else {
           cell.classList.add((col%2===0)?'stripe-a':'stripe-b');
           cell.classList.add('playable');
-          if(col===6) cell.classList.add('centerline');
           cell.addEventListener('click', ()=>clickCell(col,row));
           if(shootZone){
             const penalty = shootRowPenalty(row);
@@ -3400,13 +3560,15 @@
     pieces.forEach(p=>{
       const el=document.createElement('div');
       el.className = `piece team-${p.team.toLowerCase()} role-${p.role}`;
+      el.dataset.fxId = 'p:'+p.id;
       el.style.gridColumn=(p.col+1); el.style.gridRow=(p.row+1);
+      if(!matchEnded && p.team!==turn) el.classList.add('idle-team');
       el.textContent = p.number ? String(p.number) : p.role[0];
       el.title = p.name ? `${p.name} — POR${p.goalkeeping} VEL${p.speed} FUE${p.strength} TIR${p.shot} PAS${p.pass} DEF${p.defense} REG${p.dribble} RES${p.stamina} · Cansancio ${p.fatigue||0}%` : '';
       if((p.fatigue||0) >= 70) el.style.opacity = '0.7';
       else if((p.fatigue||0) >= 40) el.style.opacity = '0.87';
       if(matchKitColors[p.team]){
-        el.style.background = matchKitColors[p.team];
+        el.style.setProperty('--kit', matchKitColors[p.team]);
         el.style.color = textColorFor(matchKitColors[p.team]);
       }
       if(selected && selected.id===p.id) el.classList.add('selected');
@@ -3416,11 +3578,21 @@
       }
       el.addEventListener('click',(e)=>{ e.stopPropagation(); selectPiece(p); });
       boardEl.appendChild(el);
+      // Tras un gol las fichas vuelven a su sitio más despacio
+      animateFromPrevious(el, prevPos['p:'+p.id], el.classList.contains('selected') ? 1.1 : 1,
+        d=> goalFx ? 650 : Math.min(420, 150 + d*70));
     });
     const ballEl=document.createElement('div');
-    ballEl.className='ball';
+    ballEl.className = 'ball ' + (getCarrier() ? 'carried' : 'loose');
+    ballEl.dataset.fxId = 'ball';
     ballEl.style.gridColumn=(ball.col+1); ballEl.style.gridRow=(ball.row+1);
     boardEl.appendChild(ballEl);
+    if(goalFx){
+      playGoalShotFx(goalFx);
+      if(!reduceMotion) ballEl.animate([{opacity:0},{opacity:0, offset:0.7},{opacity:1}], {duration:900});
+    } else {
+      animateFromPrevious(ballEl, prevPos['ball'], 1, d=> Math.min(560, 140 + d*55));
+    }
 
     document.getElementById('scoreA').textContent=score.A;
     document.getElementById('scoreB').textContent=score.B;
@@ -3573,6 +3745,7 @@
     matchParticipants = {A: pieces.filter(p=>p.team==='A').map(p=>p.pid), B: pieces.filter(p=>p.team==='B').map(p=>p.pid)};
     message='¡Comienza el partido! Elige una ficha.';
     showScreen('gameScreen');
+    skipMoveFx = true; shotFx = null;
     render();
   }
 
