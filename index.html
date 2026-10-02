@@ -369,6 +369,44 @@
   }
   .m3d-cams button.active{background:var(--gold); color:#0d1f18; border-color:var(--gold);}
 
+  /* Aviso para girar el móvil (solo en vertical y pantallas estrechas) */
+  .rotate-hint{display:none;}
+  @media (orientation: portrait) and (max-width: 600px){
+    body.in-match:not(.rotate-hint-off) .rotate-hint{
+      display:flex; align-items:center; gap:8px; justify-content:space-between;
+      background:var(--panel); border:1px solid #2f5c46; border-radius:8px; padding:6px 10px; margin-bottom:6px;
+      font-size:12px; color:#cfe8d8;
+    }
+    .rotate-hint button{background:transparent; border:none; color:#9fd4b8; font-size:16px; cursor:pointer; padding:0 4px;}
+  }
+
+  /* Partido en horizontal: campo a la izquierda ocupando el alto, controles a la derecha */
+  @media (orientation: landscape) and (max-height: 600px){
+    body.in-match #app{
+      max-width:none; min-height:0; display:grid; align-items:start;
+      grid-template-columns: auto minmax(220px, 1fr); column-gap:10px; padding:0 8px 0 6px;
+    }
+    body.in-match #gameScreen{display:contents;}
+    body.in-match #gameScreen > *{grid-column:2; margin-left:0; margin-right:0;}
+    body.in-match #boardWrap, body.in-match #match3d{
+      grid-column:1; grid-row:1 / span 30; position:sticky; top:6px; margin:6px 0;
+    }
+    body.in-match #boardWrap .board{width:min(calc((100dvh - 18px) * 13.24 / 9), 66vw);}
+    body.in-match #match3d{
+      aspect-ratio:auto; max-height:none;
+      height:min(calc(100dvh - 12px), calc(66vw * 9 / 13.24));
+      width:min(calc((100dvh - 12px) * 13.24 / 9), 66vw);
+    }
+    body.in-match header.scoreboard{grid-column:2; padding:6px 8px 6px; border-bottom-width:2px; margin-top:4px; border-radius:8px;}
+    body.in-match header.scoreboard h1{display:none;}
+    body.in-match .score-team{font-size:11px; padding:4px 8px; min-width:64px;}
+    body.in-match .score-num{font-size:19px;}
+    body.in-match .turn-indicator{margin-top:4px; font-size:12px;}
+    body.in-match .view-toggle-row{justify-content:center; margin:6px 0;}
+    body.in-match .action-btn{padding:8px 12px; font-size:13px;}
+    body.in-match .footer-row button{padding:5px 9px; font-size:11px;}
+  }
+
   .action-panel{
     display:flex; flex-wrap:wrap; gap:8px; justify-content:center; min-height:44px; margin-bottom:8px;
   }
@@ -659,6 +697,7 @@
 
   <!-- PARTIDO -->
   <main class="screen" id="gameScreen" hidden style="padding-top:6px;">
+    <div class="rotate-hint" id="rotateHint"><span>📱↻ Gira el móvil para jugar en horizontal: el campo se ve más grande.</span><button id="btnRotateHintClose" aria-label="Cerrar aviso">✕</button></div>
     <div class="view-toggle-row"><button class="view-toggle" id="btnToggle3D">🎥 Ver en 3D</button></div>
     <div class="board-wrap" id="boardWrap"><div id="board" class="board"></div></div>
     <div class="match3d" id="match3d" hidden>
@@ -986,6 +1025,7 @@
       document.getElementById(id).hidden = (id !== name);
     });
     document.getElementById('scoreboard').hidden = (name !== 'gameScreen');
+    document.body.classList.toggle('in-match', name === 'gameScreen');
     if(name==='careerSelectScreen') renderCareerSelectScreen();
     if(name==='careerCreateScreen'){ selectedLogo = LOGO_EMOJIS[0]; renderLogoGrid(); }
     if(name==='careerScreen') renderCareerScreen();
@@ -2447,7 +2487,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=10').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=11').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -3664,7 +3704,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=10').then(m=>{
+      import('./match3d.js?v=11').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
@@ -3685,6 +3725,12 @@
     render();
   }
   document.getElementById('btnToggle3D').addEventListener('click', ()=> set3DMode(!view3dOn));
+  // Aviso de girar el móvil: se puede cerrar y no vuelve a salir
+  try{ if(localStorage.getItem('ft_rotate_hint_off')==='1') document.body.classList.add('rotate-hint-off'); }catch(e){}
+  document.getElementById('btnRotateHintClose').addEventListener('click', ()=>{
+    document.body.classList.add('rotate-hint-off');
+    try{ localStorage.setItem('ft_rotate_hint_off','1'); }catch(e){}
+  });
 
   function render(){
     const isNewMatch = skipMoveFx;

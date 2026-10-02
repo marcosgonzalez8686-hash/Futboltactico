@@ -2,7 +2,7 @@
 // No contiene reglas: recibe el estado ya calculado por index.html y avisa de los toques
 // sobre fichas o casillas para que el juego los procese igual que en el tablero 2D.
 import * as THREE from './vendor/three.module.min.js';
-import { buildStadiumShell } from './stadium3d.js?v=10';
+import { buildStadiumShell } from './stadium3d.js?v=11';
 
 const COLS = 14, ROWS = 9;
 const GOAL_COL_W = 0.62;
@@ -734,7 +734,9 @@ export function mountMatch3D(container, handlers){
       // En pantallas estrechas se aleja un poco para que quepa el campo entero
       const fit = w/h < 1.2 ? 1.25 : 1;
       CAMS.side.radius = 15.5*fit; CAMS.top.radius = 15.5*fit*1.05;
-      if(camGoal && camMode in CAMS && CAMS[camMode].radius) camGoal.radius = CAMS[camMode].radius;
+      // Al girar el móvil, las cámaras fijas se reencuadran solas
+      if(camMode === 'side' || camMode === 'top') camGoal = {...CAMS[camMode]};
+      else if(camGoal && CAMS[camMode].radius) camGoal.radius = CAMS[camMode].radius;
     }
     return true;
   }
