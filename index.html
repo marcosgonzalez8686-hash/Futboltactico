@@ -397,6 +397,91 @@
   .fx-att{display:block; font-size:11px; color:#9fd4b8; margin-top:2px; font-weight:normal;}
   .match-crowd{color:#8ecbff;}
 
+  /* ---------- Plantilla y táctica estilo manager ---------- */
+  .chip-row{display:flex; gap:5px; flex-wrap:wrap; align-items:center;}
+  .chip-row > span{font-size:11px; color:#9fd4b8; margin-right:2px;}
+  .chip-row button{background:#0e2118; border:1.5px solid #2f5c46; color:#cfe8d8; border-radius:14px; padding:5px 10px; font-size:11.5px; font-weight:bold; cursor:pointer;}
+  .chip-row button.active{background:var(--gold); border-color:var(--gold); color:#0d1f18;}
+  .sq-controls{display:flex; flex-direction:column; gap:6px;}
+  .sq-card{padding:4px 6px;}
+  .sq-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  .sq-table th{font-size:10px; color:#9fd4b8; font-weight:600; text-align:center; padding:6px 3px; border-bottom:1px solid #2f5c46;}
+  .sq-table td{text-align:center; padding:8px 3px; border-bottom:1px solid rgba(255,255,255,.05);}
+  .sq-table tr[data-pid]{cursor:pointer;}
+  .sq-table tr[data-pid]:active td{background:rgba(255,255,255,.05);}
+  .sq-table .sq-name{text-align:left; max-width:150px;}
+  .sq-table td.sq-name b{display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .sq-icons{font-size:11px;}
+  .sq-num{font-weight:900; color:var(--gold);}
+  .sq-val{font-size:11px; color:#cfe8d8; white-space:nowrap;}
+  .sq-table tr.sq-focus td{background:rgba(255,210,63,.15);}
+  .role-tag{display:inline-block; font-size:10px; font-weight:900; padding:2px 5px; border-radius:5px; color:#0d1f18;}
+  .role-tag.r-GK{background:#f4d03f;} .role-tag.r-DF{background:#5dade2;} .role-tag.r-MF{background:#58d68d;} .role-tag.r-FW{background:#ec7063;}
+  .pp-card{padding:0; overflow:hidden; max-width:460px;}
+  .pp-head{display:flex; align-items:center; gap:10px; padding:12px; background:linear-gradient(135deg, var(--kit), color-mix(in srgb, var(--kit) 45%, #0d1f18)); color:var(--kit-text);}
+  .pp-num{font-family:'Arial Black',sans-serif; font-size:30px; min-width:44px; text-align:center;}
+  .pp-id{flex:1; display:flex; flex-direction:column; min-width:0;}
+  .pp-id b{font-size:17px;}
+  .pp-id span{font-size:11.5px; opacity:.9;}
+  .pp-close{background:rgba(0,0,0,.25); color:#fff; border:none; border-radius:50%; width:32px; height:32px; font-size:15px; cursor:pointer;}
+  .pp-money{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:10px 12px 0;}
+  .pp-money div{background:#0e2118; border-radius:8px; padding:6px; text-align:center;}
+  .pp-money span{display:block; font-size:10px; color:#9fd4b8;} .pp-money b{font-size:13px;}
+  .pp-body{display:grid; grid-template-columns:1fr 1fr; gap:8px; align-items:center; padding:6px 12px 0;}
+  .pp-radar{width:100%; height:auto;}
+  .pp-attrs{grid-template-columns:1fr 1fr !important;}
+  .pp-card > .card-title, .pp-card > .pp-fits, .pp-card > .offer-banner, .pp-card > .pp-actions, .pp-card > .hint{margin-left:12px; margin-right:12px;}
+  .pp-fits{display:flex; flex-direction:column; gap:5px;}
+  .pp-fit{display:grid; grid-template-columns:95px 1fr 26px; align-items:center; gap:6px; font-size:11.5px;}
+  .pp-fit-track{height:8px; background:#0e2118; border-radius:4px; overflow:hidden;}
+  .pp-fit-track div{height:100%; border-radius:4px;}
+  .pp-fit b{text-align:right;}
+  .pp-actions{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px; margin-bottom:12px;}
+  .pp-actions label{font-size:12px; color:#9fd4b8; display:flex; align-items:center; gap:6px;}
+  .pp-actions select{padding:6px; border-radius:6px; border:1px solid #2f5c46; background:#0e2118; color:var(--chalk);}
+  .pp-actions .mode-btn{width:auto;}
+  @media (max-width:380px){ .pp-body{grid-template-columns:1fr;} }
+  /* Pizarra táctica */
+  .tac-bar{display:flex; justify-content:space-between; align-items:center; gap:8px;}
+  #formationChips button{display:flex; flex-direction:column; align-items:center; line-height:1.1; padding:5px 9px;}
+  #formationChips button small{font-size:9px; font-weight:normal; opacity:.85;}
+  .tac-rating{text-align:center; background:var(--panel); border:1px solid #2f5c46; border-radius:10px; padding:4px 10px; flex-shrink:0;}
+  .tac-rating span{display:block; font-size:9.5px; color:#9fd4b8;} .tac-rating b{font-size:20px;}
+  .tac-pitch{
+    position:relative; width:100%; aspect-ratio:0.92; border-radius:10px; overflow:hidden;
+    background:repeating-linear-gradient(180deg, #245c40 0 10%, #1f5238 10% 20%);
+    border:3px solid var(--chalk); box-shadow:0 6px 16px rgba(0,0,0,.4);
+  }
+  .tac-pitch > div{position:absolute; border:2px solid rgba(241,250,238,.55);}
+  .tp-box{left:22%; right:22%; bottom:-2px; height:20%;}
+  .tp-small{left:36%; right:36%; bottom:-2px; height:8%;}
+  .tp-spot{left:calc(50% - 3px); bottom:14%; width:6px; height:6px; border-radius:50%; background:rgba(241,250,238,.7); border:none !important;}
+  .tp-arc{left:40%; right:40%; bottom:calc(20% - 7%); height:14%; border-radius:50%; clip-path:inset(0 0 50% 0);}
+  .tp-half{left:-2px; right:-2px; top:-2px; height:0; border-width:2px 0 0 0 !important;}
+  .tp-circle{left:35%; right:35%; top:-15%; aspect-ratio:1; border-radius:50%;}
+  .tp-slot{position:absolute; transform:translate(-50%,-50%); background:none; border:none; padding:0; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:1px; z-index:2;}
+  .tp-shirt{
+    width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:var(--kit, #ffd23f); color:var(--kit-text, #0d1f18); font-family:'Arial Black',sans-serif; font-size:16px;
+    box-shadow:0 0 0 3px var(--fit, transparent), 0 3px 6px rgba(0,0,0,.5);
+  }
+  .tp-shirt.sm{width:32px; height:32px; font-size:12px; flex-shrink:0;}
+  .tp-shirt.tp-empty{background:rgba(0,0,0,.3); color:#cfe8d8; border:2px dashed rgba(241,250,238,.6); box-shadow:none;}
+  .tp-name{font-size:11px; font-weight:bold; color:#fff; text-shadow:0 1px 2px #000; background:rgba(0,0,0,.45); padding:0 5px; border-radius:6px; max-width:82px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .tp-role{font-size:9.5px; color:#cfe8d8; text-shadow:0 1px 2px #000;}
+  .tp-role b{font-size:11px;}
+  .tp-slot.active .tp-shirt{outline:3px solid var(--gold); outline-offset:3px; animation:selPulseLine 1s ease-in-out infinite;}
+  @keyframes selPulseLine{ 50%{outline-offset:6px;} }
+  .tac-hint{font-size:11.5px;}
+  .bench-row{display:flex; align-items:center; gap:10px; width:100%; background:transparent; border:none; border-bottom:1px solid rgba(255,255,255,.06); color:var(--chalk); padding:8px 2px; cursor:pointer; text-align:left;}
+  .bench-row.active{background:rgba(255,210,63,.14); border-radius:8px;}
+  .bench-row:disabled{opacity:.45; cursor:not-allowed;}
+  .br-name{flex:1; display:flex; flex-direction:column; min-width:0;}
+  .br-name b{font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .br-name small{font-size:10.5px; color:#9fd4b8;}
+  .br-val{display:flex; flex-direction:column; align-items:center;}
+  .br-val small{font-size:9.5px; color:#9fd4b8;} .br-val b{font-size:15px;}
+
   /* ---------- Modo Carrera estilo manager ---------- */
   body.career-chrome #app{padding-top:58px; padding-bottom:128px;}
   .career-bar{
@@ -930,12 +1015,21 @@
 
   <div class="screen" id="careerRosterScreen" hidden>
     <h2>Plantilla</h2>
-    <p class="hint">Hasta 15 jugadores. Fija tus titulares por defecto o cámbialos antes de cada partido.</p>
     <div class="btn-row">
-      <button class="mode-btn primary" id="btnEditDefaultLineup">Editar titulares</button>
-      <button class="mode-btn" id="btnGoYouth">Cantera</button>
+      <button class="mode-btn primary" id="btnEditDefaultLineup">📋 Alineación y táctica</button>
+      <button class="mode-btn" id="btnGoYouth">🌱 Cantera</button>
     </div>
-    <div class="card"><div id="careerRosterList"></div></div>
+    <div class="sq-controls">
+      <div class="chip-row" id="sqSort">
+        <span>Ordenar:</span>
+        <button data-sort="num" class="active">#</button><button data-sort="rating">Valoración</button><button data-sort="age">Edad</button><button data-sort="value">Valor</button>
+      </div>
+      <div class="chip-row" id="sqFilter">
+        <button data-filter="all" class="active">Todos</button><button data-filter="xi">⭐ Titulares</button><button data-filter="inj">🚑 Lesionados</button><button data-filter="list">🏷️ Transferibles</button>
+      </div>
+    </div>
+    <div class="card sq-card"><div id="careerRosterList"></div></div>
+    <p class="hint" id="sqFooter"></p>
     <button class="mode-btn" id="btnBackRoster">« Volver</button>
   </div>
 
@@ -1025,14 +1119,17 @@
         <button class="mode-btn small" id="kitSecondaryBtn">Suplente</button>
       </div>
     </div>
-    <div class="card">
-      <b class="card-title">FORMACIÓN</b>
-      <select id="formationSelect" style="width:100%; padding:8px; border-radius:6px; border:1px solid #2f5c46; background:#0e2118; color:var(--chalk); font-size:13px;"></select>
+    <div class="tac-bar">
+      <div class="chip-row" id="formationChips"></div>
+      <div class="tac-rating" id="teamRating"></div>
     </div>
-    <p class="hint">Toca una posición del campo para elegir o cambiar jugador. Cualquier jugador puede ocupar cualquier puesto: su posición oculta solo afecta a su progresión. Al elegir, verás los atributos en <span style="color:#2ecc71;">verde</span> (clave), <span style="color:#f4d03f;">amarillo</span> (secundario) o gris (no influye) para ese puesto.</p>
-    <div class="lineup-pitch-wrap" id="lineupPitchWrap"></div>
-    <button class="mode-btn small" id="btnClearLineup" style="margin-bottom:10px;">Vaciar alineación</button>
-    <div class="card"><div id="lineupCandidates"></div></div>
+    <div class="tac-pitch" id="lineupPitchWrap"></div>
+    <p class="hint tac-hint" id="lineupHint"></p>
+    <div class="btn-row">
+      <button class="mode-btn small primary" id="btnBestXI">⚡ Mejor once</button>
+      <button class="mode-btn small" id="btnClearLineup">Vaciar</button>
+    </div>
+    <div class="card"><b class="card-title" id="benchTitle">BANQUILLO</b><div id="lineupCandidates"></div></div>
     <div class="btn-row">
       <button class="mode-btn small" id="btnCancelLineup">Cancelar</button>
       <button class="mode-btn small primary" id="btnConfirmLineup">Confirmar y jugar</button>
@@ -1086,6 +1183,10 @@
   </main>
 </div>
 
+<div class="modal-overlay" id="playerProfileModal" hidden>
+  <div class="modal-card pp-card" id="playerProfileBody"></div>
+</div>
+
 <div class="modal-overlay" id="weekEventsModal" hidden>
   <div class="modal-card">
     <b class="card-title">HA PASADO ESTA SEMANA</b>
@@ -1094,7 +1195,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=25"></script>
+<script src="sound.js?v=26"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1392,6 +1493,7 @@
     document.body.classList.toggle('in-match', name === 'gameScreen');
     updateCareerChrome(name);
     document.body.classList.remove('match-menu-open');
+    if(name !== 'careerRosterScreen' && profilePid) closePlayerProfile();
     if(name !== 'gameScreen' && window.FTSound) FTSound.crowdStop();
     if(name !== 'gameScreen') exitLandscapeMode();
     if(name==='careerSelectScreen') renderCareerSelectScreen();
@@ -1485,6 +1587,9 @@
   document.getElementById('btnBackStandings').addEventListener('click', ()=>showScreen('careerTabComp'));
   document.getElementById('btnBackRoster').addEventListener('click', ()=>{ const back = rosterFocus && rosterFocus.fromInbox ? 'careerScreen' : 'careerTabSquad'; rosterFocus = null; showScreen(back); });
   document.getElementById('btnEditDefaultLineup').addEventListener('click', openDefaultLineupEditor);
+  document.querySelectorAll('#sqSort [data-sort]').forEach(b=> b.addEventListener('click', ()=>{ rosterSort = b.dataset.sort; renderCareerRoster(); }));
+  document.querySelectorAll('#sqFilter [data-filter]').forEach(b=> b.addEventListener('click', ()=>{ rosterFilter = b.dataset.filter; renderCareerRoster(); }));
+  document.getElementById('playerProfileModal').addEventListener('click', e=>{ if(e.target.id==='playerProfileModal'){ closePlayerProfile(); renderCareerRoster(); } });
   document.getElementById('btnBackHistory').addEventListener('click', ()=>showScreen('careerTabComp'));
   document.getElementById('btnCancelLineup').addEventListener('click', ()=>{
     if(lineupMode==='default') showScreen('careerRosterScreen');
@@ -1496,23 +1601,14 @@
     if(!userTeam) return;
     const roles = slotRolesForFormation(userTeam.formation);
     pendingLineup = roles.map(()=>null);
-    activeSlotIdx = null;
+    activeSlotIdx = null; activeBenchPid = null;
     renderLineupScreen();
   });
   document.getElementById('btnConfirmLineup').addEventListener('click', confirmLineupAndPlay);
-  document.getElementById('formationSelect').addEventListener('change', (e)=>{
-    let userTeam;
-    if(lineupMode==='default'){
-      userTeam = career.teams.find(t=>t.isUser);
-    } else {
-      const f = career.fixtures.find(x=>x.id===lineupFixtureId);
-      const userIdx = isUserTeam(f.homeIdx) ? f.homeIdx : f.awayIdx;
-      userTeam = career.teams[userIdx];
-    }
-    userTeam.formation = e.target.value;
+  document.getElementById('btnBestXI').addEventListener('click', ()=>{
+    const userTeam = getLineupUserTeam(); if(!userTeam) return;
     pendingLineup = autoPickLineup(userTeam.slots, userTeam.formation);
-    activeSlotIdx = null;
-    persistCareers();
+    activeSlotIdx = null; activeBenchPid = null;
     renderLineupScreen();
   });
   document.getElementById('kitPrimaryBtn').addEventListener('click', ()=>{ chosenKit='primary'; renderLineupScreen(); });
@@ -2656,53 +2752,121 @@
     return card;
   }
   let pendingSellPid = null;
-  let rosterFocus = null; // {pid, fromInbox}: jugador a resaltar al abrir la plantilla
+  let rosterFocus = null; // {pid, fromInbox}: jugador a abrir al entrar en la plantilla
+  let rosterSort = 'num', rosterFilter = 'all';
+  const ROLE_SHORT = {GK:'POR', DF:'DEF', MF:'MED', FW:'DEL'};
+  const ROLE_NAME = {GK:'Portero', DF:'Defensa', MF:'Centrocampista', FW:'Delantero'};
+  // Mejor puesto según sus atributos visibles (no desvela la posición oculta)
+  function bestRoleOf(p){
+    return ['GK','DF','MF','FW'].map(r=>({r, v:slotScore(p,r)})).sort((a,b)=>b.v-a.v)[0];
+  }
+  // Encaje relativo de un jugador en un puesto (1 = su mejor puesto)
+  function roleFit(p, role){ const best = bestRoleOf(p).v || 1; return slotScore(p, role)/best; }
+  function fitColor(k){ return k>=0.9 ? '#2ecc71' : k>=0.75 ? '#f4d03f' : '#e74c3c'; }
+  // Color relativo a lo normal en la división del club: 'attr' para atributos sueltos, 'rating' para valoraciones
+  function divColor(v, kind, division){
+    const P = divisionParams(division || (career ? userDivision() : 5));
+    const lo = kind==='rating' ? P.mid[0] : P.low[0], hi = P.high[1];
+    const k = clamp((v - lo) / ((hi - lo) || 1), 0, 1);
+    return `hsl(${Math.round(k*120)}, 80%, 58%)`;
+  }
   function renderCareerRoster(){
     const el = document.getElementById('careerRosterList');
-    el.innerHTML='';
     const userTeam = career.teams.find(t=>t.isUser);
-    let focusCard = null;
-    userTeam.slots.forEach(pid=>{
-      const p = career.players.find(x=>x.id===pid);
-      if(!p) return;
-      const card = renderPlayerCard(p, {editableNumber:true});
-      card.dataset.pid = pid;
-      // Ofertas pendientes por este jugador: se pueden responder desde su ficha
-      (career.pendingOffers||[]).filter(o=>o.playerId===pid).forEach(o=>{
-        const value = calcMarketValue(p);
-        const pct = value ? Math.round((o.amount/value - 1)*100) : 0;
-        const ban = document.createElement('div'); ban.className = 'offer-banner';
-        ban.innerHTML = `<div>💰 <b>${escapeHtml(o.buyerName)}</b> ofrece <b style="color:var(--gold);">${formatMoney(o.amount)}</b></div>
-          <div class="ob-cmp">Valor de mercado ${formatMoney(value)} · <span class="${pct>=0?'fin-pos':'fin-neg'}">${pct>=0?'+':''}${pct} %</span></div>`;
-        const row = document.createElement('div'); row.className = 'btn-row'; row.style.marginTop = '6px';
-        const acc = document.createElement('button'); acc.className = 'mode-btn small primary'; acc.textContent = 'Aceptar oferta';
-        acc.addEventListener('click', ()=>{ respondToOffer(o.id, true); rosterFocus = null; renderCareerRoster(); });
-        const rej = document.createElement('button'); rej.className = 'mode-btn small'; rej.textContent = 'Rechazar';
-        rej.addEventListener('click', ()=>{ respondToOffer(o.id, false); renderCareerRoster(); });
-        row.appendChild(acc); row.appendChild(rej); ban.appendChild(row);
-        card.insertBefore(ban, card.children[1] || null);
-      });
-      if(rosterFocus && rosterFocus.pid === pid){ card.classList.add('pc-focus'); focusCard = card; }
-      const isListed = !!p.transferListed;
-      const btnRow=document.createElement('div'); btnRow.className='btn-row'; btnRow.style.marginTop='6px';
-      const listBtn=document.createElement('button');
-      listBtn.className = isListed ? 'mode-btn small primary' : 'mode-btn small';
-      listBtn.textContent = isListed ? 'Transferible (quitar)' : 'Poner como transferible';
-      listBtn.addEventListener('click', ()=>{
-        p.transferListed = !isListed;
-        persistCareers();
-        renderCareerRoster();
-      });
-      btnRow.appendChild(listBtn);
-      card.appendChild(btnRow);
-      if(isListed){
-        const note=document.createElement('p'); note.className='hint';
-        note.textContent = 'En la lista de transferibles: es más probable que lleguen ofertas por él al pulsar "Seguir".';
-        card.appendChild(note);
-      }
-      el.appendChild(card);
+    const xi = new Set(getEffectiveLineup(userTeam) || []);
+    const offersBy = {};
+    (career.pendingOffers||[]).forEach(o=>{ offersBy[o.playerId] = o; });
+    document.querySelectorAll('#sqSort [data-sort]').forEach(b=> b.classList.toggle('active', b.dataset.sort===rosterSort));
+    document.querySelectorAll('#sqFilter [data-filter]').forEach(b=> b.classList.toggle('active', b.dataset.filter===rosterFilter));
+    let list = userTeam.slots.map(id=>career.players.find(p=>p.id===id)).filter(Boolean);
+    if(rosterFilter==='xi') list = list.filter(p=>xi.has(p.id));
+    if(rosterFilter==='inj') list = list.filter(p=>p.injuryMatchesLeft>0);
+    if(rosterFilter==='list') list = list.filter(p=>p.transferListed);
+    const key = {num:p=>p.squadNumber||99, rating:p=>-bestRoleOf(p).v, age:p=>p.age, value:p=>-calcMarketValue(p)}[rosterSort];
+    list.sort((a,b)=> key(a)-key(b));
+    let h = `<table class="sq-table"><tr><th>#</th><th class="sq-name">Jugador</th><th>Edad</th><th>Puesto</th><th>Val.</th><th>Valor</th></tr>`;
+    list.forEach(p=>{
+      const br = bestRoleOf(p);
+      const icons = (xi.has(p.id)?'⭐':'') + (p.injuryMatchesLeft>0?'🚑':'') + (p.transferListed?'🏷️':'') + (offersBy[p.id]?'💰':'');
+      h += `<tr data-pid="${p.id}" class="${rosterFocus && rosterFocus.pid===p.id ? 'sq-focus' : ''}">
+        <td class="sq-num">${p.squadNumber||'–'}</td>
+        <td class="sq-name"><b>${escapeHtml(p.name)}</b>${icons?`<span class="sq-icons">${icons}</span>`:''}</td>
+        <td>${p.age}</td>
+        <td><span class="role-tag r-${br.r}">${ROLE_SHORT[br.r]}</span></td>
+        <td><b style="color:${divColor(br.v,'rating')}">${Math.round(br.v)}</b></td>
+        <td class="sq-val">${shortMoney(calcMarketValue(p))}</td></tr>`;
     });
-    if(focusCard) setTimeout(()=> focusCard.scrollIntoView({behavior:'smooth', block:'center'}), 60);
+    if(!list.length) h += `<tr><td colspan="6" class="hint" style="text-align:center; padding:14px;">Ningún jugador con este filtro.</td></tr>`;
+    el.innerHTML = h + '</table>';
+    el.querySelectorAll('tr[data-pid]').forEach(tr=> tr.addEventListener('click', ()=> openPlayerProfile(tr.dataset.pid)));
+    const wages = userTeam.slots.reduce((s2,id)=>{ const p=career.players.find(x=>x.id===id); return s2 + (p?calcWage(p):0); }, 0);
+    document.getElementById('sqFooter').textContent = `${userTeam.slots.length}/${MAX_SQUAD_SIZE} jugadores · Sueldos ${formatMoney(wages)}/semana · Toca un jugador para ver su ficha.`;
+    // Viniendo de una oferta: abrir directamente su ficha
+    if(rosterFocus && rosterFocus.pid && !rosterFocus.opened){ rosterFocus.opened = true; openPlayerProfile(rosterFocus.pid); }
+  }
+  // Radar de 8 atributos (una sola serie: el color del club)
+  function radarSVG(p, color, maxV){
+    const N = ATTRS.length, R = 62, cx = 90, cy = 82, M = maxV || 99;
+    const pt = (i, v)=>{ const a = -Math.PI/2 + i*2*Math.PI/N; return [cx + Math.cos(a)*R*v/M, cy + Math.sin(a)*R*v/M]; };
+    let g = '';
+    [M*0.25, M*0.5, M*0.75, M].forEach(r=>{ g += `<polygon points="${ATTRS.map((_,i)=>pt(i,r).map(n=>n.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="1"/>`; });
+    ATTRS.forEach((a,i)=>{
+      const [x,y] = pt(i,M), [lx,ly] = pt(i,M*1.23);
+      g += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,.08)"/>`;
+      g += `<text x="${lx.toFixed(1)}" y="${(ly+3).toFixed(1)}" font-size="9" fill="#9fd4b8" text-anchor="middle" font-weight="bold">${a.short}</text>`;
+    });
+    const pts = ATTRS.map((a,i)=>pt(i, Math.max(M*0.04, p[a.key])).map(n=>n.toFixed(1)).join(',')).join(' ');
+    g += `<polygon points="${pts}" fill="${color}" fill-opacity=".32" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`;
+    ATTRS.forEach((a,i)=>{ const [x,y] = pt(i, Math.max(M*0.04,p[a.key])); g += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="${color}" stroke="#123326" stroke-width="1.5"><title>${a.short} ${p[a.key]}</title></circle>`; });
+    return `<svg viewBox="0 0 180 168" class="pp-radar" role="img" aria-label="Atributos de ${escapeHtml(p.name)}">${g}</svg>`;
+  }
+  var profilePid = null; // var: showScreen lo consulta y puede ejecutarse antes de llegar aquí
+  function openPlayerProfile(pid){ profilePid = pid; renderPlayerProfile(); document.getElementById('playerProfileModal').hidden = false; }
+  function closePlayerProfile(){ document.getElementById('playerProfileModal').hidden = true; profilePid = null; }
+  function renderPlayerProfile(){
+    const p = career.players.find(x=>x.id===profilePid);
+    const body = document.getElementById('playerProfileBody');
+    const userTeam = career.teams.find(t=>t.isUser);
+    if(!p || !userTeam.slots.includes(p.id)){ closePlayerProfile(); return; }
+    const br = bestRoleOf(p), color = userTeam.kitPrimary || '#ffd23f';
+    // El radar se escala al máximo habitual de la división (si no, en divisiones bajas sale diminuto)
+    const radarMax = Math.max(divisionParams(userTeam.division).high[1] + 8, ...ATTRS.map(a=>p[a.key]));
+    const xi = (getEffectiveLineup(userTeam)||[]).includes(p.id);
+    const status = [xi?'⭐ Titular':'Suplente', p.injuryMatchesLeft>0?`🚑 Baja ${p.injuryMatchesLeft} partido(s)`:'', p.transferListed?'🏷️ Transferible':''].filter(Boolean).join(' · ');
+    let h = `<div class="pp-head" style="--kit:${color}; --kit-text:${textColorFor(color)}">
+        <div class="pp-num">${p.squadNumber||'–'}</div>
+        <div class="pp-id"><b>${escapeHtml(p.name)}</b><span>${p.age} años · Mejor puesto: ${ROLE_NAME[br.r]}</span><span>${status}</span></div>
+        <button class="pp-close" id="ppClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="pp-money"><div><span>Valor</span><b>${formatMoney(calcMarketValue(p))}</b></div><div><span>Sueldo</span><b>${formatMoney(calcWage(p))}/sem</b></div><div><span>Valoración</span><b style="color:${divColor(br.v,'rating')}">${Math.round(br.v)}</b></div></div>
+      <div class="pp-body">${radarSVG(p, color, radarMax)}
+        <div class="pc-grid pp-attrs">${ATTRS.map(a=>`<div class="pc-attr"><span>${a.short}</span><b style="color:${divColor(p[a.key],'attr')}">${p[a.key]}</b></div>`).join('')}</div>
+      </div>
+      <b class="card-title" style="margin-top:8px;">ENCAJE POR PUESTO</b>
+      <div class="pp-fits">${['GK','DF','MF','FW'].map(r=>{ const v = slotScore(p,r), k = roleFit(p,r);
+        return `<div class="pp-fit"><span>${ROLE_NAME[r]}</span><div class="pp-fit-track"><div style="width:${Math.max(3, Math.min(100, v/radarMax*100))}%; background:${fitColor(k)}"></div></div><b>${Math.round(v)}</b></div>`; }).join('')}</div>`;
+    (career.pendingOffers||[]).filter(o=>o.playerId===p.id).forEach(o=>{
+      const value = calcMarketValue(p), pct = value ? Math.round((o.amount/value - 1)*100) : 0;
+      h += `<div class="offer-banner"><div>💰 <b>${escapeHtml(o.buyerName)}</b> ofrece <b style="color:var(--gold);">${formatMoney(o.amount)}</b></div>
+        <div class="ob-cmp">Valor de mercado ${formatMoney(value)} · <span class="${pct>=0?'fin-pos':'fin-neg'}">${pct>=0?'+':''}${pct} %</span></div>
+        <div class="btn-row" style="margin-top:6px;"><button class="mode-btn small primary" data-offer-accept="${o.id}">Aceptar oferta</button><button class="mode-btn small" data-offer-reject="${o.id}">Rechazar</button></div></div>`;
+    });
+    h += `<div class="pp-actions"><label>Dorsal <select id="ppNumber"><option value="">—</option>${Array.from({length:MAX_SQUAD_SIZE},(_,i)=>`<option value="${i+1}" ${p.squadNumber===i+1?'selected':''}>${i+1}</option>`).join('')}</select></label>
+      <button class="mode-btn small ${p.transferListed?'primary':''}" id="ppList">${p.transferListed?'🏷️ Quitar de transferibles':'🏷️ Poner como transferible'}</button></div>`;
+    if(p.transferListed) h += `<p class="hint">En la lista de transferibles es más probable que lleguen ofertas por él.</p>`;
+    body.innerHTML = h;
+    body.querySelector('#ppClose').addEventListener('click', ()=>{ closePlayerProfile(); renderCareerRoster(); });
+    body.querySelector('#ppNumber').addEventListener('change', e=>{
+      const newNum = e.target.value ? Number(e.target.value) : null;
+      if(newNum){
+        const clash = userTeam.slots.map(id=>career.players.find(x=>x.id===id)).find(o=>o && o.id!==p.id && o.squadNumber===newNum);
+        if(clash) clash.squadNumber = p.squadNumber || null;
+      }
+      p.squadNumber = newNum; persistCareers(); renderPlayerProfile(); renderCareerRoster();
+    });
+    body.querySelector('#ppList').addEventListener('click', ()=>{ p.transferListed = !p.transferListed; persistCareers(); renderPlayerProfile(); renderCareerRoster(); });
+    body.querySelectorAll('[data-offer-accept]').forEach(b=> b.addEventListener('click', ()=>{ respondToOffer(b.dataset.offerAccept, true); closePlayerProfile(); rosterFocus = null; renderCareerRoster(); }));
+    body.querySelectorAll('[data-offer-reject]').forEach(b=> b.addEventListener('click', ()=>{ respondToOffer(b.dataset.offerReject, false); renderPlayerProfile(); renderCareerRoster(); }));
   }
   const MIN_SQUAD_SIZE = 6;
   function renderCareerYouthScreen(){
@@ -3083,7 +3247,7 @@
     friendlyOpponentIdx = oppIdx;
     lineupFixtureId = null;
     chosenKit = 'primary';
-    activeSlotIdx = null;
+    activeSlotIdx = null; activeBenchPid = null;
     const validPrev = userTeam.lineup && userTeam.lineup.length===6 && userTeam.lineup.every(id=>{
       const p = career.players.find(x=>x.id===id);
       return p && userTeam.slots.includes(id) && !(p.injuryMatchesLeft>0);
@@ -3116,7 +3280,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=25').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=26').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -3608,7 +3772,7 @@
     lineupMode = 'match';
     lineupFixtureId = fixtureId;
     chosenKit = 'primary';
-    activeSlotIdx = null;
+    activeSlotIdx = null; activeBenchPid = null;
     const validPrev = userTeam.lineup && userTeam.lineup.length===6 && userTeam.lineup.every(id=>{ const p=career.players.find(x=>x.id===id); return p && userTeam.slots.includes(id) && !(p.injuryMatchesLeft>0); });
     pendingLineup = validPrev ? [...userTeam.lineup] : autoPickLineup(userTeam.slots, userTeam.formation);
     showScreen('careerLineupScreen');
@@ -3617,7 +3781,7 @@
     const userTeam = career.teams.find(t=>t.isUser);
     lineupMode = 'default';
     lineupFixtureId = null;
-    activeSlotIdx = null;
+    activeSlotIdx = null; activeBenchPid = null;
     const validPrev = userTeam.lineup && userTeam.lineup.length===6 && userTeam.lineup.every(id=>{ const p=career.players.find(x=>x.id===id); return p && userTeam.slots.includes(id) && !(p.injuryMatchesLeft>0); });
     pendingLineup = validPrev ? [...userTeam.lineup] : autoPickLineup(userTeam.slots, userTeam.formation);
     showScreen('careerLineupScreen');
@@ -3665,79 +3829,87 @@
       kitSecondaryBtn.style.outline = chosenKit==='secondary' ? '3px solid var(--gold)' : 'none';
     }
 
-    const formationSelect = document.getElementById('formationSelect');
-    if(!formationSelect.dataset.filled){
-      Object.keys(FORMATIONS).forEach(key=>{
-        const opt=document.createElement('option'); opt.value=key; opt.textContent=FORMATIONS[key].label;
-        formationSelect.appendChild(opt);
-      });
-      formationSelect.dataset.filled='1';
-    }
-    formationSelect.value = userTeam.formation || DEFAULT_FORMATION;
+    // Formación con botones
+    const chips = document.getElementById('formationChips');
+    chips.innerHTML = Object.keys(FORMATIONS).map(k=>`<button data-formation="${k}" class="${(userTeam.formation||DEFAULT_FORMATION)===k?'active':''}">${k}<small>${FORMATIONS[k].label.split(' (')[0]}</small></button>`).join('');
+    chips.querySelectorAll('[data-formation]').forEach(btn=> btn.addEventListener('click', ()=>{
+      userTeam.formation = btn.dataset.formation;
+      pendingLineup = autoPickLineup(userTeam.slots, userTeam.formation);
+      activeSlotIdx = null; activeBenchPid = null;
+      persistCareers(); renderLineupScreen();
+    }));
 
     const roles = slotRolesForFormation(userTeam.formation);
     const layout = buildLayoutForFormation(userTeam.formation);
+    const player = id=> id ? career.players.find(x=>x.id===id) : null;
 
+    // Pizarra vertical: portero abajo, delanteros arriba
     const pitchEl = document.getElementById('lineupPitchWrap');
-    pitchEl.innerHTML = '';
+    pitchEl.innerHTML = `<div class="tp-box"></div><div class="tp-small"></div><div class="tp-spot"></div><div class="tp-arc"></div><div class="tp-half"></div><div class="tp-circle"></div>`;
+    let ratingSum = 0, filled = 0;
     layout.forEach((slot, idx)=>{
-      const pid = pendingLineup[idx];
-      const p = pid ? career.players.find(x=>x.id===pid) : null;
-      const colPct = (slot.col/13)*100;
-      const rowPct = (slot.row/8)*100;
-      const marker = document.createElement('div');
-      marker.className = 'lineup-marker' + (!p ? ' empty' : '') + (activeSlotIdx===idx ? ' active' : '');
-      marker.style.left = colPct + '%';
-      marker.style.top = rowPct + '%';
-      marker.textContent = p ? (p.squadNumber ? String(p.squadNumber) : roles[idx][0]) : roles[idx][0];
-      marker.title = p ? `${p.name} (${roleShortLabel(roles[idx], idx, roles)})` : roleShortLabel(roles[idx], idx, roles);
-      marker.addEventListener('click', ()=>{ activeSlotIdx = (activeSlotIdx===idx ? null : idx); renderLineupScreen(); });
-      pitchEl.appendChild(marker);
+      const p = player(pendingLineup[idx]);
+      const role = roles[idx];
+      const x = 10 + (slot.row/8)*80, y = 90 - ((slot.col-1)/5)*76;
+      const m = document.createElement('button');
+      const sel = activeSlotIdx===idx;
+      m.className = 'tp-slot' + (p ? '' : ' empty') + (sel ? ' active' : '');
+      m.style.left = x+'%'; m.style.top = y+'%';
       if(p){
+        const v = slotScore(p, role), k = roleFit(p, role);
+        ratingSum += v; filled++;
         const surname = p.name.trim().split(' ').slice(-1)[0];
-        const label = document.createElement('div');
-        label.className = 'lineup-marker-label';
-        label.style.left = colPct + '%';
-        label.style.top = (slot.row > 4 ? rowPct - 11 : rowPct + 9) + '%';
-        label.textContent = surname;
-        pitchEl.appendChild(label);
+        m.innerHTML = `<span class="tp-shirt" style="--kit:${userTeam.kitPrimary}; --kit-text:${textColorFor(userTeam.kitPrimary)}; --fit:${fitColor(k)}">${p.squadNumber||'–'}</span>
+          <span class="tp-name">${escapeHtml(surname)}</span><span class="tp-role">${ROLE_SHORT[role]} <b style="color:${divColor(v,'rating')}">${Math.round(v)}</b></span>`;
+        m.title = `${p.name} · ${ROLE_NAME[role]} · encaje ${Math.round(k*100)} %`;
+      } else {
+        m.innerHTML = `<span class="tp-shirt tp-empty">+</span><span class="tp-role">${ROLE_SHORT[role]}</span>`;
       }
+      m.addEventListener('click', ()=> lineupTapSlot(idx));
+      pitchEl.appendChild(m);
     });
+    const avg = filled ? ratingSum/filled : 0;
+    document.getElementById('teamRating').innerHTML = `<span>Media del once</span><b style="color:${divColor(avg,'rating')}">${filled?Math.round(avg):'–'}</b>`;
 
     const hasEmpty = pendingLineup.slice(0, roles.length).some(id=>!id);
     confirmBtn.disabled = hasEmpty;
+    const selRole = activeSlotIdx!==null ? roles[activeSlotIdx] : null;
+    const selBench = activeBenchPid ? player(activeBenchPid) : null;
+    document.getElementById('lineupHint').innerHTML = selRole
+      ? `Puesto <b>${ROLE_NAME[selRole]}</b> marcado: toca otro jugador del campo para intercambiarlos o uno del banquillo para que entre.`
+      : selBench ? `<b>${escapeHtml(selBench.name)}</b> marcado: toca el puesto del campo donde quieres que juegue.`
+      : 'Toca un jugador del campo y luego otro (del campo o del banquillo) para intercambiarlos. El aro indica cómo encaja en su puesto: <span style="color:#2ecc71">bien</span>, <span style="color:#f4d03f">regular</span> o <span style="color:#e74c3c">mal</span>.';
+
+    // Banquillo: el resto de la plantilla, ordenado por encaje en el puesto marcado
+    const inXI = new Set(pendingLineup.filter(Boolean));
+    const bench = userTeam.slots.map(player).filter(p=>p && !inXI.has(p.id));
+    const sortRole = selRole;
+    bench.sort((a,b)=> (a.injuryMatchesLeft>0) - (b.injuryMatchesLeft>0) || (sortRole ? slotScore(b,sortRole)-slotScore(a,sortRole) : bestRoleOf(b).v-bestRoleOf(a).v));
+    document.getElementById('benchTitle').textContent = sortRole ? `BANQUILLO · mejores para ${ROLE_NAME[sortRole].toUpperCase()}` : `BANQUILLO (${bench.length})`;
     const candEl = document.getElementById('lineupCandidates');
-    candEl.innerHTML = '';
-    if(activeSlotIdx===null || activeSlotIdx>=roles.length){
-      const hint=document.createElement('p'); hint.className='hint';
-      hint.textContent = 'Toca una posición del campo para elegir o cambiar jugador.';
-      candEl.appendChild(hint);
-    } else {
-      const idx = activeSlotIdx;
-      const title=document.createElement('b'); title.className='card-title';
-      title.textContent = `ELIGE: ${roleShortLabel(roles[idx], idx, roles)}`;
-      candEl.appendChild(title);
-      let any=false;
-      userTeam.slots.forEach(pid=>{
-        const p = career.players.find(x=>x.id===pid);
-        if(!p || p.injuryMatchesLeft>0) return;
-        const usedElsewhere = pendingLineup.some((sel,i)=> i!==idx && sel===pid);
-        if(usedElsewhere) return;
-        any=true;
-        const row=document.createElement('div'); row.className='lineup-candidate';
-        const info=document.createElement('div'); info.className='lc-info';
-        const attrLine = ATTRS.map(a=>`<span style="color:${tierColorForAttr(roles[idx], a.key)};">${a.short}${p[a.key]}</span>`).join(' ');
-        info.innerHTML = `<b>#${p.squadNumber||'-'} ${escapeHtml(p.name)}, ${p.age}a</b><span>${attrLine}</span>`;
-        const pickBtn=document.createElement('button'); pickBtn.className='icon-btn'; pickBtn.textContent='Elegir';
-        row.appendChild(info); row.appendChild(pickBtn);
-        row.addEventListener('click', ()=>{ pendingLineup[idx]=pid; activeSlotIdx=null; renderLineupScreen(); });
-        candEl.appendChild(row);
-      });
-      if(!any){
-        const p=document.createElement('p'); p.className='hint'; p.textContent='No hay jugadores disponibles para este puesto.';
-        candEl.appendChild(p);
-      }
-    }
+    if(!bench.length){ candEl.innerHTML = '<p class="hint">No quedan jugadores en el banquillo.</p>'; return; }
+    candEl.innerHTML = bench.map(p=>{
+      const br = bestRoleOf(p), injured = p.injuryMatchesLeft>0;
+      const r = sortRole || br.r, v = slotScore(p, r), k = roleFit(p, r);
+      return `<button class="bench-row ${activeBenchPid===p.id?'active':''}" data-pid="${p.id}" ${injured?'disabled':''}>
+        <span class="tp-shirt sm" style="--kit:${userTeam.kitPrimary}; --kit-text:${textColorFor(userTeam.kitPrimary)}; --fit:${fitColor(k)}">${p.squadNumber||'–'}</span>
+        <span class="br-name"><b>${escapeHtml(p.name)}</b><small>${p.age} años · mejor puesto ${ROLE_SHORT[br.r]}${injured?` · 🚑 baja ${p.injuryMatchesLeft}`:''}</small></span>
+        <span class="br-val"><small>${ROLE_SHORT[r]}</small><b style="color:${divColor(v,'rating')}">${Math.round(v)}</b></span></button>`;
+    }).join('');
+    candEl.querySelectorAll('.bench-row').forEach(b=> b.addEventListener('click', ()=> lineupTapBench(b.dataset.pid)));
+  }
+  var activeBenchPid = null; // jugador del banquillo marcado para entrar
+  function lineupTapSlot(idx){
+    if(activeBenchPid){ pendingLineup[idx] = activeBenchPid; activeBenchPid = null; activeSlotIdx = null; }
+    else if(activeSlotIdx===null) activeSlotIdx = idx;
+    else if(activeSlotIdx===idx) activeSlotIdx = null;
+    else { const a = activeSlotIdx; [pendingLineup[a], pendingLineup[idx]] = [pendingLineup[idx], pendingLineup[a]]; activeSlotIdx = null; }
+    renderLineupScreen();
+  }
+  function lineupTapBench(pid){
+    if(activeSlotIdx!==null){ pendingLineup[activeSlotIdx] = pid; activeSlotIdx = null; activeBenchPid = null; }
+    else activeBenchPid = (activeBenchPid===pid ? null : pid);
+    renderLineupScreen();
   }
   function confirmLineupAndPlay(){
     if(lineupMode==='default'){
@@ -4728,7 +4900,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=25').then(m=>{
+      import('./match3d.js?v=26').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
@@ -4979,7 +5151,7 @@
     html += `<div class="pc-fat">Cansancio: <b style="color:${fatigueColor};">${fatigue}%</b>${fatigue>=70 ? ' — haz un cambio' : ''}</div><div class="pc-grid">`;
     ATTRS.forEach(a=>{
       const v = p[a.key];
-      html += `<div class="pc-attr"><span>${a.short}</span><b style="color:${attrNumColor(v)}">${v}</b></div>`;
+      html += `<div class="pc-attr"><span>${a.short}</span><b style="color:${matchContext && career ? divColor(v,'attr', (matchVenueTeam||{}).division) : attrNumColor(v)}">${v}</b></div>`;
     });
     html += `</div></div>`;
     el.innerHTML = html;
