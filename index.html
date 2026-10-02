@@ -821,7 +821,7 @@
     <div class="rules" id="rulesBox">
       <b>Reglas rápidas</b><br>
       • Cada turno tiene <b>2 pasos garantizados</b>, cada uno con una ficha <b>distinta</b>: dos movimientos, o un movimiento y una acción (como máximo 1 acción por turno).<br>
-      • <b>Turno extra</b>: si uno de esos pasos fue un movimiento, se tira la Velocidad del jugador para un 3er paso, esta vez repitiendo <b>esa misma ficha</b>.<br>
+      • <b>Turno extra</b>: si uno de esos pasos fue un movimiento, hay una probabilidad igual a la mitad de su Velocidad (VEL 100 ≈ 50 %) de dar un 3er paso, esta vez repitiendo <b>esa misma ficha</b>.<br>
       • <b>Mover</b>: 1 casilla en cualquier dirección, destino vacío.<br>
       • <b>Pasar</b> (con balón): envía el balón a cualquier casilla dentro de tu rango (según tu Fuerza: 2 a 5 casillas, 3 con Fuerza 50). Si hay un compañero ahí, la recibe; si no, queda suelta. Un rival en el camino bloquea esa dirección (y todo lo que quede detrás).<br>
       • <b>Chutar</b> (con balón, dentro de tu rango según Fuerza): probabilidad según distancia, tiro y portero rival.<br>
@@ -856,7 +856,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=16"></script>
+<script src="sound.js?v=17"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -2615,7 +2615,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=16').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=17').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -3518,7 +3518,8 @@
     } else {
       turnGuaranteedUsed++;
       if(wasMove){
-        const chance = fatiguedAttr(piece,'speed')/100;
+        // Probabilidad de turno extra: la mitad de la Velocidad (VEL 100 descansado ≈ 50 %)
+        const chance = fatiguedAttr(piece,'speed')/200;
         if(Math.random() < chance){
           turnBonusPieceId = piece.id;
           selected = piece;
@@ -3839,7 +3840,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=16').then(m=>{
+      import('./match3d.js?v=17').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
