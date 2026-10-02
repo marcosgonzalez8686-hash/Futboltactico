@@ -1,4 +1,4 @@
-const CACHE_NAME = 'futbol-tactico-v5';
+const CACHE_NAME = 'futbol-tactico-v6';
 const ASSETS = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png', './stadium3d.js', './vendor/three.module.min.js'];
 
 self.addEventListener('install', (event) => {
@@ -19,13 +19,22 @@ self.addEventListener('activate', (event) => {
 
 // Network-first: siempre intenta traer la versión más reciente; si no hay conexión, usa la copia en caché.
 self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  // Solo peticiones GET del propio juego
+  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
   event.respondWith(
-    fetch(event.request)
+    fetch(req)
       .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(()=>{});
+        if (response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(()=>{});
+        }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() =>
+        caches.match(req, {ignoreSearch: true}).then((hit) =>
+          hit || (req.mode === 'navigate' ? caches.match('./index.html') : Response.error())
+        )
+      )
   );
 });
