@@ -475,6 +475,10 @@
   .form-dot.f-V{background:#2ecc71;} .form-dot.f-E{background:#bdc3c7;} .form-dot.f-D{background:#e74c3c; color:#fff;}
   .mgr-round summary{cursor:pointer; font-weight:bold; font-size:13px; color:#cfe8d8;}
   .hub-list{display:flex; flex-direction:column; gap:10px;}
+  .offer-banner{background:rgba(255,210,63,.1); border:1px solid rgba(255,210,63,.5); border-radius:10px; padding:8px 10px; margin:6px 0; font-size:12.5px;}
+  .offer-banner .ob-cmp{font-size:11px; color:#9fd4b8; margin-top:2px;}
+  .player-card.pc-focus{outline:2px solid var(--gold); outline-offset:4px; border-radius:8px; animation:pcFocus 1.2s ease-out 2;}
+  @keyframes pcFocus{ 0%{box-shadow:0 0 0 0 rgba(255,210,63,.6);} 100%{box-shadow:0 0 0 14px rgba(255,210,63,0);} }
   .hub-item{
     display:flex; align-items:center; gap:12px; width:100%; text-align:left; cursor:pointer;
     background:var(--panel); border:1px solid #2f5c46; border-radius:12px; padding:14px; color:var(--chalk);
@@ -1021,7 +1025,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=21"></script>
+<script src="sound.js?v=22"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1367,7 +1371,7 @@
   document.getElementById('btnSwitchCareer').addEventListener('click', ()=>showScreen('careerSelectScreen'));
   document.getElementById('btnExitCareer').addEventListener('click', ()=>showScreen('menuScreen'));
   document.getElementById('btnGoStandings').addEventListener('click', ()=>showScreen('careerStandingsScreen'));
-  document.getElementById('btnGoRoster').addEventListener('click', ()=>showScreen('careerRosterScreen'));
+  document.getElementById('btnGoRoster').addEventListener('click', ()=>{ rosterFocus = null; showScreen('careerRosterScreen'); });
   document.getElementById('btnGoHistory').addEventListener('click', ()=>showScreen('careerHistoryScreen'));
   document.getElementById('btnGoYouth').addEventListener('click', ()=>showScreen('careerYouthScreen'));
   document.getElementById('btnBackYouth').addEventListener('click', ()=>showScreen('careerTabSquad'));
@@ -1403,7 +1407,7 @@
   document.getElementById('btnGoFacilities').addEventListener('click', ()=>showScreen('careerFacilitiesScreen'));
   document.getElementById('btnBackFacilities').addEventListener('click', ()=>showScreen('careerTabClub'));
   document.getElementById('btnBackStandings').addEventListener('click', ()=>showScreen('careerTabComp'));
-  document.getElementById('btnBackRoster').addEventListener('click', ()=>showScreen('careerTabSquad'));
+  document.getElementById('btnBackRoster').addEventListener('click', ()=>{ const back = rosterFocus && rosterFocus.fromInbox ? 'careerScreen' : 'careerTabSquad'; rosterFocus = null; showScreen(back); });
   document.getElementById('btnEditDefaultLineup').addEventListener('click', openDefaultLineupEditor);
   document.getElementById('btnBackHistory').addEventListener('click', ()=>showScreen('careerTabComp'));
   document.getElementById('btnCancelLineup').addEventListener('click', ()=>{
@@ -2358,7 +2362,8 @@
       } else if(it.kind==='offer'){
         const o = it.o;
         addMsg('💰', `Oferta de ${escapeHtml(o.buyerName)}`, `Ofrece <b style="color:var(--gold);">${formatMoney(o.amount)}</b> por ${escapeHtml(o.playerName)}.`,
-          [['Aceptar', true, ()=>respondToOffer(o.id, true)], ['Rechazar', false, ()=>respondToOffer(o.id, false)]]);
+          [['Aceptar', true, ()=>respondToOffer(o.id, true)], ['Rechazar', false, ()=>respondToOffer(o.id, false)],
+           ['👤 Ver ficha', false, ()=>{ rosterFocus = {pid:o.playerId, fromInbox:true}; showScreen('careerRosterScreen'); }]]);
       } else if(it.kind==='season'){
         const sm = career.seasonSummary;
         let body = sm.promoted ? `<span class="promo-dot"></span>¡Ascenso! Pasas a la División ${sm.divisionAfter}.`
@@ -2542,14 +2547,33 @@
     return card;
   }
   let pendingSellPid = null;
+  let rosterFocus = null; // {pid, fromInbox}: jugador a resaltar al abrir la plantilla
   function renderCareerRoster(){
     const el = document.getElementById('careerRosterList');
     el.innerHTML='';
     const userTeam = career.teams.find(t=>t.isUser);
+    let focusCard = null;
     userTeam.slots.forEach(pid=>{
       const p = career.players.find(x=>x.id===pid);
       if(!p) return;
       const card = renderPlayerCard(p, {editableNumber:true});
+      card.dataset.pid = pid;
+      // Ofertas pendientes por este jugador: se pueden responder desde su ficha
+      (career.pendingOffers||[]).filter(o=>o.playerId===pid).forEach(o=>{
+        const value = calcMarketValue(p);
+        const pct = value ? Math.round((o.amount/value - 1)*100) : 0;
+        const ban = document.createElement('div'); ban.className = 'offer-banner';
+        ban.innerHTML = `<div>💰 <b>${escapeHtml(o.buyerName)}</b> ofrece <b style="color:var(--gold);">${formatMoney(o.amount)}</b></div>
+          <div class="ob-cmp">Valor de mercado ${formatMoney(value)} · <span class="${pct>=0?'fin-pos':'fin-neg'}">${pct>=0?'+':''}${pct} %</span></div>`;
+        const row = document.createElement('div'); row.className = 'btn-row'; row.style.marginTop = '6px';
+        const acc = document.createElement('button'); acc.className = 'mode-btn small primary'; acc.textContent = 'Aceptar oferta';
+        acc.addEventListener('click', ()=>{ respondToOffer(o.id, true); rosterFocus = null; renderCareerRoster(); });
+        const rej = document.createElement('button'); rej.className = 'mode-btn small'; rej.textContent = 'Rechazar';
+        rej.addEventListener('click', ()=>{ respondToOffer(o.id, false); renderCareerRoster(); });
+        row.appendChild(acc); row.appendChild(rej); ban.appendChild(row);
+        card.insertBefore(ban, card.children[1] || null);
+      });
+      if(rosterFocus && rosterFocus.pid === pid){ card.classList.add('pc-focus'); focusCard = card; }
       const isListed = !!p.transferListed;
       const btnRow=document.createElement('div'); btnRow.className='btn-row'; btnRow.style.marginTop='6px';
       const listBtn=document.createElement('button');
@@ -2569,6 +2593,7 @@
       }
       el.appendChild(card);
     });
+    if(focusCard) setTimeout(()=> focusCard.scrollIntoView({behavior:'smooth', block:'center'}), 60);
   }
   const MIN_SQUAD_SIZE = 6;
   function renderCareerYouthScreen(){
@@ -2982,7 +3007,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=21').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=22').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -4454,7 +4479,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=21').then(m=>{
+      import('./match3d.js?v=22').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
