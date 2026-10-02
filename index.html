@@ -355,6 +355,7 @@
     padding:5px 12px; font-size:12px; font-weight:bold; cursor:pointer;
   }
   .view-toggle:disabled{opacity:.6; cursor:wait;}
+  .view-toggle[hidden]{display:none;}
   .match3d{
     position:relative; width:100%; aspect-ratio:1/1; max-height:64vh; margin:0 auto 10px; border-radius:10px; overflow:hidden;
     background:linear-gradient(180deg,#14324a 0%,#1d4a5e 40%,#0e2118 100%);
@@ -697,8 +698,8 @@
 
   <!-- PARTIDO -->
   <main class="screen" id="gameScreen" hidden style="padding-top:6px;">
-    <div class="rotate-hint" id="rotateHint"><span>📱↻ Gira el móvil para jugar en horizontal: el campo se ve más grande.</span><button id="btnRotateHintClose" aria-label="Cerrar aviso">✕</button></div>
-    <div class="view-toggle-row"><button class="view-toggle" id="btnSound" aria-label="Sonido">🔊</button><button class="view-toggle" id="btnToggle3D">🎥 Ver en 3D</button></div>
+    <div class="rotate-hint" id="rotateHint"><span>📱 Pulsa <b>↻ Horizontal</b> o gira el móvil para ver el campo más grande.</span><button id="btnRotateHintClose" aria-label="Cerrar aviso">✕</button></div>
+    <div class="view-toggle-row"><button class="view-toggle" id="btnSound" aria-label="Sonido">🔊</button><button class="view-toggle" id="btnLandscape" hidden>↻ Horizontal</button><button class="view-toggle" id="btnToggle3D">🎥 Ver en 3D</button></div>
     <div class="board-wrap" id="boardWrap"><div id="board" class="board"></div></div>
     <div class="match3d" id="match3d" hidden>
       <div class="m3d-cams">
@@ -749,7 +750,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=12"></script>
+<script src="sound.js?v=13"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1039,6 +1040,7 @@
     document.getElementById('scoreboard').hidden = (name !== 'gameScreen');
     document.body.classList.toggle('in-match', name === 'gameScreen');
     if(name !== 'gameScreen' && window.FTSound) FTSound.crowdStop();
+    if(name !== 'gameScreen') exitLandscapeMode();
     if(name==='careerSelectScreen') renderCareerSelectScreen();
     if(name==='careerCreateScreen'){ selectedLogo = LOGO_EMOJIS[0]; renderLogoGrid(); }
     if(name==='careerScreen') renderCareerScreen();
@@ -2500,7 +2502,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=12').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=13').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -3723,7 +3725,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=12').then(m=>{
+      import('./match3d.js?v=13').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
@@ -3744,6 +3746,34 @@
     render();
   }
   document.getElementById('btnToggle3D').addEventListener('click', ()=> set3DMode(!view3dOn));
+  // Modo horizontal: pantalla completa + giro forzado (funciona aunque la rotación automática esté bloqueada)
+  const btnLandscape = document.getElementById('btnLandscape');
+  const canLockOrientation = !!(screen.orientation && screen.orientation.lock && document.documentElement.requestFullscreen);
+  const isTouch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  btnLandscape.hidden = !(canLockOrientation && isTouch);
+  function inFullscreen(){ return !!document.fullscreenElement; }
+  function updateLandscapeBtn(){ btnLandscape.textContent = inFullscreen() ? '✕ Salir horizontal' : '↻ Horizontal'; }
+  async function enterLandscapeMode(){
+    try{
+      if(!inFullscreen()) await document.documentElement.requestFullscreen({navigationUI:'hide'});
+      await screen.orientation.lock('landscape');
+    } catch(e){
+      if(inFullscreen() && !(screen.orientation.type||'').startsWith('landscape')){ try{ await document.exitFullscreen(); }catch(_){} }
+      message = 'Tu navegador no deja girar la pantalla desde el juego. Activa la rotación automática del móvil y gíralo.';
+      render();
+    }
+    updateLandscapeBtn();
+  }
+  function exitLandscapeMode(){
+    try{ if(screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); }catch(e){}
+    if(inFullscreen()) document.exitFullscreen().catch(()=>{});
+  }
+  btnLandscape.addEventListener('click', ()=>{ if(inFullscreen()) exitLandscapeMode(); else enterLandscapeMode(); });
+  document.addEventListener('fullscreenchange', ()=>{
+    if(!inFullscreen()){ try{ screen.orientation.unlock(); }catch(e){} }
+    updateLandscapeBtn();
+  });
+
   const btnSound = document.getElementById('btnSound');
   function updateSoundBtn(){
     const off = !window.FTSound || FTSound.isMuted();
