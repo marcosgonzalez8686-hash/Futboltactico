@@ -453,6 +453,8 @@
   .pp-form > span{color:#cfe8d8;} .pp-form > b{text-align:right;}
   .pp-form-note{font-size:11.5px; color:#9fd4b8; margin:3px 0 6px;}
   .tp-form{display:block; font-size:9.5px; font-weight:bold; line-height:1.1;}
+  .pp-contract{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin:8px 0 4px; padding:7px 10px; border-radius:10px; background:rgba(0,0,0,.18); border:1px solid #2f5c46; font-size:12px;}
+  .pp-contract .mode-btn{width:auto; margin:0; padding:6px 12px;}
   .cup-status{padding:8px 10px; border-radius:10px; background:rgba(244,208,63,.12); color:#f4d03f; font-weight:bold; font-size:13px; margin:6px 0 10px;}
   .cup-round{margin:8px 0; padding:8px; border-radius:10px; background:rgba(0,0,0,.16); border:1px solid #2f5c46;}
   .cup-rhead{display:flex; justify-content:space-between; align-items:baseline; gap:6px; flex-wrap:wrap;}
@@ -1138,7 +1140,7 @@
         <button data-sort="num" class="active">#</button><button data-sort="rating">Valoración</button><button data-sort="age">Edad</button><button data-sort="value">Valor</button><button data-sort="form">Forma</button>
       </div>
       <div class="chip-row" id="sqFilter">
-        <button data-filter="all" class="active">Todos</button><button data-filter="xi">⭐ Titulares</button><button data-filter="inj">🚑 Lesionados</button><button data-filter="list">🏷️ Transferibles</button>
+        <button data-filter="all" class="active">Todos</button><button data-filter="xi">⭐ Titulares</button><button data-filter="inj">🚑 Lesionados</button><button data-filter="list">🏷️ Transferibles</button><button data-filter="exp">📝 Acaban contrato</button>
       </div>
     </div>
     <div class="card sq-card"><div id="careerRosterList"></div></div>
@@ -1317,7 +1319,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=33"></script>
+<script src="sound.js?v=34"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1969,11 +1971,14 @@
     };
   }
   function calcWage(p){
-    if(p.contractWage) return p.contractWage; // sueldo negociado al ficharlo
+    if(p.contractWage) return p.contractWage; // sueldo de su contrato
+    return baseWage(p);
+  }
+  // Sueldo de mercado según su nivel y edad (lo que pediría hoy)
+  function baseWage(p){
     const overall = overallRating(p);
-    const base = overall * 10;
     const ageFactor = clamp(1 - Math.abs(p.age-27)*0.02, 0.5, 1.15);
-    return Math.max(50, Math.round(base * ageFactor));
+    return Math.max(50, Math.round(overall * 10 * ageFactor));
   }
   function calcMarketValue(p){
     const overall = overallRating(p);
@@ -2039,7 +2044,7 @@
   }
   // ---------- Libro de cuentas del club del usuario (por semana) ----------
   const FIN_INCOME = {tv:'Derechos de TV', gate:'Taquilla', prizes:'Premios', cup:'Copa (premios y taquilla)', sales:'Venta de jugadores'};
-  const FIN_EXPENSE = {wages:'Sueldos de la plantilla', youth:'Cantera', staff:'Personal', facilities:'Obras e instalaciones', signings:'Fichajes'};
+  const FIN_EXPENSE = {wages:'Sueldos de la plantilla', youth:'Cantera', staff:'Personal', facilities:'Obras e instalaciones', signings:'Fichajes y primas', contracts:'Rescisiones'};
   function finEntry(season, week){
     if(!career.finance) career.finance = [];
     let e = career.finance.find(x=>x.s===season && x.w===week);
@@ -2202,6 +2207,7 @@
     careersList.push(newCareer);
     career = newCareer;
     newCup();
+    ensureContracts();
     persistCareers();
   }
 
@@ -2395,13 +2401,16 @@
     career.fixtures = buildSeasonFixtures(career.teams);
     newCup();
     { const sc = scoutingState(); sc.freeAgents.forEach(p=> p.age++); sc.freeAgents = sc.freeAgents.filter(p=> p.age<34 && Math.random()<0.6); }
+    const contractsEnd = processContractsEndOfSeason();
+    ensureContracts();
+    { const exp = expiringPlayers(); if(exp.length) career.contractNotice = {season: career.season, names: exp.map(p=>p.name), read: false}; }
     refillScoutingPool();
     career.seasonSummary = {
       season: career.season-1,
       divisionBefore, divisionAfter,
       promoted: divisionAfter < divisionBefore,
       relegated: divisionAfter > divisionBefore,
-      retired: retiredNames, arrived: arrivedNames, cupLine,
+      retired: retiredNames, arrived: arrivedNames, cupLine, leftFree: contractsEnd.left, urgent: contractsEnd.urgent,
     };
     career.youthReviewPending = true;
     persistCareers();
@@ -2712,6 +2721,7 @@
     if(cupRound>=0 && cupRound < CUP_ROUNDS.length-1 && career.cup && !career.cup.skipped) drawCupRound(cupRound+1);
     const offersBefore = (career.pendingOffers||[]).length;
     career.week = (career.week||1) + 1;
+    if(career.week === 13){ const exp = expiringPlayers().filter(p=>!(p.renew && p.renew.blocked)); if(exp.length) career.contractNotice = {season: career.season, names: exp.map(p=>p.name), read: false}; }
     processWeeklyEvents();
     const newOffers = (career.pendingOffers||[]).slice(offersBefore);
     const seasonEnded = career.week > TOTAL_SEASON_WEEKS;
@@ -2750,7 +2760,7 @@
         if(buyer){
           // el jugador sigue en la liga, ahora en el club comprador
           buyer.slots.push(p.id); buyer.lineup = null; buyer.budget = (buyer.budget||0) - offer.amount;
-          delete p.contractWage; delete p.askingPrice; p.transferListed = false;
+          delete p.contractWage; delete p.contractYears; delete p.contractSince; delete p.renew; delete p.askingPrice; p.transferListed = false;
         } else career.players = career.players.filter(x=>x.id!==offer.playerId);
         career.pendingOffers = career.pendingOffers.filter(o=>o.playerId!==offer.playerId);
       }
@@ -2961,6 +2971,7 @@
     if(career.youthReviewPending && !career.seasonSummary) items.push({kind:'youth'});
     if(career.youthIntake && !career.youthIntake.read) items.push({kind:'intake'});
     if(career.cupNews && !career.cupNews.read) items.push({kind:'cup'});
+    if(career.contractNotice && !career.contractNotice.read && career.contractNotice.season===career.season && expiringPlayers().length) items.push({kind:'contracts'});
     if(career.lastMatchSummary) items.push({kind:'xp'});
     ((career.scouting||{}).negotiations||[]).filter(n=>n.unread).forEach(n=> items.push({kind:'deal', n}));
     { const nw = (career.scouting||{}).inboxNew; if(nw && !nw.read && nw.pids.some(pid=>findPlayerAnywhere(pid))) items.push({kind:'scout', nw}); }
@@ -2999,11 +3010,18 @@
         let body = sm.promoted ? `<span class="promo-dot"></span>¡Ascenso! Pasas a la División ${sm.divisionAfter}.`
           : sm.relegated ? `<span class="releg-dot"></span>Descenso a la División ${sm.divisionAfter}.` : `Sigues en la División ${sm.divisionAfter}.`;
         if(sm.cupLine) body += `<br>${escapeHtml(sm.cupLine)}`;
+        if(sm.leftFree && sm.leftFree.length) body += `<br>📝 Acaban contrato y se van libres: ${sm.leftFree.map(escapeHtml).join(', ')}`;
+        if(sm.urgent && sm.urgent.length) body += `<br>🆘 Fichados de urgencia para completar la plantilla: ${sm.urgent.map(escapeHtml).join(', ')}`;
         if(sm.retired.length) body += `<br>Se retiran: ${sm.retired.map(escapeHtml).join(', ')}<br>Se incorporan: ${sm.arrived.map(escapeHtml).join(', ')}`;
         const acts = career.youthReviewPending
           ? [['Revisar cantera', true, ()=> showScreen('careerYouthScreen')]]
           : [['Cerrar', false, ()=>{ career.seasonSummary=null; persistCareers(); renderCareerScreen(); }]];
         addMsg(sm.promoted?'🎉':sm.relegated?'📉':'🏁', `Resumen de la temporada ${sm.season}`, body, acts);
+      } else if(it.kind==='contracts'){
+        const exp = expiringPlayers();
+        addMsg('📝', `${exp.length} contrato${exp.length>1?'s acaban':' acaba'} esta temporada`,
+          `${exp.map(p=>`<b>${escapeHtml(p.name)}</b>${p.renew && p.renew.blocked ? ' <small>(no quiere renovar)</small>' : ''}`).join(', ')}. Renuévalos desde su ficha o se irán libres al acabar la temporada.`,
+          [['📝 Ver contratos', true, ()=>{ career.contractNotice.read = true; rosterFilter = 'exp'; persistCareers(); showScreen('careerRosterScreen'); }], ['Entendido', false, ()=>{ career.contractNotice.read = true; persistCareers(); renderCareerScreen(); }]]);
       } else if(it.kind==='cup'){
         const cn = career.cupNews;
         addMsg(cn.icon||'🏆', escapeHtml(cn.title), cn.text, [['🏆 Ver Copa', true, ()=>{ cn.read = true; persistCareers(); showScreen('careerCupScreen'); }], ['Entendido', false, ()=>{ cn.read = true; persistCareers(); renderCareerScreen(); }]]);
@@ -3154,6 +3172,7 @@
     if(!career) return;
     if(career.week===undefined) career.week = weekForJornada(career.currentJornada);
     ensureCup();
+    ensureContracts();
     renderNextMatchCard();
     renderInbox();
     renderTableCard();
@@ -3256,9 +3275,10 @@
     if(rosterFilter==='xi') list = list.filter(p=>xi.has(p.id));
     if(rosterFilter==='inj') list = list.filter(p=>p.injuryMatchesLeft>0);
     if(rosterFilter==='list') list = list.filter(p=>p.transferListed);
+    if(rosterFilter==='exp') list = list.filter(p=>(p.contractYears||0)<=1);
     const key = {num:p=>p.squadNumber||99, rating:p=>-bestRoleOf(p).v, age:p=>p.age, value:p=>-calcMarketValue(p), form:p=>-playerForm(p)}[rosterSort];
     list.sort((a,b)=> key(a)-key(b));
-    let h = `<table class="sq-table"><tr><th>#</th><th class="sq-name">Jugador</th><th>Edad</th><th>Puesto</th><th>Val.</th><th>Forma</th><th>Valor</th></tr>`;
+    let h = `<table class="sq-table"><tr><th>#</th><th class="sq-name">Jugador</th><th>Edad</th><th>Puesto</th><th>Val.</th><th>Forma</th><th>Contr.</th><th>Valor</th></tr>`;
     list.forEach(p=>{
       const br = bestRoleOf(p);
       const icons = (xi.has(p.id)?'⭐':'') + (p.injuryMatchesLeft>0?'🚑':'') + (p.transferListed?'🏷️':'') + (offersBy[p.id]?'💰':'');
@@ -3269,9 +3289,10 @@
         <td><span class="role-tag r-${br.r}">${ROLE_SHORT[br.r]}</span></td>
         <td><b style="color:${divColor(br.v,'rating')}">${Math.round(br.v)}</b></td>
         <td>${formHTML(p)}</td>
+        <td><b style="color:${contractColor(p)}; font-size:11px;">${contractShort(p)}</b></td>
         <td class="sq-val">${shortMoney(calcMarketValue(p))}</td></tr>`;
     });
-    if(!list.length) h += `<tr><td colspan="7" class="hint" style="text-align:center; padding:14px;">Ningún jugador con este filtro.</td></tr>`;
+    if(!list.length) h += `<tr><td colspan="8" class="hint" style="text-align:center; padding:14px;">Ningún jugador con este filtro.</td></tr>`;
     el.innerHTML = h + '</table>';
     el.querySelectorAll('tr[data-pid]').forEach(tr=> tr.addEventListener('click', ()=> openPlayerProfile(tr.dataset.pid)));
     const wages = userTeam.slots.reduce((s2,id)=>{ const p=career.players.find(x=>x.id===id); return s2 + (p?calcWage(p):0); }, 0);
@@ -3296,7 +3317,7 @@
     return `<svg viewBox="0 0 180 168" class="pp-radar" role="img" aria-label="Atributos de ${escapeHtml(p.name)}">${g}</svg>`;
   }
   var profilePid = null; var saleDraft = {}, profileMsg = ''; // var: showScreen lo consulta y puede ejecutarse antes de llegar aquí
-  function openPlayerProfile(pid){ profilePid = pid; renderPlayerProfile(); document.getElementById('playerProfileModal').hidden = false; }
+  function openPlayerProfile(pid){ profilePid = pid; if(renewOpenPid !== pid) renewOpenPid = null; renderPlayerProfile(); document.getElementById('playerProfileModal').hidden = false; }
   function closePlayerProfile(){ document.getElementById('playerProfileModal').hidden = true; profilePid = null; }
   function renderPlayerProfile(){
     const p = career.players.find(x=>x.id===profilePid);
@@ -3316,6 +3337,9 @@
       <div class="pp-money"><div><span>Valor</span><b>${formatMoney(calcMarketValue(p))}</b></div><div><span>Sueldo</span><b>${formatMoney(calcWage(p))}/sem</b></div><div><span>Valoración</span><b style="color:${divColor(br.v,'rating')}">${Math.round(br.v)}</b></div></div>
       <div class="pp-form"><span>Forma física</span><div class="pp-fit-track"><div style="width:${playerForm(p)}%; background:${formColor(playerForm(p))}"></div></div>${formHTML(p)}</div>
       <div class="pp-form-note">${playerForm(p)>=100 ? 'Descansado: rinde al 100 %.' : `Cansancio ${100-playerForm(p)} % (rinde un ${Math.round((100-playerForm(p))*0.3)} % menos). Antes del próximo partido recuperará unos ${weeklyRecovery(p)} puntos.`}</div>
+      <div class="pp-contract"><span>📝 Contrato: <b style="color:${contractColor(p)}">${(p.contractYears||0)<=1 ? 'último año' : `${p.contractYears} temporadas`}</b> (hasta el final de T${contractEndSeason(p)}) · ${formatMoney(calcWage(p))}/sem</span>
+        ${renewOpenPid===p.id ? '' : `<button class="mode-btn small" id="ppRenew">✍️ Renovar</button>`}</div>
+      ${renewOpenPid===p.id ? renewPanelHTML(p) : ''}
       <div class="pp-body">${radarSVG(p, color, radarMax)}
         <div class="pc-grid pp-attrs">${ATTRS.map(a=>`<div class="pc-attr"><span>${a.short}</span><b style="color:${divColor(p[a.key],'attr')}">${p[a.key]}</b></div>`).join('')}</div>
       </div>
@@ -3365,6 +3389,11 @@
     body.querySelectorAll('[data-ap]').forEach(b=> b.addEventListener('click', ()=>{ p.askingPrice = Math.max(250, p.askingPrice + Number(b.dataset.ap)); persistCareers(); renderPlayerProfile(); }));
     body.querySelectorAll('[data-sd]').forEach(b=> b.addEventListener('click', ()=>{ saleDraft[b.dataset.sd] = Math.max(250, saleDraft[b.dataset.sd] + Number(b.dataset.sv)); renderPlayerProfile(); }));
     body.querySelectorAll('[data-offer-counter]').forEach(b=> b.addEventListener('click', ()=>{ profileMsg = counterSaleOffer(b.dataset.offerCounter, saleDraft[b.dataset.offerCounter]); renderPlayerProfile(); renderCareerRoster(); updateCareerChrome(); }));
+    { const rb = body.querySelector('#ppRenew'); if(rb) rb.addEventListener('click', ()=>{ renewOpenPid = p.id; renderPlayerProfile(); }); }
+    body.querySelectorAll('[data-ry]').forEach(b=> b.addEventListener('click', ()=>{ const d = renewDraft[p.id]; d.years = clamp(d.years + Number(b.dataset.ry), 1, MAX_CONTRACT_YEARS); renderPlayerProfile(); }));
+    body.querySelectorAll('[data-rw]').forEach(b=> b.addEventListener('click', ()=>{ const d = renewDraft[p.id]; d.wage = Math.max(50, d.wage + Number(b.dataset.rw)); renderPlayerProfile(); }));
+    body.querySelectorAll('[data-rb]').forEach(b=> b.addEventListener('click', ()=>{ const d = renewDraft[p.id]; d.bonus = Math.max(0, d.bonus + Number(b.dataset.rb)); renderPlayerProfile(); }));
+    { const rs = body.querySelector('#ppRenewSend'); if(rs) rs.addEventListener('click', ()=>{ const d = renewDraft[p.id]; offerRenewal(p, d.years, d.wage, d.bonus); renderPlayerProfile(); renderCareerRoster(); updateCareerChrome(); }); }
     { const dm = body.querySelector('#ppDemote'); if(dm) dm.addEventListener('click', ()=>{ demoteToYouth(p); profileMsg=''; closePlayerProfile(); renderCareerRoster(); updateCareerChrome(); }); }
     body.querySelector('#ppShop').addEventListener('click', ()=>{ profileMsg = offerPlayerToClubs(p.id); renderPlayerProfile(); renderCareerRoster(); updateCareerChrome(); });
     body.querySelectorAll('[data-offer-accept]').forEach(b=> b.addEventListener('click', ()=>{ respondToOffer(b.dataset.offerAccept, true); profileMsg=''; closePlayerProfile(); rosterFocus = null; renderCareerRoster(); }));
@@ -3437,6 +3466,7 @@
     const used = new Set(ut.slots.map(id=>(career.players.find(x=>x.id===id)||{}).squadNumber));
     for(let num=1; num<=MAX_SQUAD_SIZE; num++){ if(!used.has(num)){ p.squadNumber = num; break; } }
     career.players.push(p); ut.slots.push(p.id);
+    giveContract(p, 3, baseWage(p));
     persistCareers();
   }
   // Bajar al filial a un jugador joven del primer equipo
@@ -3452,6 +3482,7 @@
     career.players = career.players.filter(x=>x.id!==p.id);
     career.pendingOffers = (career.pendingOffers||[]).filter(o=>o.playerId!==p.id);
     p.transferListed = false; delete p.askingPrice; p.squadNumber = null;
+    ['contractYears','contractWage','contractSince','renew'].forEach(k=> delete p[k]);
     p.yJoin = {s:career.season, w:career.week, v:Math.round(bestRoleOf(p).v)}; p.yHist = [p.yJoin.v]; p.persKnown = true;
     career.youthPlayers.push(p);
     persistCareers();
@@ -3483,10 +3514,12 @@
         const btnRow=document.createElement('div'); btnRow.className='btn-row'; btnRow.style.marginTop='6px';
         const isPending = pendingDiscardPid===pid;
         const discardBtn=document.createElement('button'); discardBtn.className='mode-btn small';
-        discardBtn.textContent = isPending ? '¿Seguro? Sí, descartar' : 'Descartar del primer equipo';
+        const rc = releaseCost(p);
+        discardBtn.textContent = isPending ? `¿Seguro? Sí, rescindir${rc?` (${formatMoney(rc)})`:''}` : `Rescindir contrato${rc?` · ${formatMoney(rc)}`:' · gratis'}`;
         if(userTeam.slots.length<=MIN_SQUAD_SIZE) discardBtn.disabled=true;
         discardBtn.addEventListener('click', ()=>{
           if(!isPending){ pendingDiscardPid = pid; renderCareerYouthScreen(); return; }
+          if(rc) userMoney('contracts', -rc);
           userTeam.slots = userTeam.slots.filter(id=>id!==pid);
           userTeam.lineup = null;
           career.players = career.players.filter(x=>x.id!==pid);
@@ -3728,17 +3761,120 @@
     }
     return n.minScore;
   }
-  function offerContract(n, wage, bonus){
+  // ---------- Contratos: duración, renovaciones y salidas libres ----------
+  const MAX_CONTRACT_YEARS = 5;
+  function giveContract(p, years, wage){
+    p.contractYears = clamp(Math.round(years||3), 1, MAX_CONTRACT_YEARS);
+    p.contractWage = Math.max(50, Math.round(wage || baseWage(p)));
+    p.contractSince = career.season || 1;
+    delete p.renew;
+  }
+  // Partidas antiguas o jugadores sin contrato: se les da uno al sueldo actual
+  function ensureContracts(){
+    const ut = career.teams.find(t=>t.isUser); if(!ut) return;
+    ut.slots.forEach(id=>{ const p = career.players.find(x=>x.id===id); if(p && !p.contractYears) giveContract(p, p.age>=31 ? randInt(1,2) : randInt(2,4), p.contractWage || baseWage(p)); });
+  }
+  function contractEndSeason(p){ return (career.season||1) + (p.contractYears||1) - 1; }
+  function contractShort(p){ const y = p.contractYears||0; return y<=1 ? 'Último' : `${y} t.`; }
+  function contractColor(p){ const y = p.contractYears||0; return y<=1 ? '#ff8b80' : y===2 ? '#f4d03f' : '#9fd4b8'; }
+  // Años que prefiere: los jóvenes contratos cortos, los veteranos largos
+  function idealYears(p){ return p.age<=21 ? 2 : p.age<=29 ? 3 : 4; }
+  function yearsFactor(p, years){ return 1 + 0.07*Math.abs((years||3) - idealYears(p)); }
+  // Lo que pide por renovar: según su valor actual, más si es titular; no quiere cobrar menos (salvo veteranos)
+  function renewDemand(p){
+    const ut = career.teams.find(t=>t.isUser);
+    const starter = (getEffectiveLineup(ut)||[]).includes(p.id);
+    let d = baseWage(p) * (starter ? 1.12 : 1.02);
+    d = Math.max(d, (p.contractWage||0) * (p.age>=31 ? 0.9 : 1));
+    return Math.round(d/10)*10;
+  }
+  function renewalState(p){
+    if(!p.renew || p.renew.season !== career.season) p.renew = {season: career.season, rounds: 0, flex: 0.88 + Math.random()*0.12, blocked: false, done: false, note: ''};
+    return p.renew;
+  }
+  function offerRenewal(p, years, wage, bonus){
+    const r = renewalState(p); if(r.blocked || r.done) return;
+    const ut = career.teams.find(t=>t.isUser);
+    const need = renewDemand(p) * yearsFactor(p, years) * r.flex, score = wage + bonus/20;
+    r.rounds++;
+    if(score >= need){
+      if((ut.budget||0) < bonus){ r.rounds--; r.note = `No tienes presupuesto para pagar la prima de ${formatMoney(bonus)}.`; persistCareers(); return; }
+      if(bonus) userMoney('signings', -bonus);
+      giveContract(p, years + 1, wage);
+      const rr = renewalState(p); rr.done = true; rr.note = `✅ ${p.name} renueva ${years} temporada${years>1?'s':''} (hasta T${contractEndSeason(p)}) por ${formatMoney(wage)}/semana${bonus?` y una prima de ${formatMoney(bonus)}`:''}.`;
+      persistCareers(); return;
+    }
+    const left = PLAYER_PATIENCE - r.rounds;
+    if(left <= 0 || score < need*0.7){
+      r.blocked = true;
+      r.note = `❌ ${p.name} se ha cansado y no quiere hablar de renovar hasta la temporada que viene.${(p.contractYears||0)<=1 ? ' Como es su último año, se irá libre al acabar la temporada.' : ''}`;
+      persistCareers(); return;
+    }
+    const gap = need - score;
+    r.note = `${p.name} quiere más: le faltan unos ${formatMoney(Math.ceil(gap/10)*10)}/semana (o ${formatMoney(Math.ceil(gap*20/100)*100)} más de prima). Prefiere ${idealYears(p)} temporadas. Le quedan ${left} ronda(s) de paciencia.`;
+    persistCareers();
+  }
+  // Rescindir: se paga la mitad del sueldo que le quedaba más allá de esta temporada
+  function releaseCost(p){ return Math.round(calcWage(p) * TOTAL_SEASON_WEEKS * Math.max(0, (p.contractYears||1) - 1) * 0.5); }
+  // Fin de temporada: se descuenta un año y los que acaban se van libres
+  function processContractsEndOfSeason(){
+    const ut = career.teams.find(t=>t.isUser);
+    const leaving = [];
+    ut.slots.forEach(id=>{
+      const p = career.players.find(x=>x.id===id); if(!p || !p.contractYears) return; // los recién llegados (relevos de retirados) aún no tienen
+      p.contractYears = p.contractYears - 1;
+      if(p.contractYears <= 0) leaving.push(p);
+    });
+    leaving.forEach(p=>{
+      ut.slots = ut.slots.filter(id=>id!==p.id);
+      career.players = career.players.filter(x=>x.id!==p.id);
+      career.pendingOffers = (career.pendingOffers||[]).filter(o=>o.playerId!==p.id);
+      ['contractYears','contractWage','contractSince','renew','askingPrice','squadNumber','tired'].forEach(k=> delete p[k]);
+      p.transferListed = false; p.wasMine = true;
+      const sc = scoutingState();
+      sc.freeAgents.push(p);
+      sc.knowledge[p.id] = {k:100, n1:0, n2:0, by:'antiguo jugador'};
+    });
+    if(leaving.length) ut.lineup = null;
+    // si la plantilla se queda corta, llegan jugadores libres de urgencia con contrato de un año
+    const urgent = [];
+    while(ut.slots.length < MIN_SQUAD_SIZE){
+      const p = generateRandomPlayer(SQUAD_TARGETS[ut.slots.length % SQUAD_TARGETS.length], ut.division);
+      career.players.push(p); ut.slots.push(p.id); giveContract(p, 1, baseWage(p)); urgent.push(p.name);
+    }
+    return {left: leaving.map(p=>p.name), urgent};
+  }
+  function expiringPlayers(){
+    const ut = career.teams.find(t=>t.isUser);
+    return ut.slots.map(id=>career.players.find(x=>x.id===id)).filter(p=> p && (p.contractYears||0) <= 1 && !(p.renew && p.renew.season===career.season && p.renew.done));
+  }
+  var renewOpenPid = null, renewDraft = {};
+  function renewPanelHTML(p){
+    const r = renewalState(p);
+    let h = `<div class="offer-banner nego"><div class="nego-head"><b>✍️ Renovación</b>${!r.blocked && !r.done ? ` <small>Paciencia ${patienceHTML(PLAYER_PATIENCE - r.rounds, PLAYER_PATIENCE)}</small>` : ''}</div>`;
+    if(r.note) h += `<div class="nego-note">${escapeHtml(r.note)}</div>`;
+    if(!r.blocked && !r.done){
+      const d = renewDraft[p.id] || (renewDraft[p.id] = {years: idealYears(p), wage: Math.round(renewDemand(p)*0.9/10)*10, bonus: 0});
+      h += `<div class="nego-label">Pide unos <b>${formatMoney(renewDemand(p))}/semana</b> y prefiere <b>${idealYears(p)} temporadas</b> (alejarte de eso le hace pedir más). Más prima compensa menos sueldo.</div>
+        <div class="nego-row"><span>Años</span><div class="offer-ctl"><button data-ry="-1">−1</button><b>+${d.years} temp. (hasta T${(career.season||1)+d.years})</b><button data-ry="1">+1</button></div></div>
+        <div class="nego-row"><span>Sueldo</span><div class="offer-ctl"><button data-rw="-50">−50</button><button data-rw="-10">−10</button><b>${formatMoney(d.wage)}/sem</b><button data-rw="10">+10</button><button data-rw="50">+50</button></div></div>
+        <div class="nego-row"><span>Prima</span><div class="offer-ctl"><button data-rb="-1000">−1k</button><button data-rb="-250">−250</button><b>${formatMoney(d.bonus)}</b><button data-rb="250">+250</button><button data-rb="1000">+1k</button></div></div>
+        <div class="btn-row"><button class="mode-btn small primary" id="ppRenewSend">Ofrecer renovación</button></div>`;
+    }
+    return h + `</div>`;
+  }
+  function offerContract(n, wage, bonus, years){
     const f = findPlayerAnywhere(n.pid); if(!f) return;
     const ut = career.teams.find(t=>t.isUser), from = f.teamIdx>=0 ? career.teams[f.teamIdx] : null;
     if(!canSignPlayer(ut, f.p)){ n.stage = 'refused'; n.respWeek = career.week; n.note = `${f.p.name} no quiere fichar por un club de tu nivel (reputación ${clubReputation(ut)}).`; persistCareers(); return; }
-    const need = playerMinScore(n, f.p, from), score = wage + bonus/20;
-    n.wage = wage; n.bonus = bonus; n.cRounds = (n.cRounds||0) + 1;
-    if(score >= need){ n.agreed = true; n.note = `${f.p.name} acepta ${formatMoney(wage)}/semana${bonus?` y una prima de ${formatMoney(bonus)}`:''}.`; finishSigning(n); return; }
+    years = years || idealYears(f.p);
+    const need = playerMinScore(n, f.p, from) * yearsFactor(f.p, years), score = wage + bonus/20;
+    n.wage = wage; n.bonus = bonus; n.years = years; n.cRounds = (n.cRounds||0) + 1;
+    if(score >= need){ n.agreed = true; n.note = `${f.p.name} acepta ${formatMoney(wage)}/semana durante ${years} temporada${years>1?'s':''}${bonus?` y una prima de ${formatMoney(bonus)}`:''}.`; finishSigning(n); return; }
     const left = PLAYER_PATIENCE - n.cRounds;
     if(left <= 0 || score < need*0.7){ n.stage = 'refused'; n.respWeek = career.week; n.note = `${f.p.name} rechaza la oferta y no quiere seguir negociando.`; persistCareers(); return; }
     const gap = need - score;
-    n.note = `${f.p.name} quiere más: le faltan unos ${formatMoney(Math.ceil(gap/10)*10)}/semana (o ${formatMoney(Math.ceil(gap*20/100)*100)} más de prima). Le quedan ${left} ronda(s) de paciencia.`;
+    n.note = `${f.p.name} quiere más: le faltan unos ${formatMoney(Math.ceil(gap/10)*10)}/semana (o ${formatMoney(Math.ceil(gap*20/100)*100)} más de prima). Prefiere ${idealYears(f.p)} temporadas. Le quedan ${left} ronda(s) de paciencia.`;
     persistCareers();
   }
   // Pagos aplazados: la segunda mitad del traspaso se paga al empezar la siguiente temporada
@@ -3823,7 +3959,7 @@
       const sc = scoutingState(); sc.freeAgents = sc.freeAgents.filter(x=>x.id!==p.id);
       career.players.push(p);
     }
-    p.contractWage = wage; p.transferListed = false; delete p.askingPrice;
+    giveContract(p, n.years || idealYears(p), wage); p.transferListed = false; delete p.askingPrice; delete p.wasMine;
     const used = new Set(ut.slots.map(id=>(career.players.find(x=>x.id===id)||{}).squadNumber));
     for(let num=1; num<=MAX_SQUAD_SIZE; num++){ if(!used.has(num)){ p.squadNumber = num; break; } }
     ut.slots.push(p.id);
@@ -3909,7 +4045,7 @@
   function draftFor(n, f){
     if(!negoDraft[n.id]){
       const from = f.teamIdx>=0 ? career.teams[f.teamIdx] : null, d = wageDemand(f.p, from);
-      negoDraft[n.id] = {fee: n.counter || n.fee || Math.round(calcMarketValue(f.p)/250)*250, inst: !!n.installments, wage: Math.round(d*0.9/10)*10, bonus: n.free ? d*4 : 0};
+      negoDraft[n.id] = {fee: n.counter || n.fee || Math.round(calcMarketValue(f.p)/250)*250, inst: !!n.installments, wage: Math.round(d*0.9/10)*10, bonus: n.free ? d*4 : 0, years: idealYears(f.p)};
     }
     return negoDraft[n.id];
   }
@@ -3929,7 +4065,8 @@
         h += `<div class="btn-row"><button class="mode-btn small primary" data-nsign ${open?'':'disabled'}>✍️ Firmar ahora</button></div>`;
       } else {
         const from = f.teamIdx>=0 ? career.teams[f.teamIdx] : null, demand = wageDemand(f.p, from);
-        h += `<div class="nego-label">Pide unos <b>${formatMoney(demand)}/semana</b>${n.free?` y una prima de unos ${formatMoney(demand*4)}`:''}. Más prima compensa menos sueldo (20 € de prima ≈ 1 €/semana).</div>
+        h += `<div class="nego-label">Pide unos <b>${formatMoney(demand)}/semana</b>${n.free?` y una prima de unos ${formatMoney(demand*4)}`:''} y prefiere <b>${idealYears(f.p)} temporadas</b>. Más prima compensa menos sueldo (20 € de prima ≈ 1 €/semana).</div>
+          <div class="nego-row"><span>Años</span><div class="offer-ctl"><button data-ny="-1">−1</button><b>${d.years||3} temp. (hasta T${(career.season||1)+(d.years||3)-1})</b><button data-ny="1">+1</button></div></div>
           <div class="nego-row"><span>Sueldo</span><div class="offer-ctl"><button data-nw="-50">−50</button><button data-nw="-10">−10</button><b>${formatMoney(d.wage)}/sem</b><button data-nw="10">+10</button><button data-nw="50">+50</button></div></div>
           <div class="nego-row"><span>Prima</span><div class="offer-ctl"><button data-nb="-1000">−1k</button><button data-nb="-250">−250</button><b>${formatMoney(d.bonus)}</b><button data-nb="250">+250</button><button data-nb="1000">+1k</button></div></div>
           <div class="hint">Pagarías ahora: ${formatMoney((n.installments?Math.round(n.fee/2):n.fee) + d.bonus)}${n.installments?` (y ${formatMoney(n.fee-Math.round(n.fee/2))} la próxima temporada)`:''}</div>
@@ -3945,11 +4082,12 @@
     const on = (sel, fn)=> root.querySelectorAll(sel).forEach(b=> b.addEventListener('click', e=>{ e.stopPropagation(); fn(b); }));
     on('[data-nf]', b=>{ d.fee = Math.max(250, d.fee + Number(b.dataset.nf)); rerender(); });
     on('[data-nw]', b=>{ d.wage = Math.max(50, d.wage + Number(b.dataset.nw)); rerender(); });
+    on('[data-ny]', b=>{ d.years = clamp((d.years||3) + Number(b.dataset.ny), 1, MAX_CONTRACT_YEARS); rerender(); });
     on('[data-nb]', b=>{ d.bonus = Math.max(0, d.bonus + Number(b.dataset.nb)); rerender(); });
     root.querySelectorAll('[data-ninst]').forEach(c=> c.addEventListener('change', ()=>{ d.inst = c.checked; rerender(); }));
     on('[data-naccept]', ()=>{ n.fee = n.counter; n.stage='contract'; n.respWeek = career.week; n.note='Traspaso acordado. Ahora ofrécele un contrato al jugador.'; persistCareers(); rerender(); });
     on('[data-nimprove]', ()=>{ improveOffer(n, d.fee, d.inst); rerender(); });
-    on('[data-ncontract]', ()=>{ offerContract(n, d.wage, d.bonus); updateCareerChrome(); rerender(); });
+    on('[data-ncontract]', ()=>{ offerContract(n, d.wage, d.bonus, d.years); updateCareerChrome(); rerender(); });
     on('[data-nsign]', ()=>{ finishSigning(n); updateCareerChrome(); rerender(); });
     on('[data-ncancel]', ()=>{ sc.negotiations = sc.negotiations.filter(x=>x.id!==n.id); delete negoDraft[n.id]; persistCareers(); rerender(); });
   }
@@ -4254,7 +4392,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=33').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=34').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -5898,7 +6036,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=33').then(m=>{
+      import('./match3d.js?v=34').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
