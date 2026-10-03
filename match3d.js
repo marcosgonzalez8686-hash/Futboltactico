@@ -2,7 +2,7 @@
 // No contiene reglas: recibe el estado ya calculado por index.html y avisa de los toques
 // sobre fichas o casillas para que el juego los procese igual que en el tablero 2D.
 import * as THREE from './vendor/three.module.min.js';
-import { buildStadiumShell } from './stadium3d.js?v=32';
+import { buildStadiumShell } from './stadium3d.js?v=33';
 
 const COLS = 14, ROWS = 9;
 const GOAL_COL_W = 0.62;

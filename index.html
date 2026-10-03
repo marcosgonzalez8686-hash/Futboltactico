@@ -453,6 +453,29 @@
   .pp-form > span{color:#cfe8d8;} .pp-form > b{text-align:right;}
   .pp-form-note{font-size:11.5px; color:#9fd4b8; margin:3px 0 6px;}
   .tp-form{display:block; font-size:9.5px; font-weight:bold; line-height:1.1;}
+  .cup-status{padding:8px 10px; border-radius:10px; background:rgba(244,208,63,.12); color:#f4d03f; font-weight:bold; font-size:13px; margin:6px 0 10px;}
+  .cup-round{margin:8px 0; padding:8px; border-radius:10px; background:rgba(0,0,0,.16); border:1px solid #2f5c46;}
+  .cup-rhead{display:flex; justify-content:space-between; align-items:baseline; gap:6px; flex-wrap:wrap;}
+  .cup-rhead small{color:#9fd4b8; font-size:11px;}
+  .cup-round details summary{cursor:pointer; color:#9fd4b8; font-size:12px; margin-top:4px;}
+  .cup-tie{display:grid; grid-template-columns:1fr auto 1fr; gap:6px; align-items:center; font-size:12px; padding:4px 0; border-top:1px solid rgba(255,255,255,.05);}
+  .cup-tie span:last-child{text-align:right;} .cup-tie small{color:#7fb79a; font-size:10px;}
+  .cup-tie b{text-align:center; min-width:46px;} .cup-tie b small{display:block;}
+  .cup-tie.me{background:rgba(244,208,63,.1); border-radius:6px; padding:5px 4px;}
+  .cup-win{font-weight:bold; color:#5ee08f;}
+  .cup-hist{font-size:12.5px; margin:3px 0;}
+  .cal-week{padding:7px 8px; border-radius:10px; margin:5px 0; background:rgba(0,0,0,.14); border:1px solid #2f5c46;}
+  .cal-week.empty{opacity:.55; padding:4px 8px;} .cal-week.past{opacity:.75;}
+  .cal-week.now{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold) inset;}
+  .cal-whead{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;}
+  .cal-whead small{color:#9fd4b8; font-size:11px;}
+  .cal-dbl{background:rgba(231,76,60,.2); color:#ff9f95; font-size:10.5px; font-weight:bold; border-radius:6px; padding:1px 6px;}
+  .cal-dbl.maybe{background:rgba(244,208,63,.14); color:#f4d03f;}
+  .cal-match{display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12.5px; margin-top:4px;}
+  .cal-match.cup > span:first-child{color:#f7dc6f;} .cal-match.tbd{opacity:.75;}
+  .cal-res{white-space:nowrap;}
+  .nm-double{margin:8px 0 2px; padding:6px 8px; border-radius:8px; background:rgba(231,76,60,.14); font-size:12px; color:#ffd2cc;}
+  .nm-pens{display:block; font-size:10px; color:#9fd4b8; text-align:center;}
   .yr{margin-top:8px; padding:8px 10px; border-radius:10px; background:rgba(0,0,0,.18); border:1px solid #2f5c46; font-size:12px;}
   .yr-row{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:2px 0;}
   .yr-row > span:first-child{width:72px; color:#9fd4b8; font-size:11px;}
@@ -1081,6 +1104,7 @@
     <h2>🏆 Competición</h2>
     <div class="hub-list">
       <button class="hub-item" id="btnGoStandings"><span class="hi-ico">📊</span><span class="hi-txt"><b>Clasificación</b><small id="hubSubStandings"></small></span><span class="hi-arrow">›</span></button>
+      <button class="hub-item" id="btnGoCup"><span class="hi-ico">🏆</span><span class="hi-txt"><b>Copa</b><small id="hubSubCup"></small></span><span class="hi-arrow">›</span></button>
       <button class="hub-item" id="btnGoCalendar"><span class="hi-ico">📅</span><span class="hi-txt"><b>Calendario</b><small id="hubSubCalendar"></small></span><span class="hi-arrow">›</span></button>
       <button class="hub-item" id="btnGoHistory"><span class="hi-ico">📜</span><span class="hi-txt"><b>Historial del club</b><small id="hubSubHistory"></small></span><span class="hi-arrow">›</span></button>
     </div>
@@ -1195,6 +1219,12 @@
     <button class="mode-btn" id="btnBackFinance">« Volver</button>
   </div>
 
+  <div class="screen" id="careerCupScreen" hidden>
+    <h2>🏆 Copa</h2>
+    <div class="card"><div id="careerCupList"></div></div>
+    <button class="mode-btn" id="btnBackCup">« Volver</button>
+  </div>
+
   <div class="screen" id="careerCalendarScreen" hidden>
     <h2>Calendario</h2>
     <div class="card"><div id="careerCalendarList"></div></div>
@@ -1287,7 +1317,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=32"></script>
+<script src="sound.js?v=33"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1601,7 +1631,7 @@
 
   // ---------- Navegación de pantallas ----------
   function showScreen(name, fromHistory){
-    ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerTabSquad','careerTabComp','careerTabClub','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerCalendarScreen','careerFinanceScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen','careerFacilitiesScreen','careerAllFacilitiesScreen','careerFriendlyScreen','careerLineupScreen','gameScreen'].forEach(id=>{
+    ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerTabSquad','careerTabComp','careerTabClub','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerCalendarScreen','careerCupScreen','careerFinanceScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen','careerFacilitiesScreen','careerAllFacilitiesScreen','careerFriendlyScreen','careerLineupScreen','gameScreen'].forEach(id=>{
       document.getElementById(id).hidden = (id !== name);
     });
     document.getElementById('scoreboard').hidden = (name !== 'gameScreen');
@@ -1625,6 +1655,7 @@
     if(name==='careerFacilitiesScreen') renderCareerFacilitiesScreen();
     if(name==='careerHistoryScreen') renderCareerHistory();
     if(name==='careerCalendarScreen') renderCareerCalendar();
+    if(name==='careerCupScreen') renderCareerCup();
     if(name==='careerFinanceScreen'){ financeView = {mode: financeView.mode, season: career.season||1, week: null}; renderFinanceScreen(); }
     if(name==='careerLineupScreen') renderLineupScreen();
     if(!fromHistory){
@@ -1675,6 +1706,8 @@
   document.getElementById('btnBackStaff').addEventListener('click', ()=>showScreen('careerTabSquad'));
   document.getElementById('btnBackAllFacilities').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnGoCalendar').addEventListener('click', ()=>showScreen('careerCalendarScreen'));
+  document.getElementById('btnGoCup').addEventListener('click', ()=>showScreen('careerCupScreen'));
+  document.getElementById('btnBackCup').addEventListener('click', ()=>showScreen('careerTabComp'));
   document.getElementById('btnGoFinance').addEventListener('click', ()=>showScreen('careerFinanceScreen'));
   document.getElementById('btnBackFinance').addEventListener('click', ()=>showScreen('careerTabClub'));
   document.getElementById('financeTabs').addEventListener('click', e=>{
@@ -2005,7 +2038,7 @@
     return { id:uid(), name:randomName(), skill, wage:Math.round(60 + skill*3), age:randInt(35,65) };
   }
   // ---------- Libro de cuentas del club del usuario (por semana) ----------
-  const FIN_INCOME = {tv:'Derechos de TV', gate:'Taquilla', prizes:'Premios', sales:'Venta de jugadores'};
+  const FIN_INCOME = {tv:'Derechos de TV', gate:'Taquilla', prizes:'Premios', cup:'Copa (premios y taquilla)', sales:'Venta de jugadores'};
   const FIN_EXPENSE = {wages:'Sueldos de la plantilla', youth:'Cantera', staff:'Personal', facilities:'Obras e instalaciones', signings:'Fichajes'};
   function finEntry(season, week){
     if(!career.finance) career.finance = [];
@@ -2168,6 +2201,7 @@
     };
     careersList.push(newCareer);
     career = newCareer;
+    newCup();
     persistCareers();
   }
 
@@ -2253,7 +2287,9 @@
   function simulateUserFixture(fixtureId){
     const f = career.fixtures.find(x=>x.id===fixtureId);
     if(!f || f.played) return;
+    if(blockedByCup(f)){ showWeekEventsModal(['🏆 Primero juega o simula el partido de Copa: se juega entre semana, antes que la liga.']); return; }
     simulateAndRecord(f);
+    if(f.cup){ resolveCupTie(f); afterUserCupTie(f); }
     persistCareers();
     renderCareerScreen();
   }
@@ -2336,10 +2372,19 @@
 
     // 3. Guardar los espectadores de los partidos en casa antes de rehacer el calendario
     if(!career.attendanceHistory) career.attendanceHistory = [];
-    career.fixtures.filter(f=>f.played && f.homeIdx===uIdx && typeof f.attendance==='number').forEach(f=>{
+    career.fixtures.filter(f=>!f.cup && f.played && f.homeIdx===uIdx && typeof f.attendance==='number').forEach(f=>{
       career.attendanceHistory.push({s:career.season, j:f.jornada, rival:career.teams[f.awayIdx].name, a:f.attendance, c:f.capacity});
     });
     career.attendanceHistory = career.attendanceHistory.filter(a=> a.s >= career.season - 5);
+
+    // Copa: se apunta el campeón y hasta dónde llegó el usuario
+    let cupLine = '';
+    if(career.cup && !career.cup.skipped){
+      const ci = career.cup.championIdx, champ = (ci!==null && ci!==undefined) ? career.teams[ci].name : '—';
+      const userTxt = (ci!==null && ci!==undefined && isUserTeam(ci)) ? '¡Campeón!' : (career.cup.userOut!==null && career.cup.userOut!==undefined) ? `eliminado en ${CUP_ROUNDS[career.cup.userOut].name}` : '';
+      (career.cupHistory = career.cupHistory || []).push({season: career.season, champion: champ, user: userTxt, won: userTxt==='¡Campeón!'});
+      cupLine = userTxt==='¡Campeón!' ? '🏆 ¡Campeón de Copa!' : `Copa: ${userTxt||'—'} · campeón ${champ}`;
+    }
 
     // 4. Nueva temporada: recalendarizar según las divisiones ya actualizadas
     career.season++;
@@ -2348,6 +2393,7 @@
     career.currentJornada = 1;
     career.week = 1;
     career.fixtures = buildSeasonFixtures(career.teams);
+    newCup();
     { const sc = scoutingState(); sc.freeAgents.forEach(p=> p.age++); sc.freeAgents = sc.freeAgents.filter(p=> p.age<34 && Math.random()<0.6); }
     refillScoutingPool();
     career.seasonSummary = {
@@ -2355,7 +2401,7 @@
       divisionBefore, divisionAfter,
       promoted: divisionAfter < divisionBefore,
       relegated: divisionAfter > divisionBefore,
-      retired: retiredNames, arrived: arrivedNames,
+      retired: retiredNames, arrived: arrivedNames, cupLine,
     };
     career.youthReviewPending = true;
     persistCareers();
@@ -2414,6 +2460,156 @@
     if(j<=1) return 3;
     if(j>=2 && j<=7) return j+2;
     return j+5; // j 8..15
+  }
+
+  // ---------- Copa: eliminatorias a partido único entre las 5 divisiones ----------
+  // Ronda previa: divisiones 4 y 5. En treintaidosavos entran las divisiones 1 a 3.
+  const CUP_ROUNDS = [
+    {key:'pre', name:'Ronda previa', short:'Previa', week:4, prize:2000},
+    {key:'r64', name:'Treintaidosavos', short:'1/32', week:6, prize:3000},
+    {key:'r32', name:'Dieciseisavos', short:'1/16', week:8, prize:5000},
+    {key:'r16', name:'Octavos de final', short:'Octavos', week:11, prize:8000},
+    {key:'qf', name:'Cuartos de final', short:'Cuartos', week:14, prize:12000},
+    {key:'sf', name:'Semifinales', short:'Semis', week:17, prize:20000},
+    {key:'f', name:'Final', short:'Final', week:21, prize:40000},
+  ];
+  function cupRoundIdxForWeek(w){ return CUP_ROUNDS.findIndex(r=>r.week===w); }
+  function cupFixtures(round){ return career.fixtures.filter(f=>f.cup && (round===undefined || f.round===round)); }
+  function fxWeek(f){ return f.cup ? f.week : weekForJornada(f.jornada); }
+  function fxLabel(f){ return f.cup ? `🏆 Copa · ${CUP_ROUNDS[f.round].name}` : `⚽ Liga · J${f.jornada}`; }
+  function userInFixture(f){ return isUserTeam(f.homeIdx) || isUserTeam(f.awayIdx); }
+  function userCupFixtureThisWeek(){ return career.fixtures.find(f=>f.cup && f.week===career.week && userInFixture(f)) || null; }
+  // Partidos del usuario esta semana: la Copa se juega entre semana, antes que la liga
+  function userFixturesThisWeek(){
+    const list = [];
+    const c = userCupFixtureThisWeek(); if(c) list.push(c);
+    if(weekPhaseInfo(career.week||1).hasMatch){ const l = userFixtureThisJornada(); if(l) list.push(l); }
+    return list;
+  }
+  // La liga no se puede jugar hasta resolver la Copa de esa misma semana
+  function blockedByCup(f){ if(!f || f.cup) return false; const c = userCupFixtureThisWeek(); return !!(c && !c.played); }
+  function ensureCup(){
+    if(career.cup && career.cup.season === career.season) return;
+    if((career.week||1) <= CUP_ROUNDS[0].week) newCup();
+    else career.cup = {season: career.season, skipped: true}; // partida empezada a mitad de temporada: la Copa arranca la próxima
+  }
+  function newCup(){
+    career.fixtures = career.fixtures.filter(f=>!f.cup);
+    career.cup = {season: career.season, championIdx: null, userOut: null};
+    drawCupRound(0);
+  }
+  function drawCupRound(r){
+    if(cupFixtures(r).length) return;
+    let pool;
+    if(r===0) pool = career.teams.map((t,i)=>i).filter(i=>career.teams[i].division>=4);
+    else if(r===1) pool = cupFixtures(0).map(f=>f.winnerIdx).concat(career.teams.map((t,i)=>i).filter(i=>career.teams[i].division<=3));
+    else pool = cupFixtures(r-1).map(f=>f.winnerIdx);
+    pool = shuffleArray(pool.filter(i=>i!==undefined && i!==null));
+    for(let i=0; i+1<pool.length; i+=2){
+      let a = pool[i], b = pool[i+1];
+      // en la Copa juega en casa el de categoría inferior; si son de la misma, sorteo
+      const da = career.teams[a].division, db = career.teams[b].division;
+      if(db > da || (db===da && Math.random()<0.5)) [a,b] = [b,a];
+      career.fixtures.push({id:uid(), cup:true, round:r, week:CUP_ROUNDS[r].week, division:'cup', jornada:null, homeIdx:a, awayIdx:b, played:false});
+    }
+    const mine = cupFixtures(r).find(userInFixture);
+    if(mine){
+      const home = isUserTeam(mine.homeIdx), rival = career.teams[home ? mine.awayIdx : mine.homeIdx];
+      career.cupNews = {read:false, icon:'🎱', title:`Sorteo de Copa: ${CUP_ROUNDS[r].name}`,
+        text:`Te enfrentas a <b>${escapeHtml(rival.name)}</b> (División ${rival.division}) ${home?'en casa':'fuera'} la semana ${CUP_ROUNDS[r].week}.`};
+    }
+  }
+  // Tanda de penaltis: cinco lanzamientos y muerte súbita; algo más de acierto para el mejor equipo
+  function teamStrength(t){ const xi = getEffectiveLineup(t).map(id=>career.players.find(p=>p.id===id)).filter(Boolean); return xi.length ? xi.reduce((s,p)=>s+overallRating(p),0)/xi.length : 40; }
+  function penaltyShootout(home, away){
+    const d = (teamStrength(home) - teamStrength(away))/200;
+    const ph = clamp(0.74 + d, 0.6, 0.88), pa = clamp(0.74 - d, 0.6, 0.88);
+    let h = 0, a = 0;
+    for(let i=0;i<5;i++){ if(Math.random()<ph) h++; if(Math.random()<pa) a++; }
+    for(let k=0; h===a && k<50; k++){ if(Math.random()<ph) h++; if(Math.random()<pa) a++; }
+    if(h===a){ if(Math.random()<0.5) h++; else a++; }
+    return {h, a};
+  }
+  function resolveCupTie(f){
+    if(!f.cup || !f.played || (f.winnerIdx!==undefined && f.winnerIdx!==null)) return;
+    if(f.scoreHome===f.scoreAway && !f.pens) f.pens = penaltyShootout(career.teams[f.homeIdx], career.teams[f.awayIdx]);
+    f.winnerIdx = f.scoreHome>f.scoreAway ? f.homeIdx : f.scoreHome<f.scoreAway ? f.awayIdx : (f.pens.h>f.pens.a ? f.homeIdx : f.awayIdx);
+    const loserIdx = f.winnerIdx===f.homeIdx ? f.awayIdx : f.homeIdx;
+    const w = career.teams[f.winnerIdx], l = career.teams[loserIdx], home = career.teams[f.homeIdx];
+    const prize = CUP_ROUNDS[f.round].prize;
+    if(w.isUser) userMoney('cup', prize); else w.budget = (w.budget||0) + prize;
+    ensureFixtureAttendance(f);
+    const gate = Math.round(f.attendance * TICKET_PRICE);
+    if(home.isUser) userMoney('cup', gate); else home.budget = (home.budget||0) + gate;
+    changeFanMood(w, f.round>=4 ? 6 : 3); changeFanMood(l, -3);
+    const last = f.round === CUP_ROUNDS.length-1;
+    if(last){ career.cup.championIdx = f.winnerIdx; changeFanMood(w, 12); }
+    if(userInFixture(f)){
+      const pens = f.pens ? ` (penaltis ${f.pens.h}-${f.pens.a})` : '';
+      const res = `${escapeHtml(home.name)} ${f.scoreHome}-${f.scoreAway} ${escapeHtml(career.teams[f.awayIdx].name)}${pens}`;
+      if(w.isUser){
+        career.cupNews = last
+          ? {read:false, icon:'🏆', title:'¡CAMPEONES DE COPA!', text:`${res}. Premio de ${formatMoney(prize)} y la afición está eufórica.`}
+          : {read:false, icon:'🏆', title:`Copa: pasas a ${CUP_ROUNDS[f.round+1].name}`, text:`${res}. Premio de ${formatMoney(prize)}. El sorteo de la siguiente ronda se hace al acabar la semana.`};
+      } else {
+        career.cup.userOut = f.round;
+        career.cupNews = {read:false, icon:'💔', title:`Eliminado de la Copa en ${CUP_ROUNDS[f.round].name}`, text:res + '.'};
+      }
+    }
+  }
+  function simulateCupTie(f){ simulateAndRecord(f); resolveCupTie(f); }
+  function ensureCupRoundSimulated(r){
+    if(r<0 || !career.cup || career.cup.skipped) return;
+    cupFixtures(r).filter(f=>!f.played && !userInFixture(f)).forEach(simulateCupTie);
+  }
+  // Recuperación a mitad de semana tras el partido de Copa (solo media)
+  function midweekRecovery(){ career.players.forEach(p=>{ if(p.tired>0){ p.tired = Math.round(p.tired * Math.sqrt(restKeep(p))); if(p.tired<3) delete p.tired; } }); }
+  function afterUserCupTie(f){
+    ensureCupRoundSimulated(f.round);
+    if(weekPhaseInfo(f.week).hasMatch) midweekRecovery();
+  }
+  function cupUserRoundText(){
+    const cup = career.cup;
+    if(!cup || cup.skipped) return 'Empieza la próxima temporada';
+    if(cup.championIdx!==null && cup.championIdx!==undefined && isUserTeam(cup.championIdx)) return '🏆 ¡Campeón!';
+    if(cup.userOut!==null && cup.userOut!==undefined) return `Eliminado en ${CUP_ROUNDS[cup.userOut].name}`;
+    const next = cupFixtures().filter(f=>userInFixture(f) && !f.played).sort((a,b)=>a.round-b.round)[0];
+    if(next) return `En juego · ${CUP_ROUNDS[next.round].name} (semana ${next.week})`;
+    const lastWon = cupFixtures().filter(f=>userInFixture(f) && f.played).sort((a,b)=>b.round-a.round)[0];
+    if(lastWon && lastWon.round < CUP_ROUNDS.length-1) return `En juego · ${CUP_ROUNDS[lastWon.round+1].name} (semana ${CUP_ROUNDS[lastWon.round+1].week}, rival por sortear)`;
+    const firstR = career.teams[userTeamIdx()].division>=4 ? 0 : 1;
+    return `Entras en ${CUP_ROUNDS[firstR].name} (semana ${CUP_ROUNDS[firstR].week})`;
+  }
+  function renderCareerCup(){
+    const el = document.getElementById('careerCupList');
+    ensureCup();
+    const cup = career.cup;
+    let h = `<p class="hint" style="margin-top:0;">Eliminatorias a partido único entre clubes de todas las divisiones. Juega en casa el de categoría inferior; si hay empate, penaltis. Las divisiones 4 y 5 empiezan en la ronda previa. Los partidos de Copa se juegan entre semana: esas semanas puedes tener <b>dos partidos</b>, así que rota la plantilla.</p>`;
+    h += `<div class="cup-status">${cupUserRoundText()}</div>`;
+    if(cup.skipped){ el.innerHTML = h + '<p class="hint">Esta temporada ya estaba empezada cuando llegó la Copa: arrancará la temporada que viene.</p>'; return; }
+    CUP_ROUNDS.forEach((r, ri)=>{
+      const ties = cupFixtures(ri);
+      const mine = ties.find(userInFixture);
+      const tieRow = f=>{
+        const hm = career.teams[f.homeIdx], aw = career.teams[f.awayIdx];
+        const res = f.played ? `${f.scoreHome}-${f.scoreAway}${f.pens?` <small>(p. ${f.pens.h}-${f.pens.a})</small>`:''}` : '—';
+        const win = idx=> f.winnerIdx===idx ? ' cup-win' : '';
+        return `<div class="cup-tie ${userInFixture(f)?'me':''}"><span class="${win(f.homeIdx)}">${escapeHtml(hm.name)} <small>D${hm.division}</small></span><b>${res}</b><span class="${win(f.awayIdx)}">${escapeHtml(aw.name)} <small>D${aw.division}</small></span></div>`;
+      };
+      h += `<div class="cup-round"><div class="cup-rhead"><b>${r.name}</b><small>Semana ${r.week} · premio al ganador ${formatMoney(r.prize)}</small></div>`;
+      if(!ties.length) h += `<p class="hint" style="margin:4px 0;">Sorteo pendiente.</p>`;
+      else {
+        if(mine) h += tieRow(mine);
+        const rest = ties.filter(f=>f!==mine);
+        if(rest.length) h += `<details><summary>${mine?'Resto de eliminatorias':'Eliminatorias'} (${rest.length})</summary>${rest.map(tieRow).join('')}</details>`;
+      }
+      h += `</div>`;
+    });
+    const hist = career.cupHistory || [];
+    if(hist.length){
+      h += `<b class="card-title" style="margin-top:12px; display:block;">CAMPEONES</b>` + hist.slice().reverse().map(x=>`<div class="cup-hist">T${x.season} · 🏆 ${escapeHtml(x.champion)}${x.user?` · <small>tú: ${escapeHtml(x.user)}</small>`:''}</div>`).join('');
+    }
+    el.innerHTML = h;
   }
 
   function userFixtureThisJornada(){
@@ -2485,7 +2681,11 @@
 
   function advanceWeek(){
     if(!career) return;
+    ensureCup();
     const phase = weekPhaseInfo(career.week);
+    const cupRound = cupRoundIdxForWeek(career.week);
+    { const ucf = userCupFixtureThisWeek(); if(ucf && !ucf.played) return; }
+    ensureCupRoundSimulated(cupRound);
     if(phase.hasMatch){
       const uf = userFixtureThisJornada();
       if(uf && !uf.played) return; // el botón debe estar deshabilitado en este caso
@@ -2508,6 +2708,8 @@
     if(phase.hasMatch && career.currentJornada < TOTAL_JORNADAS){
       career.currentJornada++;
     }
+    // sorteo de la siguiente ronda de Copa
+    if(cupRound>=0 && cupRound < CUP_ROUNDS.length-1 && career.cup && !career.cup.skipped) drawCupRound(cupRound+1);
     const offersBefore = (career.pendingOffers||[]).length;
     career.week = (career.week||1) + 1;
     processWeeklyEvents();
@@ -2693,11 +2895,11 @@
 
   // ---------- Inicio del Modo Carrera (estilo manager) ----------
   const CAREER_CHROME_SCREENS = ['careerScreen','careerTabSquad','careerTabComp','careerTabClub','careerStandingsScreen','careerRosterScreen',
-    'careerHistoryScreen','careerCalendarScreen','careerFinanceScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen',
+    'careerHistoryScreen','careerCalendarScreen','careerCupScreen','careerFinanceScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen',
     'careerFacilitiesScreen','careerAllFacilitiesScreen','careerFriendlyScreen'];
   const TAB_OF_SCREEN = {careerScreen:'careerScreen', careerFriendlyScreen:'careerScreen', careerAllFacilitiesScreen:'careerScreen',
     careerTabSquad:'careerTabSquad', careerRosterScreen:'careerTabSquad', careerYouthScreen:'careerTabSquad', careerStaffScreen:'careerTabSquad',
-    careerTabComp:'careerTabComp', careerStandingsScreen:'careerTabComp', careerCalendarScreen:'careerTabComp', careerHistoryScreen:'careerTabComp',
+    careerTabComp:'careerTabComp', careerStandingsScreen:'careerTabComp', careerCalendarScreen:'careerTabComp', careerCupScreen:'careerTabComp', careerHistoryScreen:'careerTabComp',
     careerTabClub:'careerTabClub', careerFacilitiesScreen:'careerTabClub', careerFinanceScreen:'careerTabClub', careerMarketScreen:'careerTabClub'};
   let currentScreenName = 'menuScreen';
   // Estado del mercado de fichajes y cuándo cambia
@@ -2737,13 +2939,13 @@
     // Botón Continuar
     const advanceBtn = document.getElementById('btnAdvanceWeek');
     const advanceHint = document.getElementById('advanceWeekHint');
-    const uf = phase.hasMatch ? userFixtureThisJornada() : null;
-    if(uf && !uf.played){
+    const wk = userFixturesThisWeek(), pend = wk.filter(f=>!f.played).length;
+    if(pend){
       advanceBtn.disabled = true;
-      advanceHint.textContent = 'Juega o simula tu partido primero';
+      advanceHint.textContent = wk.length>1 ? `Semana con 2 partidos: te queda${pend>1?'n':''} ${pend}` : 'Juega o simula tu partido primero';
     } else {
       advanceBtn.disabled = false;
-      advanceHint.textContent = phase.hasMatch ? 'Jornada resuelta' : `${phase.label}: sin partido`;
+      advanceHint.textContent = wk.length ? (wk.length>1 ? 'Partidos de la semana resueltos' : 'Jornada resuelta') : `${phase.label}: sin partido`;
     }
     if(currentScreenName === 'careerTabSquad') renderHubSquad();
     if(currentScreenName === 'careerTabComp') renderHubComp();
@@ -2758,6 +2960,7 @@
     if(career.seasonSummary) items.push({kind:'season'});
     if(career.youthReviewPending && !career.seasonSummary) items.push({kind:'youth'});
     if(career.youthIntake && !career.youthIntake.read) items.push({kind:'intake'});
+    if(career.cupNews && !career.cupNews.read) items.push({kind:'cup'});
     if(career.lastMatchSummary) items.push({kind:'xp'});
     ((career.scouting||{}).negotiations||[]).filter(n=>n.unread).forEach(n=> items.push({kind:'deal', n}));
     { const nw = (career.scouting||{}).inboxNew; if(nw && !nw.read && nw.pids.some(pid=>findPlayerAnywhere(pid))) items.push({kind:'scout', nw}); }
@@ -2795,11 +2998,15 @@
         const sm = career.seasonSummary;
         let body = sm.promoted ? `<span class="promo-dot"></span>¡Ascenso! Pasas a la División ${sm.divisionAfter}.`
           : sm.relegated ? `<span class="releg-dot"></span>Descenso a la División ${sm.divisionAfter}.` : `Sigues en la División ${sm.divisionAfter}.`;
+        if(sm.cupLine) body += `<br>${escapeHtml(sm.cupLine)}`;
         if(sm.retired.length) body += `<br>Se retiran: ${sm.retired.map(escapeHtml).join(', ')}<br>Se incorporan: ${sm.arrived.map(escapeHtml).join(', ')}`;
         const acts = career.youthReviewPending
           ? [['Revisar cantera', true, ()=> showScreen('careerYouthScreen')]]
           : [['Cerrar', false, ()=>{ career.seasonSummary=null; persistCareers(); renderCareerScreen(); }]];
         addMsg(sm.promoted?'🎉':sm.relegated?'📉':'🏁', `Resumen de la temporada ${sm.season}`, body, acts);
+      } else if(it.kind==='cup'){
+        const cn = career.cupNews;
+        addMsg(cn.icon||'🏆', escapeHtml(cn.title), cn.text, [['🏆 Ver Copa', true, ()=>{ cn.read = true; persistCareers(); showScreen('careerCupScreen'); }], ['Entendido', false, ()=>{ cn.read = true; persistCareers(); renderCareerScreen(); }]]);
       } else if(it.kind==='intake'){
         const yi = career.youthIntake;
         const ps = yi.pids.map(id=>career.youthPlayers.find(x=>x.id===id)).filter(Boolean);
@@ -2850,23 +3057,34 @@
     const div = userDivision();
     const st = computeStandingsForDivision(div);
     const posOf = idx=>{ const i = st.findIndex(x=>x.idx===idx); return i>=0 ? i+1 : '-'; };
-    const thisWeek = phase.hasMatch ? userFixtureThisJornada() : null;
-    const next = thisWeek || career.fixtures.filter(f=>f.division===div && !f.played && (f.homeIdx===uIdx || f.awayIdx===uIdx)).sort((a,b)=>a.jornada-b.jornada)[0];
+    const week = userFixturesThisWeek();
+    const thisWeek = week.find(f=>!f.played) || week[week.length-1] || null;
+    const upcoming = career.fixtures.filter(f=>(f.cup || f.division===div) && !f.played && userInFixture(f) && fxWeek(f) > (career.week||1)).sort((a,b)=>fxWeek(a)-fxWeek(b))[0];
+    const next = thisWeek || upcoming;
     document.getElementById('btnGoFriendly').hidden = !phase.friendlies;
     if(!next){
-      el.innerHTML = `<b class="card-title">PRÓXIMO PARTIDO</b><p class="hint">No quedan partidos de liga esta temporada. Pulsa Continuar para cerrar la temporada.</p>`;
+      el.innerHTML = `<b class="card-title">PRÓXIMO PARTIDO</b><p class="hint">No te quedan partidos esta temporada. Pulsa Continuar para avanzar.</p>`;
       return;
     }
     const home = career.teams[next.homeIdx], away = career.teams[next.awayIdx];
     const userHome = next.homeIdx === uIdx;
-    const when = thisWeek ? (next.played ? 'Jugado esta semana' : 'Esta semana') : `Semana ${weekForJornada(next.jornada)}${phase.hasMatch?'':' · ahora: '+phase.label}`;
-    const side = (t, idx)=>`<div class="nm-team">${teamBadgeHTML(t)}<b>${escapeHtml(t.name)}</b><small>${posOf(idx)}º · ${(st.find(x=>x.idx===idx)||{pts:0}).pts} pts</small></div>`;
-    const score = next.played ? `<div class="nm-score">${next.scoreHome} - ${next.scoreAway}</div>` : `<div class="nm-vs">VS</div>`;
-    el.innerHTML = `<div class="nm-head"><b class="card-title">${next.played?'RESULTADO':'PRÓXIMO PARTIDO'}</b><span>J${next.jornada} · ${userHome?'🏠 En casa':'✈️ Fuera'} · ${when}</span></div>
-      <div class="nm-row">${side(home, next.homeIdx)}${score}${side(away, next.awayIdx)}</div><div class="nm-actions"></div>`;
+    const when = thisWeek ? (next.played ? 'Jugado esta semana' : (next.cup ? 'Esta semana (entre semana)' : 'Esta semana')) : `Semana ${fxWeek(next)}${phase.hasMatch?'':' · ahora: '+phase.label}`;
+    const sub = (t, idx)=> next.cup ? `División ${t.division}` : `${posOf(idx)}º · ${(st.find(x=>x.idx===idx)||{pts:0}).pts} pts`;
+    const side = (t, idx)=>`<div class="nm-team">${teamBadgeHTML(t)}<b>${escapeHtml(t.name)}</b><small>${sub(t, idx)}</small></div>`;
+    const pens = next.played && next.pens ? `<small class="nm-pens">penaltis ${next.pens.h}-${next.pens.a}</small>` : '';
+    const score = next.played ? `<div class="nm-score">${next.scoreHome} - ${next.scoreAway}${pens}</div>` : `<div class="nm-vs">VS</div>`;
+    let dbl = '';
+    if(week.length > 1){
+      dbl = `<div class="nm-double">📅 <b>Semana con 2 partidos</b>: ${week.map(f=>{ const r = career.teams[isUserTeam(f.homeIdx)?f.awayIdx:f.homeIdx]; return `${f.cup?'🏆 Copa':'⚽ Liga'} vs ${escapeHtml(r.name)} ${f.played?`<b>${f.scoreHome}-${f.scoreAway}</b>`:'<i>pendiente</i>'}`; }).join(' · ')}. Vigila el cansancio y rota.</div>`;
+    } else if(!thisWeek && upcoming){
+      const u2 = career.fixtures.filter(f=>(f.cup || f.division===div) && userInFixture(f) && fxWeek(f)===fxWeek(upcoming));
+      if(u2.length > 1) dbl = `<div class="nm-double">📅 La semana ${fxWeek(upcoming)} tienes 2 partidos (Copa y Liga).</div>`;
+    }
+    el.innerHTML = `<div class="nm-head"><b class="card-title">${next.played?'RESULTADO':'PRÓXIMO PARTIDO'}</b><span>${next.cup?`🏆 Copa · ${CUP_ROUNDS[next.round].name}`:`J${next.jornada}`} · ${userHome?'🏠 En casa':'✈️ Fuera'} · ${when}</span></div>
+      <div class="nm-row">${side(home, next.homeIdx)}${score}${side(away, next.awayIdx)}</div>${dbl}<div class="nm-actions"></div>`;
     if(thisWeek && !next.played){
       const acts = el.querySelector('.nm-actions');
-      const play = document.createElement('button'); play.className='mode-btn primary'; play.textContent='⚽ Alineación y jugar';
+      const play = document.createElement('button'); play.className='mode-btn primary'; play.textContent = next.cup ? '🏆 Alineación y jugar la Copa' : '⚽ Alineación y jugar';
       play.addEventListener('click', ()=>openLineupScreen(next.id));
       const sim = document.createElement('button'); sim.className='mode-btn'; sim.textContent='⏩ Simular';
       sim.addEventListener('click', ()=>simulateUserFixture(next.id));
@@ -2892,12 +3110,12 @@
   function renderFormCard(){
     const el = document.getElementById('cardForm');
     const uIdx = userTeamIdx();
-    const played = career.fixtures.filter(f=>f.played && (f.homeIdx===uIdx || f.awayIdx===uIdx)).sort((a,b)=>a.jornada-b.jornada).slice(-5);
+    const played = career.fixtures.filter(f=>f.played && (f.homeIdx===uIdx || f.awayIdx===uIdx)).sort((a,b)=>fxWeek(a)-fxWeek(b) || (a.cup?0:1)-(b.cup?0:1)).slice(-5);
     let dots = played.map(f=>{
       const gf = f.homeIdx===uIdx ? f.scoreHome : f.scoreAway, gc = f.homeIdx===uIdx ? f.scoreAway : f.scoreHome;
       const r = gf>gc ? 'V' : gf<gc ? 'D' : 'E';
       const rival = career.teams[f.homeIdx===uIdx ? f.awayIdx : f.homeIdx].name;
-      return `<span class="form-dot f-${r}" title="J${f.jornada} vs ${escapeHtml(rival)}: ${gf}-${gc}">${r}</span>`;
+      return `<span class="form-dot f-${r}" title="${f.cup?'Copa':'J'+f.jornada} vs ${escapeHtml(rival)}: ${gf}-${gc}">${r}</span>`;
     }).join('');
     if(!played.length) dots = '<span class="hint">Aún sin partidos</span>';
     const team = career.teams[uIdx];
@@ -2915,7 +3133,8 @@
     const div = userDivision(), st = computeStandingsForDivision(div), pos = st.findIndex(x=>x.idx===userTeamIdx())+1;
     document.getElementById('hubSubStandings').textContent = `División ${div} · vas ${pos}º`;
     const left = career.fixtures.filter(f=>f.division===div && !f.played && (f.homeIdx===userTeamIdx()||f.awayIdx===userTeamIdx())).length;
-    document.getElementById('hubSubCalendar').textContent = `${left} partido${left===1?'':'s'} por jugar`;
+    document.getElementById('hubSubCalendar').textContent = `${left} partido${left===1?'':'s'} de liga por jugar · semanas con Copa`;
+    ensureCup(); document.getElementById('hubSubCup').textContent = cupUserRoundText();
     const h = career.clubHistory||[];
     document.getElementById('hubSubHistory').textContent = h.length ? `${h.length} temporada${h.length>1?'s':''} completada${h.length>1?'s':''}` : 'Aún sin temporadas completadas';
   }
@@ -2934,6 +3153,7 @@
   function renderCareerScreen(){
     if(!career) return;
     if(career.week===undefined) career.week = weekForJornada(career.currentJornada);
+    ensureCup();
     renderNextMatchCard();
     renderInbox();
     renderTableCard();
@@ -4034,7 +4254,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=32').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=33').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -4179,8 +4399,10 @@
     titlesTitle.textContent='TÍTULOS';
     el.appendChild(titlesTitle);
     const champs = hist.filter(h=>h.champion);
-    if(!champs.length){
-      const p=document.createElement('p'); p.className='hint'; p.textContent='Todavía no has sido campeón de tu división.';
+    const cupWins = (career.cupHistory||[]).filter(x=>x.won);
+    cupWins.forEach(x=>{ const row=document.createElement('div'); row.style.cssText='margin-top:6px; font-size:13px;'; row.innerHTML = `🏆 Temporada ${x.season} — Campeón de Copa`; el.appendChild(row); });
+    if(!champs.length && !cupWins.length){
+      const p=document.createElement('p'); p.className='hint'; p.textContent='Todavía no has ganado ningún título (liga o Copa).';
       el.appendChild(p);
     } else {
       champs.forEach(h=>{
@@ -4190,40 +4412,49 @@
       });
     }
   }
+  // Calendario por semanas: liga, Copa y semanas con dos partidos
   function renderCareerCalendar(){
     const el = document.getElementById('careerCalendarList');
-    el.innerHTML='';
+    ensureCup();
     const div = userDivision();
-    const rows = career.fixtures
-      .filter(f=> f.division===div && (isUserTeam(f.homeIdx) || isUserTeam(f.awayIdx)))
-      .sort((a,b)=>a.jornada-b.jornada);
-    if(!rows.length){ el.innerHTML='<p class="hint">Aún no hay calendario disponible.</p>'; return; }
-    rows.forEach(f=>{
-      const userIsHome = isUserTeam(f.homeIdx);
-      const rivalIdx = userIsHome ? f.awayIdx : f.homeIdx;
-      const rivalTeam = career.teams[rivalIdx];
-      const row=document.createElement('div'); row.className='fixture-item';
-      const teamsSpan=document.createElement('div'); teamsSpan.className='fixture-teams';
-      if(f.played){
-        const gf = userIsHome ? f.scoreHome : f.scoreAway;
-        const gc = userIsHome ? f.scoreAway : f.scoreHome;
-        const resultLabel = gf>gc ? 'Victoria' : (gf<gc ? 'Derrota' : 'Empate');
-        const att = typeof f.attendance === 'number'
-          ? `<span class="fx-att">👥 ${formatInt(f.attendance)} espectadores${f.capacity ? ` · ${Math.round(f.attendance/f.capacity*100)} %` : ''} · ${userIsHome ? 'en casa' : 'fuera'}</span>` : '';
-        teamsSpan.innerHTML = `J${f.jornada} · vs ${clubNameLink(rivalTeam, rivalIdx)} (${resultLabel})${att}`;
-        row.appendChild(teamsSpan);
-        const scoreSpan=document.createElement('div'); scoreSpan.className='fixture-score';
-        scoreSpan.textContent = `${gf} - ${gc}`;
-        row.appendChild(scoreSpan);
-      } else {
-        teamsSpan.innerHTML = `J${f.jornada} · vs ${clubNameLink(rivalTeam, rivalIdx)} ${userIsHome?'(casa)':'(fuera)'}`;
-        row.appendChild(teamsSpan);
-        const scoreSpan=document.createElement('div'); scoreSpan.className='fixture-score'; scoreSpan.textContent='—';
-        row.appendChild(scoreSpan);
-      }
-      el.appendChild(row);
-    });
+    const mine = career.fixtures.filter(f=> (f.cup || f.division===div) && userInFixture(f));
+    const cup = career.cup || {};
+    const alive = !cup.skipped && (cup.userOut===null || cup.userOut===undefined) && !(cup.championIdx!==null && cup.championIdx!==undefined);
+    // última ronda de Copa a la que ha llegado (para mostrar las siguientes como "rival por sortear")
+    const myCup = mine.filter(f=>f.cup).sort((a,b)=>a.round-b.round);
+    const lastCup = myCup[myCup.length-1];
+    const firstR = career.teams[userTeamIdx()].division>=4 ? 0 : 1;
+    const nextPendingRound = lastCup ? lastCup.round+1 : firstR;
+    const doubles = [], maybes = [];
+    let h = `<p class="hint" style="margin-top:0;">⚽ Liga · 🏆 Copa (entre semana). Las semanas marcadas con <span class="cal-dbl">2 partidos</span> conviene rotar.</p>`;
+    for(let w=1; w<=TOTAL_SEASON_WEEKS; w++){
+      const ph = weekPhaseInfo(w);
+      const items = mine.filter(f=>fxWeek(f)===w).sort((a,b)=>(b.cup?1:0)-(a.cup?1:0));
+      const ri = cupRoundIdxForWeek(w);
+      const tbd = alive && ri>=0 && nextPendingRound!==null && ri>=nextPendingRound && !items.some(f=>f.cup) && !(ri===0 && firstR===1);
+      const n = items.length + (tbd ? 1 : 0);
+      if(items.length>=2) doubles.push(w); else if(n>=2) maybes.push(w);
+      const cls = 'cal-week' + (w===career.week ? ' now' : '') + (w<career.week ? ' past' : '') + (n ? '' : ' empty');
+      h += `<div class="${cls}"><div class="cal-whead"><b>Semana ${w}</b><small>${escapeHtml(ph.label)}${w===career.week?' · ahora':''}</small>${items.length>=2?'<span class="cal-dbl">2 partidos</span>':n>=2?'<span class="cal-dbl maybe">posibles 2 partidos</span>':''}</div>`;
+      items.forEach(f=>{
+        const home = isUserTeam(f.homeIdx), rivalIdx = home ? f.awayIdx : f.homeIdx, rival = career.teams[rivalIdx];
+        let right = '—';
+        if(f.played){
+          const gf = home ? f.scoreHome : f.scoreAway, gc = home ? f.scoreAway : f.scoreHome;
+          let r = gf>gc ? 'V' : gf<gc ? 'D' : 'E';
+          let pens = '';
+          if(f.cup && f.pens){ const pf = home ? f.pens.h : f.pens.a, pc = home ? f.pens.a : f.pens.h; pens = ` <small>(p. ${pf}-${pc})</small>`; r = pf>pc ? 'V' : 'D'; }
+          right = `<span class="form-dot f-${r}">${r}</span> <b>${gf}-${gc}</b>${pens}`;
+        }
+        const att = f.played && typeof f.attendance==='number' && home ? `<span class="fx-att">👥 ${formatInt(f.attendance)}</span>` : '';
+        h += `<div class="cal-match ${f.cup?'cup':''}"><span>${fxLabel(f)} · vs ${clubNameLink(rival, rivalIdx)} <small>${home?'(casa)':'(fuera)'}${f.cup?` · D${rival.division}`:''}</small>${att}</span><span class="cal-res">${right}</span></div>`;
+      });
+      if(tbd) h += `<div class="cal-match cup tbd"><span>🏆 Copa · ${CUP_ROUNDS[ri].name} · <small>rival por sortear (si sigues vivo)</small></span><span class="cal-res">—</span></div>`;
+      h += `</div>`;
+    }
+    el.innerHTML = ((doubles.length || maybes.length) ? `<div class="cup-status">📅 Semanas con 2 partidos: <b>${doubles.join(', ')||'—'}</b>${maybes.length?`<br><small>Si sigues avanzando en la Copa, también: ${maybes.join(', ')}</small>`:''}</div>` : '') + h;
     wireClubLinks(el);
+    const now = el.querySelector('.cal-week.now'); if(now && now.scrollIntoView) setTimeout(()=> now.scrollIntoView({block:'center'}), 50);
   }
   // ---------- Pantalla de Finanzas ----------
   let financeView = {mode:'week', season:1, week:null};
@@ -4253,7 +4484,7 @@
     // Partidos en casa del usuario con espectadores (solo temporada actual: el calendario se rehace cada año)
     if(season !== (career.season||1)) return (career.attendanceHistory||[]).filter(a=>a.s===season);
     const uIdx = userTeamIdx();
-    return career.fixtures.filter(f=>f.played && f.homeIdx===uIdx && typeof f.attendance==='number')
+    return career.fixtures.filter(f=>!f.cup && f.played && f.homeIdx===uIdx && typeof f.attendance==='number')
       .sort((a,b)=>a.jornada-b.jornada)
       .map(f=>({s:season, j:f.jornada, rival:career.teams[f.awayIdx].name, a:f.attendance, c:f.capacity}));
   }
@@ -4521,6 +4752,7 @@
   }
   function openLineupScreen(fixtureId){
     const f = career.fixtures.find(x=>x.id===fixtureId);
+    if(blockedByCup(f)){ showWeekEventsModal(['🏆 Primero juega o simula el partido de Copa: se juega entre semana, antes que la liga.']); return; }
     const userIdx = isUserTeam(f.homeIdx) ? f.homeIdx : f.awayIdx;
     const userTeam = career.teams[userIdx];
     lineupMode = 'match';
@@ -4576,7 +4808,7 @@
       const oppIdx = userIdx===f.homeIdx ? f.awayIdx : f.homeIdx;
       userTeam = career.teams[userIdx];
       const oppTeam = career.teams[oppIdx];
-      document.getElementById('lineupTitle').innerHTML = `Alineación vs ${teamBadgeHTML(oppTeam)}${escapeHtml(oppTeam.name)}`;
+      document.getElementById('lineupTitle').innerHTML = `${f.cup?`🏆 Copa · ${CUP_ROUNDS[f.round].name}<br>`:''}Alineación vs ${teamBadgeHTML(oppTeam)}${escapeHtml(oppTeam.name)}`;
       kitCard.hidden = false;
       confirmBtn.textContent = 'Confirmar y jugar';
 
@@ -4702,7 +4934,7 @@
     const kits = resolveMatchKits(userTeam, oppTeam, chosenKit, userIsHome, false);
     const userColor = kits.user, oppColor = kits.opp;
     matchNames = {A:userTeam.name, B:oppTeam.name};
-    matchContext = {type:'career', fixtureId:f.id, userIsHome};
+    matchContext = {type:'career', fixtureId:f.id, userIsHome, cup:!!f.cup};
     matchKitColors = {A:userColor, B:oppColor};
     matchVenueTeam = userIsHome ? userTeam : oppTeam; // estadio del equipo local
     aiLevel = careerDifficulty().match;
@@ -5037,6 +5269,16 @@
     const sum = ps.reduce((s,p)=> s + ATTRS.reduce((s2,a)=>s2+p[a.key],0)/ATTRS.length, 0);
     return sum/ps.length;
   }
+  // Copa: si acaba en empate, tanda de penaltis
+  let matchPens = null;
+  function maybeCupPenalties(){
+    if(!(matchContext && matchContext.cup) || score.A!==score.B || matchPens) return;
+    const f = career.fixtures.find(x=>x.id===matchContext.fixtureId); if(!f) return;
+    const ut = career.teams.find(t=>t.isUser), ot = career.teams[matchContext.userIsHome ? f.awayIdx : f.homeIdx];
+    const r = penaltyShootout(ut, ot); matchPens = {A:r.h, B:r.a};
+    message += ` Empate: tanda de penaltis ${r.h}-${r.a}. ${r.h>r.a ? '¡Pasas de ronda!' : 'Eliminado.'}`;
+    setTimeout(()=> showToast(`<span class="t-icon">🥅</span>Penaltis ${r.h}-${r.a}<span class="t-sub">${r.h>r.a ? '¡Pasas de ronda!' : 'Eliminado de la Copa'}</span>`, '', r.h>r.a ? '#2ecc71' : '#e74c3c', 3200), 1400);
+  }
   function simulateRestOfMatch(){
     if(matchEnded || !mode) return;
     const totalSeconds = 90*60;
@@ -5054,6 +5296,7 @@
     matchEnded = true;
     selected = null; actionMode = null; subWindowOpen = false;
     message = `¡Partido simulado hasta el final! ${teamName('A')} ${score.A} - ${score.B} ${teamName('B')}`;
+    maybeCupPenalties();
     triggerFulltimeCelebration();
     render();
   }
@@ -5117,6 +5360,7 @@
       } else {
         matchEnded = true;
         message = `¡Final del partido! ${teamName('A')} ${score.A} - ${score.B} ${teamName('B')}`;
+        maybeCupPenalties();
         triggerFulltimeCelebration();
         return 'fulltime';
       }
@@ -5654,7 +5898,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=32').then(m=>{
+      import('./match3d.js?v=33').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
@@ -6024,7 +6268,7 @@
     matchSubsUsed=0; subWindowOpen=false;
     currentFormationA = formationA || DEFAULT_FORMATION;
     currentFormationB = formationB || DEFAULT_FORMATION;
-    halfSeconds=0; half=1; stoppageHalf1=randInt(1,6); stoppageHalf2=randInt(1,6); matchEnded=false; resetTurnState();
+    halfSeconds=0; half=1; stoppageHalf1=randInt(1,6); stoppageHalf2=randInt(1,6); matchEnded=false; matchPens=null; resetTurnState();
     resetFormation('A', rosterA, rosterB);
     matchParticipants = {A: pieces.filter(p=>p.team==='A').map(p=>p.pid), B: pieces.filter(p=>p.team==='B').map(p=>p.pid)};
     matchOutFatigue = {};
@@ -6064,6 +6308,7 @@
         const userTeamRef = career.teams.find(t=>t.isUser);
         const oppTeamRef = career.teams[matchContext.userIsHome ? f.awayIdx : f.homeIdx];
         saveMatchFatigue();
+        if(f.cup){ if(matchPens) f.pens = matchContext.userIsHome ? {h:matchPens.A, a:matchPens.B} : {h:matchPens.B, a:matchPens.A}; resolveCupTie(f); afterUserCupTie(f); }
         const summaryUser = awardXPForPids(matchParticipants.A, matchStats, trainingBoostFor(userTeamRef));
         awardXPForPids(matchParticipants.B, matchStats, trainingBoostFor(oppTeamRef));
         career.lastMatchSummary = { opponent: matchNames.B, entries: summaryUser };
