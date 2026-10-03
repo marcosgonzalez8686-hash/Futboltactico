@@ -453,6 +453,16 @@
   .pp-form > span{color:#cfe8d8;} .pp-form > b{text-align:right;}
   .pp-form-note{font-size:11.5px; color:#9fd4b8; margin:3px 0 6px;}
   .tp-form{display:block; font-size:9.5px; font-weight:bold; line-height:1.1;}
+  .yr{margin-top:8px; padding:8px 10px; border-radius:10px; background:rgba(0,0,0,.18); border:1px solid #2f5c46; font-size:12px;}
+  .yr-row{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:2px 0;}
+  .yr-row > span:first-child{width:72px; color:#9fd4b8; font-size:11px;}
+  .yr-row small{color:#9fd4b8;}
+  .yr-age{font-size:11.5px; color:#cfe8d8;}
+  .yr-know{font-size:10.5px; color:#7fb79a; margin-top:4px;}
+  .yr-gem{background:rgba(93,173,226,.18); color:#8fd0ff; border-radius:6px; padding:1px 6px; font-weight:bold; font-size:11px;}
+  .yr-spark{vertical-align:middle;}
+  .yr-intake{display:block; margin-bottom:6px; padding:6px 8px; border-radius:8px; background:rgba(46,204,113,.14); color:#cfe8d8;}
+  .yr-intake.warn{background:rgba(244,208,63,.14);}
   .offer-ctl{display:flex; align-items:center; justify-content:center; gap:6px; margin:6px 0 2px;}
   .offer-ctl button{background:#1c4433; color:var(--chalk); border:none; border-radius:8px; padding:7px 9px; font-size:12px; font-weight:bold; cursor:pointer;}
   .offer-ctl b{min-width:96px; text-align:center; font-size:16px; color:var(--gold);}
@@ -1131,6 +1141,8 @@
   <div class="screen" id="careerStaffScreen" hidden>
     <h2>Personal</h2>
     <p class="hint" id="staffHint"></p>
+    <b class="card-title">DIRECTOR DE CANTERA</b>
+    <div class="card"><p class="hint" style="margin-top:0;">Cuanta más habilidad tenga, mejores juveniles llegan en cada captación (más potencial y más joyas), más fiables son los informes de la cantera y más rápido mejoran los canteranos.</p><div id="youthDirectorBox"></div></div>
     <b class="card-title">TUS OJEADORES</b>
     <div class="card"><div id="staffList"></div></div>
     <b class="card-title">CANDIDATOS DISPONIBLES</b>
@@ -1275,7 +1287,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=31"></script>
+<script src="sound.js?v=32"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1798,22 +1810,36 @@
   }
 
   const MAX_SQUAD_SIZE = 15;
-  function generateYouthPlayer(targetPos, divisionLevel, facilityLevel){
+  function generateYouthPlayer(targetPos, divisionLevel, facilityLevel, directorSkill){
     const p = generateRandomPlayer(targetPos, Math.min(DIVISIONS, (divisionLevel||5)+1));
     p.age = randInt(15,17);
-    const fLevel = facilityLevel || 1;
-    const attrBoost = (fLevel-1) * 2; // hasta +8 en nivel 5
+    const fLevel = facilityLevel || 1, dSkill = directorSkill || 0;
+    // Instalaciones: hasta +8 en atributos; director de cantera: hasta +3 más
+    const attrBoost = (fLevel-1) * 2 + Math.floor(dSkill/30);
     if(attrBoost>0){ ATTRS.forEach(a=>{ p[a.key] = clamp(p[a.key] + randInt(0, attrBoost), 1, 99); }); }
-    const growthBoost = (fLevel-1) * 5; // hasta +20 de potencial en nivel 5
-    p.hiddenGrowth = clamp(Math.round((randInt(30,99)+randInt(30,99))/2) + growthBoost, 1, 99);
+    // Potencial: instalaciones hasta +20; un buen director encuentra más talento (segunda tirada y hasta +6)
+    const growthBoost = (fLevel-1) * 5 + Math.round(dSkill/15);
+    const roll = ()=> Math.round((randInt(30,99)+randInt(30,99))/2);
+    let g = roll(); if(Math.random() < dSkill/150) g = Math.max(g, roll());
+    p.hiddenGrowth = clamp(g + growthBoost, 1, 99);
+    // Joya: muy de vez en cuando aparece un talento excepcional (más probable con buen director)
+    if(Math.random() < 0.02 + dSkill/1500){
+      p.gem = true; p.hiddenGrowth = randInt(94, 99);
+      ATTRS.forEach(a=>{ p[a.key] = clamp(p[a.key] + randInt(3, 7), 1, 99); });
+    }
+    const r = Math.random(); p.personality = r<0.25 ? 'worker' : r<0.8 ? 'normal' : 'lazy';
+    p.persKnown = Math.random() < dSkill/120; // un buen director lo cala enseguida
+    p.yNoise = Math.random()*2 - 1;
+    if(typeof career!=='undefined' && career) p.yJoin = {s:career.season||1, w:career.week||1, v:Math.round(bestRoleOf(p).v)};
     return p;
   }
   // Tamaño del filial según las instalaciones juveniles: nivel 1 → 4 canteranos … nivel 5 → 12
   function youthSquadSize(facilityLevel){ return 2 + 2*clamp(facilityLevel||1, 1, 5); }
-  function generateYouthSquad(divisionLevel, facilityLevel){
-    const n = youthSquadSize(facilityLevel);
+  // Filial inicial: deja sitio para la primera hornada de la captación
+  function generateYouthSquad(divisionLevel, facilityLevel, directorSkill){
+    const n = Math.max(1, youthSquadSize(facilityLevel) - youthIntakeSize(facilityLevel));
     const roles = []; for(let i=0;i<n;i++) roles.push(SQUAD_TARGETS[i % SQUAD_TARGETS.length]);
-    return roles.map(role=>generateYouthPlayer(role, divisionLevel, facilityLevel));
+    return roles.map(role=>generateYouthPlayer(role, divisionLevel, facilityLevel, directorSkill));
   }
   // Coste semanal de un canterano: 20 € × división, y un 15 % más por cada nivel de instalaciones
   function youthWageEach(team){
@@ -1828,7 +1854,7 @@
 
   // ---------- Instalaciones ----------
   const FACILITY_TYPES = {
-    youth:    {label:'Instalaciones juveniles', desc:'Más canteranos en el filial (de 4 a 12) y con mejores atributos y potencial. Cada canterano cobra un poco más por nivel.'},
+    youth:    {label:'Instalaciones juveniles', desc:'Filial más grande (de 4 a 12 plazas), más juveniles en cada captación (de 2 a 6) y con mejores atributos y potencial. Cada canterano cobra un poco más por nivel.'},
     training: {label:'Instalaciones de entrenamiento', desc:'Aumenta la velocidad a la que tus jugadores y canteranos ganan experiencia.'},
   };
   const STAND_KEYS = ['north','south','east','west'];
@@ -1972,7 +1998,11 @@
   }
   function calcStaffWageBill(){
     if(!career || !career.staff) return 0;
-    return career.staff.reduce((s,st)=>s+ (st.wage||0), 0);
+    return career.staff.reduce((s,st)=>s+ (st.wage||0), 0) + (career.youthDirector ? career.youthDirector.wage||0 : 0);
+  }
+  function generateYouthDirectorCandidate(){
+    const skill = randInt(20,90);
+    return { id:uid(), name:randomName(), skill, wage:Math.round(60 + skill*3), age:randInt(35,65) };
   }
   // ---------- Libro de cuentas del club del usuario (por semana) ----------
   const FIN_INCOME = {tv:'Derechos de TV', gate:'Taquilla', prizes:'Premios', sales:'Venta de jugadores'};
@@ -2133,7 +2163,7 @@
       fixtures: buildSeasonFixtures(teams),
       currentJornada:1, season:1, week:1, seasonSummary:null,
       youthPlayers: generateYouthSquad(5, userFacilities.youth), youthReviewPending:false,
-      scouting: newScoutingState(), staff:[], staffCandidates: generateStaffCandidates(5), financialAlert:null,
+      scouting: newScoutingState(), staff:[], staffCandidates: generateStaffCandidates(5), youthDirector:null, youthDirectorCandidates:[0,1,2].map(generateYouthDirectorCandidate), financialAlert:null,
       pendingOffers:[], clubHistory:[],
     };
     careersList.push(newCareer);
@@ -2302,6 +2332,8 @@
       }
     });
 
+    (career.youthPlayers||[]).forEach(p=>{ p.age = (p.age||16) + 1; });
+
     // 3. Guardar los espectadores de los partidos en casa antes de rehacer el calendario
     if(!career.attendanceHistory) career.attendanceHistory = [];
     career.fixtures.filter(f=>f.played && f.homeIdx===uIdx && typeof f.attendance==='number').forEach(f=>{
@@ -2333,10 +2365,15 @@
     if(!career || !career.youthPlayers) return;
     const userTeam = career.teams.find(t=>t.isUser);
     const mult = trainingBoostFor(userTeam);
+    const dirBoost = 1 + youthDirectorSkill()/500; // director de 90 → +18 %
     career.youthPlayers.forEach(p=>{
-      const xp = Math.round(8 * growthFactorFor(p) * ageFactorFor(p) * mult);
+      ensureYouthMeta(p);
+      const pers = PERSONALITIES[p.personality] || PERSONALITIES.normal;
+      const xp = Math.round(8 * growthFactorFor(p) * ageFactorFor(p) * mult * pers.xp * dirBoost);
       p.hiddenExp = (p.hiddenExp||0) + xp;
       while(p.hiddenExp >= 100){ p.hiddenExp -= 100; levelUpAttribute(p); }
+      // evolución: se apunta la valoración cada 4 semanas
+      if(youthWeeksIn(p) > 0 && youthWeeksIn(p) % 4 === 0){ p.yHist.push(Math.round(bestRoleOf(p).v)); if(p.yHist.length > 16) p.yHist.shift(); }
     });
   }
   // ---------- Forma física: el cansancio se arrastra de un partido a otro ----------
@@ -2568,6 +2605,7 @@
         if(c.financialAlert===undefined){ c.financialAlert = null; persistCareers(); }
         if(!c.staff) c.staff = [];
         if(!c.staffCandidates) c.staffCandidates = generateStaffCandidates(5);
+        if(!c.youthDirectorCandidates) c.youthDirectorCandidates = [0,1,2].map(generateYouthDirectorCandidate);
         if(!c.scouting){
           // del sistema antiguo de prospectos: pasan a ser jugadores libres ya ojeados
           c.scouting = {missions:{}, knowledge:{}, shortlist:[], negotiations:[], freeAgents:[]};
@@ -2719,6 +2757,7 @@
     (career.pendingOffers||[]).forEach(o=> items.push({kind:'offer', o}));
     if(career.seasonSummary) items.push({kind:'season'});
     if(career.youthReviewPending && !career.seasonSummary) items.push({kind:'youth'});
+    if(career.youthIntake && !career.youthIntake.read) items.push({kind:'intake'});
     if(career.lastMatchSummary) items.push({kind:'xp'});
     ((career.scouting||{}).negotiations||[]).filter(n=>n.unread).forEach(n=> items.push({kind:'deal', n}));
     { const nw = (career.scouting||{}).inboxNew; if(nw && !nw.read && nw.pids.some(pid=>findPlayerAnywhere(pid))) items.push({kind:'scout', nw}); }
@@ -2761,6 +2800,20 @@
           ? [['Revisar cantera', true, ()=> showScreen('careerYouthScreen')]]
           : [['Cerrar', false, ()=>{ career.seasonSummary=null; persistCareers(); renderCareerScreen(); }]];
         addMsg(sm.promoted?'🎉':sm.relegated?'📉':'🏁', `Resumen de la temporada ${sm.season}`, body, acts);
+      } else if(it.kind==='intake'){
+        const yi = career.youthIntake;
+        const ps = yi.pids.map(id=>career.youthPlayers.find(x=>x.id===id)).filter(Boolean);
+        const done = ()=>{ yi.read = true; persistCareers(); };
+        if(yi.full || !ps.length){
+          addMsg('🌱', 'Día de captación', 'El filial está lleno: no ha podido llegar ningún juvenil nuevo. Sube o descarta canteranos para hacer sitio el próximo verano.', [['Entendido', false, ()=>{ done(); renderCareerScreen(); }]]);
+        } else {
+          const gems = ps.filter(p=>p.gem);
+          const lines = ps.map(p=>{ const e = youthEstimate(p), rec = youthRecommendation(p);
+            return `<div class="im-player">${p.gem?'💎 ':''}${starsHTML(starsFromRating(e.pot.c))} <b>${escapeHtml(p.name)}</b> · ${ROLE_SHORT[bestRoleOf(p).r]} · ${p.age} años <span class="rec ${rec.cls}">${rec.txt}</span></div>`; }).join('');
+          addMsg(gems.length?'💎':'🌱', gems.length ? `¡Día de captación: ha llegado una joya!` : `Día de captación: llegan ${ps.length} juveniles`,
+            `<div class="hint" style="margin:0 0 4px;">Potencial estimado ${career.youthDirector?'por tu director de cantera':'(sin director: poco fiable)'}</div>` + lines,
+            [['🌱 Ver cantera', true, ()=>{ done(); showScreen('careerYouthScreen'); }], ['Entendido', false, ()=>{ done(); renderCareerScreen(); }]]);
+        }
       } else if(it.kind==='youth'){
         addMsg('🌱', 'Revisión de cantera pendiente', 'Decide qué canteranos suben al primer equipo antes de que empiece la temporada.', [['Revisar cantera', true, ()=> showScreen('careerYouthScreen')]]);
       } else if(it.kind==='scout'){
@@ -2855,8 +2908,8 @@
     const team = career.teams[userTeamIdx()];
     const injured = team.slots.map(id=>career.players.find(p=>p.id===id)).filter(p=>p && p.injuryMatchesLeft>0).length;
     document.getElementById('hubSubRoster').textContent = `${team.slots.length}/${MAX_SQUAD_SIZE} jugadores${injured?` · ${injured} lesionado${injured>1?'s':''}`:''}`;
-    document.getElementById('hubSubYouth').textContent = `${(career.youthPlayers||[]).length} canteranos · ${formatMoney(youthWeeklyCost(team))}/semana${career.youthReviewPending?' · ⚠️ revisión pendiente':''}`;
-    document.getElementById('hubSubStaff').textContent = `${(career.staff||[]).length} ojeador${(career.staff||[]).length===1?'':'es'} · ${formatMoney(calcStaffWageBill())}/semana`;
+    document.getElementById('hubSubYouth').textContent = `${(career.youthPlayers||[]).length}/${youthCapacity(team)} canteranos · ${formatMoney(youthWeeklyCost(team))}/semana${career.youthReviewPending?' · ⚠️ revisión pendiente':''}`;
+    document.getElementById('hubSubStaff').textContent = `${(career.staff||[]).length} ojeador${(career.staff||[]).length===1?'':'es'}${career.youthDirector?' · director de cantera':''} · ${formatMoney(calcStaffWageBill())}/semana`;
   }
   function renderHubComp(){
     const div = userDivision(), st = computeStandingsForDivision(div), pos = st.findIndex(x=>x.idx===userTeamIdx())+1;
@@ -3072,7 +3125,12 @@
         <div class="offer-ctl"><button data-ap="-1000">−1k</button><button data-ap="-250">−250</button><b>${formatMoney(p.askingPrice)}</b><button data-ap="250">+250</button><button data-ap="1000">+1k</button></div>
         <p class="hint" style="text-align:center;">${vibe} · valor de mercado ${formatMoney(value)}</p></div>`;
     }
-    h += `<div class="rp-pad" style="margin-bottom:12px;"><button class="mode-btn small" id="ppShop" ${p.offeredAbs===absWeek()?'disabled':''}>📣 Ofrecer a clubes${p.offeredAbs===absWeek()?' (ya ofrecido esta semana)':''}</button></div>`;
+    h += `<div class="rp-pad" style="margin-bottom:12px;"><button class="mode-btn small" id="ppShop" ${p.offeredAbs===absWeek()?'disabled':''}>📣 Ofrecer a clubes${p.offeredAbs===absWeek()?' (ya ofrecido esta semana)':''}</button>`;
+    if(p.age <= YOUTH_MAX_AGE){
+      const why = userTeam.slots.length <= MIN_SQUAD_SIZE ? ' (plantilla mínima)' : (career.youthPlayers||[]).length >= youthCapacity(userTeam) ? ' (filial lleno)' : '';
+      h += `<button class="mode-btn small" id="ppDemote" ${canDemote(p)?'':'disabled'}>⬇️ Bajar al filial${why}</button><div class="pp-form-note" style="text-align:center;">Con ${p.age} años puede jugar en el filial y seguir creciendo allí.</div>`;
+    }
+    h += `</div>`;
     body.innerHTML = h;
     body.querySelector('#ppClose').addEventListener('click', ()=>{ profileMsg = ''; closePlayerProfile(); renderCareerRoster(); });
     body.querySelector('#ppNumber').addEventListener('change', e=>{
@@ -3087,11 +3145,98 @@
     body.querySelectorAll('[data-ap]').forEach(b=> b.addEventListener('click', ()=>{ p.askingPrice = Math.max(250, p.askingPrice + Number(b.dataset.ap)); persistCareers(); renderPlayerProfile(); }));
     body.querySelectorAll('[data-sd]').forEach(b=> b.addEventListener('click', ()=>{ saleDraft[b.dataset.sd] = Math.max(250, saleDraft[b.dataset.sd] + Number(b.dataset.sv)); renderPlayerProfile(); }));
     body.querySelectorAll('[data-offer-counter]').forEach(b=> b.addEventListener('click', ()=>{ profileMsg = counterSaleOffer(b.dataset.offerCounter, saleDraft[b.dataset.offerCounter]); renderPlayerProfile(); renderCareerRoster(); updateCareerChrome(); }));
+    { const dm = body.querySelector('#ppDemote'); if(dm) dm.addEventListener('click', ()=>{ demoteToYouth(p); profileMsg=''; closePlayerProfile(); renderCareerRoster(); updateCareerChrome(); }); }
     body.querySelector('#ppShop').addEventListener('click', ()=>{ profileMsg = offerPlayerToClubs(p.id); renderPlayerProfile(); renderCareerRoster(); updateCareerChrome(); });
     body.querySelectorAll('[data-offer-accept]').forEach(b=> b.addEventListener('click', ()=>{ respondToOffer(b.dataset.offerAccept, true); profileMsg=''; closePlayerProfile(); rosterFocus = null; renderCareerRoster(); }));
     body.querySelectorAll('[data-offer-reject]').forEach(b=> b.addEventListener('click', ()=>{ respondToOffer(b.dataset.offerReject, false); renderPlayerProfile(); renderCareerRoster(); }));
   }
   const MIN_SQUAD_SIZE = 6;
+  // ---------- Cantera: los canteranos se quedan hasta los 19 años ----------
+  const YOUTH_MAX_AGE = 19;
+  const PERSONALITIES = {
+    worker: {label:'Trabajador', icon:'💪', xp:1.3, desc:'Mejora más rápido de lo normal'},
+    normal: {label:'Normal', icon:'🙂', xp:1, desc:'Progresa a ritmo normal'},
+    lazy:   {label:'Vago', icon:'😴', xp:0.7, desc:'Mejora más despacio de lo normal'},
+  };
+  function youthCapacity(team){ return youthSquadSize((team.facilities && team.facilities.youth) || 1); }
+  // Juveniles nuevos en cada día de captación: nivel 1 → 2 … nivel 5 → 6
+  function youthIntakeSize(level){ return 1 + clamp(level||1, 1, 5); }
+  function youthDirectorSkill(){ return (career && career.youthDirector) ? career.youthDirector.skill : 0; }
+  function youthWeeksIn(p){ const j = p.yJoin || {s:career.season, w:career.week}; return Math.max(0, ((career.season||1) - j.s)*TOTAL_SEASON_WEEKS + ((career.week||1) - j.w)); }
+  // Datos propios del canterano (también para partidas guardadas antes de este cambio)
+  function ensureYouthMeta(p){
+    if(!p.yJoin) p.yJoin = {s:career.season||1, w:career.week||1, v:Math.round(bestRoleOf(p).v)};
+    if(!p.yHist) p.yHist = [p.yJoin.v];
+    if(!p.personality){ const r = Math.random(); p.personality = r<0.25 ? 'worker' : r<0.8 ? 'normal' : 'lazy'; }
+    if(!p.yNoise) p.yNoise = Math.random()*2 - 1;
+  }
+  // Cuánto conoce el club al canterano: depende del director de cantera y del tiempo que lleva en el filial
+  function youthKnowledge(p){ return clamp(Math.round(20 + youthDirectorSkill()*0.6 + youthWeeksIn(p)*1.5), 0, 95); }
+  function youthEstimate(p){ ensureYouthMeta(p); return scoutEstimate(p, {k: youthKnowledge(p), n1: 0, n2: p.yNoise}); }
+  function personalityKnown(p){ return p.persKnown || youthWeeksIn(p) >= Math.max(1, 10 - Math.floor(youthDirectorSkill()/12)); }
+  // Recomendación del director (o del cuerpo técnico si no hay director)
+  function youthRecommendation(p){
+    const e = youthEstimate(p), ut = career.teams.find(t=>t.isUser);
+    const now = recommendationFor(p, e.cur.c);
+    if(now.cls==='rec-xi') return {cls:'rec-xi', txt:'Súbelo ya: sería titular'};
+    const xi = getEffectiveLineup(ut).map(id=>career.players.find(q=>q.id===id)).filter(Boolean);
+    const avgXI = xi.length ? xi.reduce((s,q)=>s+bestRoleOf(q).v,0)/xi.length : 0;
+    if(p.age >= YOUTH_MAX_AGE){
+      if(now.cls==='rec-rot' || e.pot.c >= avgXI) return {cls:'rec-rot', txt:'Último año: súbelo'};
+      return {cls:'rec-no', txt:'Último año: no llegará'};
+    }
+    if(now.cls==='rec-rot') return {cls:'rec-rot', txt:'Puede subir: rotación'};
+    if(e.pot.c >= avgXI + 6) return {cls:'rec-xi', txt:'Muy prometedor: dale tiempo'};
+    if(e.pot.c >= avgXI - 4) return {cls:'rec-rot', txt:'Dale un año más'};
+    return {cls:'rec-no', txt:'No llegará'};
+  }
+  function sparkSVG(vals){
+    if(!vals || vals.length < 2) return '';
+    const lo = Math.min(...vals), hi = Math.max(...vals), W = 70, H = 18, span = (hi-lo) || 1;
+    const pts = vals.map((v,i)=> `${(i/(vals.length-1)*W).toFixed(1)},${(H - 2 - (v-lo)/span*(H-4)).toFixed(1)}`).join(' ');
+    return `<svg class="yr-spark" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><polyline points="${pts}" fill="none" stroke="#5ee08f" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  }
+  // Día de captación: llega una hornada nueva al filial (si hay sitio)
+  function youthIntake(){
+    const ut = career.teams.find(t=>t.isUser);
+    const lvl = (ut.facilities && ut.facilities.youth) || 1;
+    const free = youthCapacity(ut) - career.youthPlayers.length;
+    const n = Math.max(0, Math.min(youthIntakeSize(lvl), free));
+    const arrived = [];
+    for(let i=0;i<n;i++){
+      const p = generateYouthPlayer(SQUAD_TARGETS[randInt(0, SQUAD_TARGETS.length-1)], ut.division, lvl, youthDirectorSkill());
+      career.youthPlayers.push(p); arrived.push(p.id);
+    }
+    career.youthIntake = {season: career.season, pids: arrived, full: n===0, read: false};
+  }
+  function promoteYouth(p){
+    const ut = career.teams.find(t=>t.isUser);
+    if(ut.slots.length >= MAX_SQUAD_SIZE) return;
+    career.youthPlayers = career.youthPlayers.filter(x=>x.id!==p.id);
+    p.homeGrown = true;
+    const used = new Set(ut.slots.map(id=>(career.players.find(x=>x.id===id)||{}).squadNumber));
+    for(let num=1; num<=MAX_SQUAD_SIZE; num++){ if(!used.has(num)){ p.squadNumber = num; break; } }
+    career.players.push(p); ut.slots.push(p.id);
+    persistCareers();
+  }
+  // Bajar al filial a un jugador joven del primer equipo
+  function canDemote(p){
+    const ut = career.teams.find(t=>t.isUser);
+    return p.age <= YOUTH_MAX_AGE && ut.slots.length > MIN_SQUAD_SIZE && (career.youthPlayers||[]).length < youthCapacity(ut);
+  }
+  function demoteToYouth(p){
+    const ut = career.teams.find(t=>t.isUser);
+    if(!canDemote(p)) return;
+    ut.slots = ut.slots.filter(id=>id!==p.id);
+    if(ut.lineup && ut.lineup.includes(p.id)) ut.lineup = null;
+    career.players = career.players.filter(x=>x.id!==p.id);
+    career.pendingOffers = (career.pendingOffers||[]).filter(o=>o.playerId!==p.id);
+    p.transferListed = false; delete p.askingPrice; p.squadNumber = null;
+    p.yJoin = {s:career.season, w:career.week, v:Math.round(bestRoleOf(p).v)}; p.yHist = [p.yJoin.v]; p.persKnown = true;
+    career.youthPlayers.push(p);
+    persistCareers();
+  }
+  var pendingDiscardYouthId = null;
   function renderCareerYouthScreen(){
     const userTeam = career.teams.find(t=>t.isUser);
     const el = document.getElementById('careerYouthList');
@@ -3099,9 +3244,14 @@
     const hintEl = document.getElementById('youthHint');
     const confirmBtn = document.getElementById('btnConfirmYouth');
     const yLvl = (userTeam.facilities && userTeam.facilities.youth) || 1;
-    const youthCostTxt = ` Filial: ${(career.youthPlayers||[]).length} canteranos · ${formatMoney(youthWeeklyCost(userTeam))} por semana (${formatMoney(youthWageEach(userTeam))} cada uno). Con tus instalaciones juveniles de nivel ${yLvl} el filial nuevo de cada temporada tendrá ${youthSquadSize(yLvl)} canteranos.`;
+    const cap = youthCapacity(userTeam), dir = career.youthDirector;
+    const youthCostTxt = ` Filial: ${(career.youthPlayers||[]).length}/${cap} canteranos · ${formatMoney(youthWeeklyCost(userTeam))} por semana (${formatMoney(youthWageEach(userTeam))} cada uno). Cada verano llegan hasta ${youthIntakeSize(yLvl)} juveniles nuevos (instalaciones nivel ${yLvl}).`;
+    const dirTxt = dir ? ` Director de cantera: ${dir.name} (habilidad ${dir.skill}).` : ' Sin director de cantera: los informes son poco fiables. Contrata uno en Personal.';
     if(career.youthReviewPending){
-      hintEl.textContent = `Plantilla actual: ${userTeam.slots.length}/${MAX_SQUAD_SIZE}. Decide qué canteranos subes al primer equipo o descartas, y si quieres liberar sitio descartando jugadores del primer equipo. Los canteranos que no decidas se descartarán al confirmar.` + youthCostTxt;
+      const staying = career.youthPlayers.filter(p=>p.age<=YOUTH_MAX_AGE).length;
+      const slotsFree = Math.max(0, cap - staying), coming = Math.min(slotsFree, youthIntakeSize(yLvl));
+      hintEl.innerHTML = `<span class="yr-intake ${coming<youthIntakeSize(yLvl)?'warn':''}">🌱 Captación de este verano: ${coming ? `llegarán <b>${coming}</b> juvenil${coming>1?'es':''}` : '<b>no llegará nadie</b>'} (máximo ${youthIntakeSize(yLvl)}). ${coming<youthIntakeSize(yLvl)?'Sube o descarta canteranos para hacer sitio.':''}</span>`
+        + escapeHtml(`Fin de temporada. Plantilla: ${userTeam.slots.length}/${MAX_SQUAD_SIZE}. Los canteranos que ya tienen 20 años deben subir al primer equipo o se marcharán al confirmar; el resto se quedan en el filial.` + youthCostTxt + dirTxt);
       confirmBtn.hidden = false;
 
       const squadTitle=document.createElement('b'); squadTitle.className='card-title'; squadTitle.textContent='TU PLANTILLA (descartar)';
@@ -3116,11 +3266,7 @@
         discardBtn.textContent = isPending ? '¿Seguro? Sí, descartar' : 'Descartar del primer equipo';
         if(userTeam.slots.length<=MIN_SQUAD_SIZE) discardBtn.disabled=true;
         discardBtn.addEventListener('click', ()=>{
-          if(!isPending){
-            pendingDiscardPid = pid;
-            renderCareerYouthScreen();
-            return;
-          }
+          if(!isPending){ pendingDiscardPid = pid; renderCareerYouthScreen(); return; }
           userTeam.slots = userTeam.slots.filter(id=>id!==pid);
           userTeam.lineup = null;
           career.players = career.players.filter(x=>x.id!==pid);
@@ -3137,50 +3283,69 @@
         card.appendChild(btnRow);
         el.appendChild(card);
       });
-
       const youthTitle=document.createElement('b'); youthTitle.className='card-title'; youthTitle.style.marginTop='10px'; youthTitle.style.display='block';
       youthTitle.textContent='CANTERA';
       el.appendChild(youthTitle);
-      const youthNote=document.createElement('p'); youthNote.className='hint';
-      youthNote.textContent = 'Los canteranos no se pueden vender ni conocer su valor de mercado hasta que suban al primer equipo.';
-      el.appendChild(youthNote);
     } else {
-      hintEl.textContent = `Plantilla actual: ${userTeam.slots.length}/${MAX_SQUAD_SIZE}. Las decisiones sobre la cantera y la plantilla se toman al final de temporada.` + youthCostTxt;
+      hintEl.textContent = `Plantilla: ${userTeam.slots.length}/${MAX_SQUAD_SIZE}. Puedes subir canteranos al primer equipo cuando quieras, y bajar al filial a jugadores de ${YOUTH_MAX_AGE} años o menos desde su ficha.` + youthCostTxt + dirTxt;
       confirmBtn.hidden = true;
     }
     if(!career.youthPlayers || !career.youthPlayers.length){
-      const p=document.createElement('p'); p.className='hint'; p.textContent='No hay canteranos disponibles ahora mismo.';
+      const p=document.createElement('p'); p.className='hint'; p.textContent='No hay canteranos en el filial ahora mismo.';
       el.appendChild(p);
       return;
     }
-    career.youthPlayers.forEach(p=>{
+    const note=document.createElement('p'); note.className='hint';
+    note.textContent = 'Los canteranos no se pueden vender ni conocer su valor de mercado hasta que suban al primer equipo.';
+    el.appendChild(note);
+    const list = [...career.youthPlayers];
+    list.forEach(ensureYouthMeta);
+    list.sort((a,b)=> youthEstimate(b).pot.c - youthEstimate(a).pot.c);
+    list.forEach(p=>{
       const card = renderPlayerCard(p, {hideValue:true});
-      if(career.youthReviewPending){
-        const btnRow=document.createElement('div'); btnRow.className='btn-row'; btnRow.style.marginTop='6px';
-        const promoteBtn=document.createElement('button'); promoteBtn.className='mode-btn small primary'; promoteBtn.textContent='Subir al 1er equipo';
-        if(userTeam.slots.length>=MAX_SQUAD_SIZE) promoteBtn.disabled=true;
-        promoteBtn.addEventListener('click', ()=>{
-          career.players.push(p);
-          userTeam.slots.push(p.id);
-          career.youthPlayers = career.youthPlayers.filter(x=>x.id!==p.id);
-          persistCareers();
-          renderCareerYouthScreen();
-        });
-        const discardBtn=document.createElement('button'); discardBtn.className='mode-btn small'; discardBtn.textContent='Descartar';
-        discardBtn.addEventListener('click', ()=>{
-          career.youthPlayers = career.youthPlayers.filter(x=>x.id!==p.id);
-          persistCareers();
-          renderCareerYouthScreen();
-        });
-        btnRow.appendChild(promoteBtn); btnRow.appendChild(discardBtn);
-        card.appendChild(btnRow);
+      const e = youthEstimate(p), rec = youthRecommendation(p), k = youthKnowledge(p);
+      const pers = PERSONALITIES[p.personality] || PERSONALITIES.normal;
+      const v0 = p.yJoin.v, vNow = Math.round(bestRoleOf(p).v), dv = vNow - v0;
+      const leaving = p.age > YOUTH_MAX_AGE;
+      const yearsLeft = YOUTH_MAX_AGE - p.age;
+      const ageTxt = leaving ? '<b style="color:#ff8b80">Ya no puede seguir en el filial: súbelo o se marchará</b>'
+        : yearsLeft<=0 ? '<b style="color:#f4d03f">Último año en el filial</b>' : `Puede seguir ${yearsLeft+1} temporada${yearsLeft?'s':''} más en el filial`;
+      const gem = p.gem && k >= 40 ? '<span class="yr-gem">💎 Joya</span>' : '';
+      const rep = document.createElement('div'); rep.className = 'yr';
+      rep.innerHTML = `
+        <div class="yr-row"><span>Puesto</span><b>${ROLE_NAME[bestRoleOf(p).r]}</b> ${gem}</div>
+        <div class="yr-row"><span>Actual</span>${starsHTML(starsFromRating(bestRoleOf(p).v))} <small>valoración ${vNow}</small></div>
+        <div class="yr-row"><span>Potencial</span>${starRangeHTML(e.pot)} <span class="rec ${rec.cls}">${rec.txt}</span></div>
+        <div class="yr-row"><span>Carácter</span>${personalityKnown(p) ? `${pers.icon} <b>${pers.label}</b> <small>${pers.desc}</small>` : '❓ <small>Por descubrir (el director lo conocerá con el tiempo)</small>'}</div>
+        <div class="yr-row"><span>Evolución</span><b>${v0} → ${vNow}</b> <small style="color:${dv>0?'#5ee08f':'#9fd4b8'}">${dv>0?'+':''}${dv}</small> ${sparkSVG(p.yHist.concat(p.yHist[p.yHist.length-1]!==vNow?[vNow]:[]))}</div>
+        <div class="yr-row yr-age">${ageTxt}</div>
+        <div class="yr-know">Informe ${dir?'del director':'del cuerpo técnico'} · fiabilidad ${k} %</div>`;
+      card.appendChild(rep);
+      const btnRow=document.createElement('div'); btnRow.className='btn-row'; btnRow.style.marginTop='6px';
+      const promoteBtn=document.createElement('button'); promoteBtn.className='mode-btn small primary'; promoteBtn.textContent='⬆️ Subir al 1er equipo';
+      if(userTeam.slots.length>=MAX_SQUAD_SIZE){ promoteBtn.disabled=true; promoteBtn.textContent='Plantilla llena'; }
+      promoteBtn.addEventListener('click', ()=>{ promoteYouth(p); renderCareerYouthScreen(); });
+      const isPending = pendingDiscardYouthId===p.id;
+      const discardBtn=document.createElement('button'); discardBtn.className='mode-btn small'; discardBtn.textContent = isPending ? '¿Seguro? Sí, descartar' : 'Descartar';
+      discardBtn.addEventListener('click', ()=>{
+        if(!isPending){ pendingDiscardYouthId = p.id; renderCareerYouthScreen(); return; }
+        career.youthPlayers = career.youthPlayers.filter(x=>x.id!==p.id);
+        pendingDiscardYouthId = null; persistCareers(); renderCareerYouthScreen();
+      });
+      btnRow.appendChild(promoteBtn); btnRow.appendChild(discardBtn);
+      if(isPending){
+        const cancelBtn=document.createElement('button'); cancelBtn.className='mode-btn small'; cancelBtn.textContent='Cancelar';
+        cancelBtn.addEventListener('click', ()=>{ pendingDiscardYouthId=null; renderCareerYouthScreen(); });
+        btnRow.appendChild(cancelBtn);
       }
+      card.appendChild(btnRow);
       el.appendChild(card);
     });
   }
   document.getElementById('btnConfirmYouth').addEventListener('click', ()=>{
-    const userTeam = career.teams.find(t=>t.isUser);
-    career.youthPlayers = generateYouthSquad(userDivision(), userTeam.facilities.youth);
+    // Los que ya han cumplido 20 y no han subido se marchan; llega la nueva hornada
+    career.youthPlayers = career.youthPlayers.filter(p=> p.age <= YOUTH_MAX_AGE);
+    youthIntake();
     career.youthReviewPending = false;
     career.seasonSummary = null;
     persistCareers();
@@ -3671,6 +3836,36 @@
   }
 
   var pendingFireScoutId = null; // ojeador pendiente de confirmar el despido
+  var pendingFireDirector = false;
+  function renderYouthDirectorBox(){
+    const box = document.getElementById('youthDirectorBox');
+    const d = career.youthDirector;
+    if(!career.youthDirectorCandidates) career.youthDirectorCandidates = [0,1,2].map(generateYouthDirectorCandidate);
+    let h = '';
+    if(d){
+      h += `<div class="player-item"><div class="player-info"><b>${escapeHtml(d.name)}</b><span>Habilidad ${d.skill} · Salario ${formatMoney(d.wage)}/jornada</span></div>
+        <div class="player-actions"><button class="icon-btn danger" data-dir-fire>${pendingFireDirector?'¿Seguro?':'Despedir'}</button>${pendingFireDirector?'<button class="icon-btn" data-dir-cancel>Cancelar</button>':''}</div></div>`;
+      h += `<p class="hint">Para contratar a otro, despide primero al actual.</p>`;
+    } else {
+      h += `<p class="hint">No tienes director de cantera. Candidatos:</p>`;
+      career.youthDirectorCandidates.forEach(c=>{
+        h += `<div class="player-item"><div class="player-info"><b>${escapeHtml(c.name)}</b><span>Habilidad ${c.skill} · Salario ${formatMoney(c.wage)}/jornada</span></div><button class="icon-btn" data-dir-hire="${c.id}">Contratar</button></div>`;
+      });
+    }
+    box.innerHTML = h;
+    box.querySelectorAll('[data-dir-hire]').forEach(b=> b.addEventListener('click', ()=>{
+      const i = career.youthDirectorCandidates.findIndex(c=>c.id===b.dataset.dirHire); if(i<0) return;
+      career.youthDirector = career.youthDirectorCandidates[i];
+      career.youthDirectorCandidates.splice(i,1, generateYouthDirectorCandidate());
+      persistCareers(); renderCareerStaffScreen();
+    }));
+    const fb = box.querySelector('[data-dir-fire]');
+    if(fb) fb.addEventListener('click', ()=>{
+      if(!pendingFireDirector){ pendingFireDirector = true; renderCareerStaffScreen(); return; }
+      career.youthDirector = null; pendingFireDirector = false; persistCareers(); renderCareerStaffScreen();
+    });
+    const cb = box.querySelector('[data-dir-cancel]'); if(cb) cb.addEventListener('click', ()=>{ pendingFireDirector = false; renderCareerStaffScreen(); });
+  }
   function hireScout(candidateId){
     if(career.staff.length >= SCOUT_LIMIT) return;
     const idx = career.staffCandidates.findIndex(c=>c.id===candidateId);
@@ -3718,6 +3913,7 @@
       listEl.appendChild(row);
     });
 
+    renderYouthDirectorBox();
     const candEl=document.getElementById('staffCandidatesList');
     candEl.innerHTML='';
     career.staffCandidates.forEach(c=>{
@@ -3838,7 +4034,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=31').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=32').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -5458,7 +5654,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=31').then(m=>{
+      import('./match3d.js?v=32').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
