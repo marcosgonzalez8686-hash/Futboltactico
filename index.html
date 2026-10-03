@@ -449,6 +449,10 @@
   .nego-row .offer-ctl button{padding:7px 6px; font-size:11px;}
   .nego-row .offer-ctl b{min-width:0; flex:1; font-size:14px; white-space:nowrap;}
   .nego-msg{border-color:#5dade2; background:rgba(93,173,226,.12);}
+  .pp-form{display:grid; grid-template-columns:92px 1fr 40px; align-items:center; gap:8px; margin:8px 0 0; font-size:12px;}
+  .pp-form > span{color:#cfe8d8;} .pp-form > b{text-align:right;}
+  .pp-form-note{font-size:11.5px; color:#9fd4b8; margin:3px 0 6px;}
+  .tp-form{display:block; font-size:9.5px; font-weight:bold; line-height:1.1;}
   .offer-ctl{display:flex; align-items:center; justify-content:center; gap:6px; margin:6px 0 2px;}
   .offer-ctl button{background:#1c4433; color:var(--chalk); border:none; border-radius:8px; padding:7px 9px; font-size:12px; font-weight:bold; cursor:pointer;}
   .offer-ctl b{min-width:96px; text-align:center; font-size:16px; color:var(--gold);}
@@ -1097,7 +1101,7 @@
     <div class="sq-controls">
       <div class="chip-row" id="sqSort">
         <span>Ordenar:</span>
-        <button data-sort="num" class="active">#</button><button data-sort="rating">Valoración</button><button data-sort="age">Edad</button><button data-sort="value">Valor</button>
+        <button data-sort="num" class="active">#</button><button data-sort="rating">Valoración</button><button data-sort="age">Edad</button><button data-sort="value">Valor</button><button data-sort="form">Forma</button>
       </div>
       <div class="chip-row" id="sqFilter">
         <button data-filter="all" class="active">Todos</button><button data-filter="xi">⭐ Titulares</button><button data-filter="inj">🚑 Lesionados</button><button data-filter="list">🏷️ Transferibles</button>
@@ -1271,7 +1275,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=30"></script>
+<script src="sound.js?v=31"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1519,7 +1523,8 @@
     const pool = squadIds.map(pid=>career.players.find(p=>p.id===pid)).filter(p=>p && !(p.injuryMatchesLeft>0));
     const used = new Set();
     return roles.map(role=>{
-      const candidates = pool.filter(p=>!used.has(p.id)).sort((a,b)=> slotScore(b,role)-slotScore(a,role));
+      const fit = p=> slotScore(p,role) * (1 - (p.tired||0)/100*0.3); // un jugador cansado rinde menos: rota
+      const candidates = pool.filter(p=>!used.has(p.id)).sort((a,b)=> fit(b)-fit(a));
       const pick = candidates[0];
       if(pick) used.add(pick.id);
       return pick ? pick.id : null;
@@ -1542,6 +1547,7 @@
   let yellowCardsByPid = {}; // pid -> tarjetas amarillas en el partido actual
   let sentOffSlots = {A:new Set(), B:new Set()}; // slots (0-5) expulsados por el resto del partido
   let matchParticipants = {A:[], B:[]};
+  let matchOutFatigue = {}; // cansancio de los que salen del campo (cambio o expulsión)
   let turnGuaranteedUsed = 0;      // pasos garantizados ya resueltos en este turno (0,1,2)
   let turnUsedPieceIds = new Set(); // fichas que ya han hecho su paso garantizado este turno (no se pueden repetir)
   let turnActionUsed = false;       // ya se ha usado la única acción permitida en este turno
@@ -2197,10 +2203,11 @@
     const overallOf = lineupIds=>{
       const ps = lineupIds.map(pid=>career.players.find(p=>p.id===pid)).filter(Boolean);
       if(!ps.length) return 50;
-      const sum = ps.reduce((s,p)=> s + ATTRS.reduce((s2,a)=>s2+p[a.key],0)/ATTRS.length, 0);
+      const sum = ps.reduce((s,p)=> s + ATTRS.reduce((s2,a)=>s2+p[a.key],0)/ATTRS.length * (1 - (p.tired||0)/100*0.3), 0);
       return sum/ps.length;
     };
     const oh=overallOf(homeLineup), oa=overallOf(awayLineup);
+    addMatchLoad(homeLineup); addMatchLoad(awayLineup);
     // Si juega el usuario, la dificultad de los partidos inclina un poco la simulación
     const bias = {easy:0.35, normal:0, hard:-0.35}[careerDifficulty().match];
     const userSide = home.isUser ? 1 : (away.isUser ? -1 : 0);
@@ -2332,6 +2339,23 @@
       while(p.hiddenExp >= 100){ p.hiddenExp -= 100; levelUpAttribute(p); }
     });
   }
+  // ---------- Forma física: el cansancio se arrastra de un partido a otro ----------
+  // p.tired (0-100) es el cansancio con el que empezará su próximo partido. Forma = 100 - cansancio.
+  function playerForm(p){ return 100 - clamp(Math.round(p.tired||0), 0, 100); }
+  function formColor(v){ return v>=75 ? '#2ecc71' : v>=50 ? '#f4d03f' : '#e74c3c'; }
+  function formHTML(p){ const v = playerForm(p); return `<b style="color:${formColor(v)}">${v}%</b>`; }
+  // Recuperación semanal: se recupera del 55 % al 75 % del cansancio según la Resistencia
+  function restKeep(p){ return clamp(0.45 - (p.stamina||50)/500, 0.25, 0.45); }
+  function weeklyRecovery(p){ return Math.round((p.tired||0) * (1 - restKeep(p))); }
+  function recoverFitness(){
+    if(!career) return;
+    career.players.forEach(p=>{ if(p.tired>0){ p.tired = Math.round(p.tired * restKeep(p)); if(p.tired < 3) delete p.tired; } });
+  }
+  // Desgaste estimado de un partido simulado (sin jugarlo): unos 35-48 puntos
+  function simulatedMatchLoad(p){ return 48 - Math.round((p.stamina||50)/8); }
+  function addMatchLoad(pids, fraction){
+    pids.forEach(pid=>{ const p = pid && career.players.find(x=>x.id===pid); if(p) p.tired = clamp(Math.round((p.tired||0) + simulatedMatchLoad(p)*(fraction===undefined?1:fraction)), 0, 100); });
+  }
   function progressInjuries(){
     if(!career) return;
     career.players.forEach(p=>{ if(p.injuryMatchesLeft>0) p.injuryMatchesLeft--; });
@@ -2432,6 +2456,7 @@
     }
     trainYouthPlayers();
     progressInjuries();
+    recoverFitness();
     progressScouting();
     processNegotiationsWeek();
     refillScoutingPool();
@@ -2958,9 +2983,9 @@
     if(rosterFilter==='xi') list = list.filter(p=>xi.has(p.id));
     if(rosterFilter==='inj') list = list.filter(p=>p.injuryMatchesLeft>0);
     if(rosterFilter==='list') list = list.filter(p=>p.transferListed);
-    const key = {num:p=>p.squadNumber||99, rating:p=>-bestRoleOf(p).v, age:p=>p.age, value:p=>-calcMarketValue(p)}[rosterSort];
+    const key = {num:p=>p.squadNumber||99, rating:p=>-bestRoleOf(p).v, age:p=>p.age, value:p=>-calcMarketValue(p), form:p=>-playerForm(p)}[rosterSort];
     list.sort((a,b)=> key(a)-key(b));
-    let h = `<table class="sq-table"><tr><th>#</th><th class="sq-name">Jugador</th><th>Edad</th><th>Puesto</th><th>Val.</th><th>Valor</th></tr>`;
+    let h = `<table class="sq-table"><tr><th>#</th><th class="sq-name">Jugador</th><th>Edad</th><th>Puesto</th><th>Val.</th><th>Forma</th><th>Valor</th></tr>`;
     list.forEach(p=>{
       const br = bestRoleOf(p);
       const icons = (xi.has(p.id)?'⭐':'') + (p.injuryMatchesLeft>0?'🚑':'') + (p.transferListed?'🏷️':'') + (offersBy[p.id]?'💰':'');
@@ -2970,9 +2995,10 @@
         <td>${p.age}</td>
         <td><span class="role-tag r-${br.r}">${ROLE_SHORT[br.r]}</span></td>
         <td><b style="color:${divColor(br.v,'rating')}">${Math.round(br.v)}</b></td>
+        <td>${formHTML(p)}</td>
         <td class="sq-val">${shortMoney(calcMarketValue(p))}</td></tr>`;
     });
-    if(!list.length) h += `<tr><td colspan="6" class="hint" style="text-align:center; padding:14px;">Ningún jugador con este filtro.</td></tr>`;
+    if(!list.length) h += `<tr><td colspan="7" class="hint" style="text-align:center; padding:14px;">Ningún jugador con este filtro.</td></tr>`;
     el.innerHTML = h + '</table>';
     el.querySelectorAll('tr[data-pid]').forEach(tr=> tr.addEventListener('click', ()=> openPlayerProfile(tr.dataset.pid)));
     const wages = userTeam.slots.reduce((s2,id)=>{ const p=career.players.find(x=>x.id===id); return s2 + (p?calcWage(p):0); }, 0);
@@ -3015,6 +3041,8 @@
         <button class="pp-close" id="ppClose" aria-label="Cerrar">✕</button>
       </div>
       <div class="pp-money"><div><span>Valor</span><b>${formatMoney(calcMarketValue(p))}</b></div><div><span>Sueldo</span><b>${formatMoney(calcWage(p))}/sem</b></div><div><span>Valoración</span><b style="color:${divColor(br.v,'rating')}">${Math.round(br.v)}</b></div></div>
+      <div class="pp-form"><span>Forma física</span><div class="pp-fit-track"><div style="width:${playerForm(p)}%; background:${formColor(playerForm(p))}"></div></div>${formHTML(p)}</div>
+      <div class="pp-form-note">${playerForm(p)>=100 ? 'Descansado: rinde al 100 %.' : `Cansancio ${100-playerForm(p)} % (rinde un ${Math.round((100-playerForm(p))*0.3)} % menos). Antes del próximo partido recuperará unos ${weeklyRecovery(p)} puntos.`}</div>
       <div class="pp-body">${radarSVG(p, color, radarMax)}
         <div class="pc-grid pp-attrs">${ATTRS.map(a=>`<div class="pc-attr"><span>${a.short}</span><b style="color:${divColor(p[a.key],'attr')}">${p[a.key]}</b></div>`).join('')}</div>
       </div>
@@ -3810,7 +3838,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=30').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=31').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -4390,8 +4418,8 @@
         ratingSum += v; filled++;
         const surname = p.name.trim().split(' ').slice(-1)[0];
         m.innerHTML = `<span class="tp-shirt" style="--kit:${userTeam.kitPrimary}; --kit-text:${textColorFor(userTeam.kitPrimary)}; --fit:${fitColor(k)}">${p.squadNumber||'–'}</span>
-          <span class="tp-name">${escapeHtml(surname)}</span><span class="tp-role">${ROLE_SHORT[role]} <b style="color:${divColor(v,'rating')}">${Math.round(v)}</b></span>`;
-        m.title = `${p.name} · ${ROLE_NAME[role]} · encaje ${Math.round(k*100)} %`;
+          <span class="tp-name">${escapeHtml(surname)}</span><span class="tp-role">${ROLE_SHORT[role]} <b style="color:${divColor(v,'rating')}">${Math.round(v)}</b></span>${playerForm(p)<100?`<span class="tp-form" style="color:${formColor(playerForm(p))}">⚡${playerForm(p)}%</span>`:''}`;
+        m.title = `${p.name} · ${ROLE_NAME[role]} · encaje ${Math.round(k*100)} % · forma ${playerForm(p)} %`;
       } else {
         m.innerHTML = `<span class="tp-shirt tp-empty">+</span><span class="tp-role">${ROLE_SHORT[role]}</span>`;
       }
@@ -4423,7 +4451,7 @@
       const r = sortRole || br.r, v = slotScore(p, r), k = roleFit(p, r);
       return `<button class="bench-row ${activeBenchPid===p.id?'active':''}" data-pid="${p.id}" ${injured?'disabled':''}>
         <span class="tp-shirt sm" style="--kit:${userTeam.kitPrimary}; --kit-text:${textColorFor(userTeam.kitPrimary)}; --fit:${fitColor(k)}">${p.squadNumber||'–'}</span>
-        <span class="br-name"><b>${escapeHtml(p.name)}</b><small>${p.age} años · mejor puesto ${ROLE_SHORT[br.r]}${injured?` · 🚑 baja ${p.injuryMatchesLeft}`:''}</small></span>
+        <span class="br-name"><b>${escapeHtml(p.name)}</b><small>${p.age} años · mejor puesto ${ROLE_SHORT[br.r]} · forma ${formHTML(p)}${injured?` · 🚑 baja ${p.injuryMatchesLeft}`:''}</small></span>
         <span class="br-val"><small>${ROLE_SHORT[r]}</small><b style="color:${divColor(v,'rating')}">${Math.round(v)}</b></span></button>`;
     }).join('');
     candEl.querySelectorAll('.bench-row').forEach(b=> b.addEventListener('click', ()=> lineupTapBench(b.dataset.pid)));
@@ -4491,7 +4519,7 @@
       const p = career.players.find(x=>x.id===pid);
       if(!p) return {...NEUTRAL, name:null, id:null, number:null};
       const attrs={}; ATTRS.forEach(a=>attrs[a.key]=p[a.key]);
-      return {...attrs, name:p.name, id:p.id, number:p.squadNumber||null};
+      return {...attrs, name:p.name, id:p.id, number:p.squadNumber||null, fatigue:clamp(Math.round(p.tired||0),0,100)};
     });
   }
 
@@ -4710,6 +4738,7 @@
     return carrier.team==='A' ? (defender.col < carrier.col) : (defender.col > carrier.col);
   }
   function sendOffPiece(piece){
+    if(piece.pid) matchOutFatigue[piece.pid] = piece.fatigue||0;
     const slotIdx = parseInt(piece.id.slice(1), 10);
     sentOffSlots[piece.team].add(slotIdx);
     const idx = pieces.findIndex(p=>p.id===piece.id);
@@ -4825,6 +4854,7 @@
     const addA = Math.max(0, Math.round(expA + (Math.random()-0.5)*2*fraction));
     const addB = Math.max(0, Math.round(expB + (Math.random()-0.5)*2*fraction));
     score.A += addA; score.B += addB;
+    pieces.forEach(p=>{ p.fatigue = clamp(Math.round((p.fatigue||0) + (48 - (p.stamina||50)/8)*fraction), 0, 100); });
     matchEnded = true;
     selected = null; actionMode = null; subWindowOpen = false;
     message = `¡Partido simulado hasta el final! ${teamName('A')} ${score.A} - ${score.B} ${teamName('B')}`;
@@ -5406,6 +5436,8 @@
           kit, text: matchKitColors[p.team] ? textColorFor(kit) : (p.team==='A' ? '#291200' : '#eef4ff'),
           selected: !!(selected && selected.id===p.id),
           idle: !matchEnded && p.team!==turn,
+          // ya ha jugado en este turno y no se puede volver a usar: sin círculo en el suelo
+          spent: !matchEnded && p.team===turn && (turnBonusPieceId ? p.id!==turnBonusPieceId : turnUsedPieceIds.has(p.id)),
           yellow: !!(p.pid && yellowCardsByPid[p.pid]>=1),
         };
       }),
@@ -5426,7 +5458,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=30').then(m=>{
+      import('./match3d.js?v=31').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
@@ -5682,15 +5714,21 @@
     html += `</div></div>`;
     el.innerHTML = html;
   }
+  function saveMatchFatigue(){
+    const set = (pid, v)=>{ const p = pid && career.players.find(x=>x.id===pid); if(p){ p.tired = clamp(Math.round(v),0,100); if(!p.tired) delete p.tired; } };
+    Object.keys(matchOutFatigue).forEach(pid=> set(pid, matchOutFatigue[pid]));
+    pieces.forEach(p=> set(p.pid, p.fatigue||0));
+  }
   function performSubstitution(outPid, inPid){
     const piece = pieces.find(p=>p.pid===outPid && p.team==='A');
     const benchPlayer = career.players.find(p=>p.id===inPid);
     if(!piece || !benchPlayer) return;
+    matchOutFatigue[piece.pid] = piece.fatigue||0;
     piece.pid = benchPlayer.id;
     piece.name = benchPlayer.name;
     piece.number = benchPlayer.squadNumber || null;
     ATTRS.forEach(a=> piece[a.key] = benchPlayer[a.key]);
-    piece.fatigue = 0;
+    piece.fatigue = clamp(Math.round(benchPlayer.tired||0), 0, 100);
     if(!matchParticipants.A.includes(benchPlayer.id)) matchParticipants.A.push(benchPlayer.id);
     matchSubsUsed++;
     message = `Cambio: entra ${benchPlayer.name}.`;
@@ -5728,14 +5766,14 @@
         outSel.style.cssText='width:100%; padding:8px; margin-bottom:6px; border-radius:6px; border:1px solid #2f5c46; background:#0e2118; color:var(--chalk); font-size:13px;';
         onPitchA.forEach(p=>{
           const opt=document.createElement('option'); opt.value=p.pid;
-          opt.textContent = `Sale: ${p.name||p.role} (${p.role})`;
+          opt.textContent = `Sale: ${p.name||p.role} (${p.role}) · cansancio ${p.fatigue||0}%`;
           outSel.appendChild(opt);
         });
         const inSel=document.createElement('select');
         inSel.style.cssText='width:100%; padding:8px; margin-bottom:6px; border-radius:6px; border:1px solid #2f5c46; background:#0e2118; color:var(--chalk); font-size:13px;';
         bench.forEach(p=>{
           const opt=document.createElement('option'); opt.value=p.id;
-          opt.textContent = `Entra: ${p.name} (${overallRating(p)})`;
+          opt.textContent = `Entra: ${p.name} (${overallRating(p)}) · forma ${playerForm(p)}%`;
           inSel.appendChild(opt);
         });
         const btn=document.createElement('button'); btn.className='mode-btn small primary'; btn.textContent='Confirmar cambio';
@@ -5793,6 +5831,7 @@
     halfSeconds=0; half=1; stoppageHalf1=randInt(1,6); stoppageHalf2=randInt(1,6); matchEnded=false; resetTurnState();
     resetFormation('A', rosterA, rosterB);
     matchParticipants = {A: pieces.filter(p=>p.team==='A').map(p=>p.pid), B: pieces.filter(p=>p.team==='B').map(p=>p.pid)};
+    matchOutFatigue = {};
     message='¡Comienza el partido! Elige una ficha.';
     showScreen('gameScreen');
     skipMoveFx = true; shotFx = null;
@@ -5828,6 +5867,7 @@
         f.played=true;
         const userTeamRef = career.teams.find(t=>t.isUser);
         const oppTeamRef = career.teams[matchContext.userIsHome ? f.awayIdx : f.homeIdx];
+        saveMatchFatigue();
         const summaryUser = awardXPForPids(matchParticipants.A, matchStats, trainingBoostFor(userTeamRef));
         awardXPForPids(matchParticipants.B, matchStats, trainingBoostFor(oppTeamRef));
         career.lastMatchSummary = { opponent: matchNames.B, entries: summaryUser };
@@ -5837,6 +5877,7 @@
     } else if(matchContext && matchContext.type==='career_friendly'){
       const userTeamRef = career.teams.find(t=>t.isUser);
       const oppTeamRef = career.teams[matchContext.opponentIdx];
+      saveMatchFatigue(); persistCareers();
       awardXPForPids(matchParticipants.A, matchStats, trainingBoostFor(userTeamRef));
       awardXPForPids(matchParticipants.B, matchStats, trainingBoostFor(oppTeamRef));
       matchContext=null; showScreen('careerScreen');

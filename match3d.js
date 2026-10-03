@@ -2,7 +2,7 @@
 // No contiene reglas: recibe el estado ya calculado por index.html y avisa de los toques
 // sobre fichas o casillas para que el juego los procese igual que en el tablero 2D.
 import * as THREE from './vendor/three.module.min.js';
-import { buildStadiumShell } from './stadium3d.js?v=30';
+import { buildStadiumShell } from './stadium3d.js?v=31';
 
 const COLS = 14, ROWS = 9;
 const GOAL_COL_W = 0.62;
@@ -476,6 +476,7 @@ export function mountMatch3D(container, handlers){
       applyLook(p, st);
       p.idle = st.idle; p.selected = st.selected; p.fatigue = st.fatigue || 0;
       p.mats.base.opacity = st.idle ? 0.3 : 0.9;
+      p.base.visible = !st.spent; // ficha ya usada en este turno
       p.ring.visible = st.selected;
       p.card.visible = !!st.yellow;
       const to = piecePos(st);
