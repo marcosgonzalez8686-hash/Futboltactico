@@ -5269,7 +5269,7 @@
     pushApart(defender, carrier);
     freeKickPieceId = carrier.id;
     const who = defender.name || `el ${defender.role}`;
-    if(Math.random() < 0.5){
+    if(Math.random() < 0.4){
       const ck = cardKey(defender), cardCount = (yellowCardsByPid[ck] = (yellowCardsByPid[ck]||0) + 1);
       fx3d({type:'card', id:defender.id});
       if(cardCount>=2){
@@ -5368,19 +5368,19 @@
     fx3d({type:'tackle', id:defender.id, targetId:carrier.id});
     const behindTry = isTackleFromBehind(defender, carrier);
     // por detrás es más difícil quitarle el balón limpiamente
-    const chance = clamp(0.45 + normalize(fatiguedAttr(defender,'defense'))*0.25 + normalize(fatiguedAttr(defender,'strength'))*0.1 - normalize(fatiguedAttr(carrier,'dribble'))*0.25 - (behindTry ? 0.1 : 0), 0.1, 0.9);
+    const chance = clamp(0.40 + normalize(fatiguedAttr(defender,'defense'))*0.25 + normalize(fatiguedAttr(defender,'strength'))*0.1 - normalize(fatiguedAttr(carrier,'dribble'))*0.25 - (behindTry ? 0.1 : 0), 0.1, 0.9);
     if(Math.random() < chance){
       ball.col = defender.col; ball.row = defender.row;
       message = '¡Robo exitoso!';
       return {foul:false, failed:false};
     }
     const fromBehind = isTackleFromBehind(defender, carrier);
-    const foulChance = fromBehind ? 0.55 : 0.25;
+    const foulChance = fromBehind ? 0.45 : 0.2;
     if(Math.random() < foulChance){
       fx3d({type:'fall', id:carrier.id});
       pushApart(defender, carrier);
       freeKickPieceId = carrier.id;
-      if(fromBehind && Math.random() < 0.5){
+      if(fromBehind && Math.random() < 0.4){
         const who = defender.name || `el ${defender.role}`;
         const ck = cardKey(defender), cardCount = (yellowCardsByPid[ck] = (yellowCardsByPid[ck]||0) + 1);
         fx3d({type:'card', id:defender.id});
@@ -5676,7 +5676,7 @@
         }
         afterStep(piece, false); return;
       }
-      if(!turnActionUsed && canShoot(piece) && Math.random()<0.65){ turnActionUsed=true; doShoot(piece); afterStep(piece, false); return; }
+      if(!turnActionUsed && canShoot(piece) && Math.random()<(shootDistance(piece)<=3 ? 0.65 : 0.3)){ turnActionUsed=true; doShoot(piece); afterStep(piece, false); return; }
       if(!turnActionUsed){
         const targets = aiPassTargets(piece).filter(t=>t.col < piece.col);
         if(targets.length && Math.random()<0.5){
@@ -5813,7 +5813,7 @@
       const sc = estShotChance(piece);
       // chuta si la ocasión es razonable, o antes si le van a robar
       const pressuredNow = opponentsNear(piece,'B')>0;
-      if(sc >= 0.22 || (pressuredNow && sc >= 0.14) || isFreeKick){ turnActionUsed=true; doShoot(piece); afterStep(piece, false); return true; }
+      if(sc >= 0.32 || (pressuredNow && sc >= 0.22) || isFreeKick){ turnActionUsed=true; doShoot(piece); afterStep(piece, false); return true; }
     }
     if(canAct){
       // Pase a un compañero más adelantado y libre, si la jugada mejora
@@ -5878,7 +5878,7 @@
         }
         message='El portero no tiene a quién pasar.'; afterStep(carrier, false); return;
       }
-      if(!turnActionUsed && canShoot(carrier) && Math.random()<(aiLevel==='easy'?0.35:0.65)){ turnActionUsed=true; doShoot(carrier); afterStep(carrier, false); return; }
+      if(!turnActionUsed && canShoot(carrier) && Math.random()<(aiLevel==='easy'?0.35:(shootDistance(carrier)<=3 ? 0.65 : 0.3))){ turnActionUsed=true; doShoot(carrier); afterStep(carrier, false); return; }
       if(!turnActionUsed){
         const targets = aiPassTargets(carrier).filter(t=>t.col < carrier.col);
         if(targets.length && Math.random()<0.5){
