@@ -1203,7 +1203,7 @@
     <div class="sq-controls">
       <div class="chip-row" id="sqSort">
         <span>Ordenar:</span>
-        <button data-sort="num" class="active">#</button><button data-sort="rating">Valoración</button><button data-sort="age">Edad</button><button data-sort="value">Valor</button><button data-sort="form">Forma</button>
+        <button data-sort="num" class="active">#</button><button data-sort="role">Puesto</button><button data-sort="rating">Valoración</button><button data-sort="age">Edad</button><button data-sort="value">Valor</button><button data-sort="form">Forma</button>
       </div>
       <div class="chip-row" id="sqFilter">
         <button data-filter="all" class="active">Todos</button><button data-filter="xi">⭐ Titulares</button><button data-filter="inj">🚑 Lesionados</button><button data-filter="list">🏷️ Transferibles</button><button data-filter="exp">📝 Acaban contrato</button>
@@ -1391,7 +1391,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=48"></script>
+<script src="sound.js?v=49"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -3563,7 +3563,8 @@
     if(rosterFilter==='inj') list = list.filter(p=>p.injuryMatchesLeft>0);
     if(rosterFilter==='list') list = list.filter(p=>p.transferListed);
     if(rosterFilter==='exp') list = list.filter(p=>(p.contractYears||0)<=1);
-    const key = {num:p=>p.squadNumber||99, rating:p=>-bestRoleOf(p).v, age:p=>p.age, value:p=>-calcMarketValue(p), form:p=>-playerForm(p)}[rosterSort];
+    const ROLE_ORDER = {GK:0, DF:1, MF:2, FW:3};
+    const key = {num:p=>p.squadNumber||99, role:p=>{ const b = bestRoleOf(p); return ROLE_ORDER[b.r]*1000 - b.v; }, rating:p=>-bestRoleOf(p).v, age:p=>p.age, value:p=>-calcMarketValue(p), form:p=>-playerForm(p)}[rosterSort];
     list.sort((a,b)=> key(a)-key(b));
     let h = `<table class="sq-table"><tr><th>#</th><th class="sq-name">Jugador</th><th>Edad</th><th>Puesto</th><th>Val.</th><th>Forma</th><th>Contr.</th><th>Valor</th></tr>`;
     list.forEach(p=>{
@@ -4816,7 +4817,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=48').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=49').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -6495,7 +6496,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=48').then(m=>{
+      import('./match3d.js?v=49').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
