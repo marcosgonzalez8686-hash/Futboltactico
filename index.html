@@ -1356,7 +1356,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=42"></script>
+<script src="sound.js?v=43"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1992,7 +1992,12 @@
     const facBonus = (avgFacilityLevelForReputation(team) - 1) * 3;
     return clamp(Math.round(divRep + facBonus), 1, 100);
   }
-  function playerReputation(p){ return clamp(overallRating(p), 1, 100); }
+  // Nivel de mercado: valoración en su mejor puesto, en la escala de la antigua media de 8 atributos
+  // (así un buen especialista, como un portero, vale y cobra lo que rinde en su puesto)
+  // escala por puesto: cada puesto se valora de forma que, a igual nivel, todos valgan parecido
+  const MARKET_SCALE = {GK:0.60, DF:0.645, MF:0.665, FW:0.665};
+  function marketRating(p){ const b = bestRoleOf(p); return b.v * (MARKET_SCALE[b.r] || 0.66); }
+  function playerReputation(p){ return clamp(Math.round(marketRating(p)), 1, 100); }
   function canSignPlayer(team, p){ return playerReputation(p) <= clubReputation(team) + 15; }
 
   // ---------- Economía ----------
@@ -2015,12 +2020,12 @@
   }
   // Sueldo de mercado según su nivel y edad (lo que pediría hoy)
   function baseWage(p){
-    const overall = overallRating(p);
+    const overall = marketRating(p);
     const ageFactor = clamp(1 - Math.abs(p.age-27)*0.02, 0.5, 1.15);
     return Math.max(50, Math.round(overall * 10 * ageFactor));
   }
   function calcMarketValue(p){
-    const overall = overallRating(p);
+    const overall = marketRating(p);
     const growth = p.hiddenGrowth!==undefined ? p.hiddenGrowth : 50;
     const ageFactor = p.age<=23 ? 1.3 : (p.age<=28 ? 1.1 : (p.age<=31 ? 0.85 : (p.age<=34 ? 0.5 : 0.25)));
     const growthFactor = 0.7 + (growth/99)*0.6;
@@ -2625,7 +2630,7 @@
     }
   }
   // Tanda de penaltis: cinco lanzamientos y muerte súbita; algo más de acierto para el mejor equipo
-  function teamStrength(t){ const xi = getEffectiveLineup(t).map(id=>career.players.find(p=>p.id===id)).filter(Boolean); return xi.length ? xi.reduce((s,p)=>s+overallRating(p),0)/xi.length : 40; }
+  function teamStrength(t){ const xi = getEffectiveLineup(t).map(id=>career.players.find(p=>p.id===id)).filter(Boolean); return xi.length ? xi.reduce((s,p)=>s+marketRating(p),0)/xi.length : 40; }
   function penaltyShootout(home, away){
     const d = (teamStrength(home) - teamStrength(away))/200;
     const ph = clamp(0.74 + d, 0.6, 0.88), pa = clamp(0.74 - d, 0.6, 0.88);
@@ -4608,7 +4613,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=42').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=43').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -6286,7 +6291,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=42').then(m=>{
+      import('./match3d.js?v=43').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
