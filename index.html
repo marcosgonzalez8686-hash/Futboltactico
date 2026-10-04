@@ -5491,7 +5491,7 @@
   // Probabilidad de gol: baja con la distancia; el tiro del delantero suma y el portero resta
   function shotChance(shooter){
     const dist = shootDistance(shooter);
-    let chance = 0.62 - 0.11*(dist-1) + normalize(fatiguedAttr(shooter,'shot'))*0.25;
+    let chance = 0.70 - 0.11*(dist-1) + normalize(fatiguedAttr(shooter,'shot'))*0.25;
     const oppGK = pieces.find(p=>p.team!==shooter.team && p.role==='GK');
     if(oppGK) chance -= 0.04 + normalize(oppGK.goalkeeping)*0.3;
     return clamp(chance, 0.05, 0.8);
@@ -5583,8 +5583,8 @@
     return 1 - (f/100)*0.3; // hasta -30% de efectividad a cansancio máximo
   }
   function fatiguedAttr(piece, key){
-    // Contra la máquina, su equipo (B) rinde un 10 % menos en Fácil y un 6 % más en Difícil
-    const lvl = (mode==='ai' && piece.team==='B') ? ({easy:0.9, normal:1, hard:1.06}[aiLevel]||1) : 1;
+    // Contra la máquina, su equipo (B) rinde un 10 % menos en Fácil y un 10 % más en Difícil
+    const lvl = (mode==='ai' && piece.team==='B') ? ({easy:0.9, normal:1, hard:1.1}[aiLevel]||1) : 1;
     return Math.max(1, Math.round(piece[key] * fatiguePenaltyFactor(piece) * lvl));
   }
   function afterStep(piece, wasMove, forceEnd){
