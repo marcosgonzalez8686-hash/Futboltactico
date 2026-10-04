@@ -1326,7 +1326,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=37"></script>
+<script src="sound.js?v=38"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1560,7 +1560,7 @@
     const hiddenGrowth = Math.round((randInt(1,99)+randInt(1,99))/2); // potencial oculto: sesgo hacia valores medios
     return {id:uid(), name:randomName(), age, ...attrs, hiddenPos, hiddenExp: randInt(1,15), hiddenGrowth};
   }
-  const SQUAD_TARGETS = ['GK','GK','DF','DF','DF','MF','MF','MF','FW','FW'];
+  const SQUAD_TARGETS = ['GK','GK','DF','DF','DF','DF','MF','MF','MF','MF','FW','FW']; // 12 jugadores por club
   function generateSquad(divisionLevel){ return SQUAD_TARGETS.map((role,i)=>{ const p=generateRandomPlayer(role, divisionLevel); p.squadNumber=i+1; return p; }); }
 
   function slotScore(p, role){
@@ -1972,7 +1972,7 @@
     const f = divisionFactor(level);
     return {
       initialBudget: Math.round(80000 * f),
-      tv: Math.round(1600 * f),
+      tv: Math.round(1900 * f), // 12 jugadores por club: algo más de TV para compensar los sueldos
       gate: Math.round(500 * f),
       prizeBase: Math.round(4000 * f),
     };
@@ -4434,7 +4434,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=37').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=38').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -6079,7 +6079,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=37').then(m=>{
+      import('./match3d.js?v=38').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
