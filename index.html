@@ -362,6 +362,7 @@
     position:relative; width:100%; aspect-ratio:1/1; max-height:64vh; margin:0 auto 10px; border-radius:10px; overflow:hidden;
     background:linear-gradient(180deg,#14324a 0%,#1d4a5e 40%,#0e2118 100%);
     border:2px solid #2f5c46; touch-action:none;
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; -webkit-tap-highlight-color:transparent;
   }
   .match3d[hidden], .board-wrap[hidden]{display:none;}
   .match3d canvas{display:block; width:100%; height:100%;}
@@ -1319,7 +1320,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=34"></script>
+<script src="sound.js?v=35"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -4392,7 +4393,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=34').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=35').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -6036,7 +6037,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=34').then(m=>{
+      import('./match3d.js?v=35').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),

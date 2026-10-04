@@ -2,7 +2,7 @@
 // No contiene reglas: recibe el estado ya calculado por index.html y avisa de los toques
 // sobre fichas o casillas para que el juego los procese igual que en el tablero 2D.
 import * as THREE from './vendor/three.module.min.js';
-import { buildStadiumShell } from './stadium3d.js?v=34';
+import { buildStadiumShell } from './stadium3d.js?v=35';
 
 const COLS = 14, ROWS = 9;
 const GOAL_COL_W = 0.62;
@@ -160,7 +160,7 @@ export function mountMatch3D(container, handlers){
 
   const scene = new THREE.Scene();
   scene.fog = new THREE.Fog(0x0c1c2a, 40, 80);
-  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 200);
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 200); // near 0.5: más precisión de profundidad (Safari)
 
   scene.add(new THREE.HemisphereLight(0xd6e8ff, 0x2a3a2c, 1.5));
   const sun = new THREE.DirectionalLight(0xfff1d6, 2.1);
@@ -240,7 +240,10 @@ export function mountMatch3D(container, handlers){
   const cardGeo = bx(0.12, 0.17, 0.02);
   const cardMat = new THREE.MeshLambertMaterial({color: 0xf4d03f, emissive: 0x3a3000});
   const ringGeo = new THREE.RingGeometry(0.34, 0.42, 40); ringGeo.rotateX(-Math.PI/2);
-  const ringMat = new THREE.MeshBasicMaterial({color: 0xffd23f, transparent: true, opacity: 0.95});
+  // Las marcas pegadas al césped se dibujan con un desplazamiento de profundidad: en Safari (GPU de Apple)
+  // si no, el césped las tapa a ratos según la distancia de la cámara
+  function overlayMat(m){ m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -8; m.depthWrite = false; return m; }
+  const ringMat = overlayMat(new THREE.MeshBasicMaterial({color: 0xffd23f, transparent: true, opacity: 0.95}));
   const baseGeo = new THREE.RingGeometry(0.22, 0.3, 32); baseGeo.rotateX(-Math.PI/2);
   const players = new Map();
   const hitTargets = [];
@@ -260,7 +263,7 @@ export function mountMatch3D(container, handlers){
       socks: new THREE.MeshLambertMaterial({color: st.kit}),
       skin: new THREE.MeshLambertMaterial({color: SKINS[h % SKINS.length]}),
       hair: new THREE.MeshLambertMaterial({color: HAIRS[(h >> 3) % HAIRS.length]}),
-      base: new THREE.MeshBasicMaterial({color: st.kit, transparent: true, opacity: 0.9}),
+      base: overlayMat(new THREE.MeshBasicMaterial({color: st.kit, transparent: true, opacity: 0.9})),
       label: new THREE.SpriteMaterial({transparent: true, depthWrite: false}),
     };
     const add = (parent, geo, mat, x, y, z)=>{
@@ -331,7 +334,7 @@ export function mountMatch3D(container, handlers){
   const ballMat = new THREE.MeshLambertMaterial({map: ballTexture(), transparent: true});
   const ball = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 24, 16), ballMat);
   ball.castShadow = true; scene.add(ball);
-  const looseRing = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.26, 32), new THREE.MeshBasicMaterial({color: 0xffffff, transparent: true}));
+  const looseRing = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.26, 32), overlayMat(new THREE.MeshBasicMaterial({color: 0xffffff, transparent: true})));
   looseRing.rotation.x = -Math.PI/2; looseRing.position.y = 0.015; scene.add(looseRing);
   const ballState = {disp: null, tw: null, carried: false, carrierId: null, goalSeq: null};
 
@@ -352,9 +355,10 @@ export function mountMatch3D(container, handlers){
     dribble: new THREE.MeshBasicMaterial({color: 0xff8c1a, transparent: true, opacity: 0.95}),
     shoot: new THREE.MeshBasicMaterial({color: 0xe74c3c, transparent: true, opacity: 0.22, depthWrite: false}),
   };
+  Object.values(hlMat).forEach(overlayMat);
   function setHighlights(hl){
     hlGroup.clear();
-    const add = (geo, mat, c, r, y)=>{ const m = new THREE.Mesh(geo, mat); m.position.set(cellX(c), y, cellZ(r)); hlGroup.add(m); return m; };
+    const add = (geo, mat, c, r, y)=>{ const m = new THREE.Mesh(geo, mat); m.position.set(cellX(c), y + 0.01, cellZ(r)); m.renderOrder = 2; hlGroup.add(m); return m; };
     (hl.shoot||[]).forEach(([c,r])=> add(hlGeo.shoot, hlMat.shoot, c, r, 0.004));
     (hl.move||[]).forEach(([c,r])=>{ add(hlGeo.moveFill, hlMat.moveFill, c, r, 0.02).userData.pulse = 1; add(hlGeo.move, hlMat.move, c, r, 0.021).userData.pulse = 1; });
     (hl.pass||[]).forEach(([c,r])=>{ add(hlGeo.pass, hlMat.pass, c, r, 0.021).userData.spin = 1; add(hlGeo.dot, hlMat.pass, c, r, 0.022); });
@@ -418,12 +422,12 @@ export function mountMatch3D(container, handlers){
   canvas.addEventListener('pointerdown', e=>{
     canvas.setPointerCapture(e.pointerId);
     pointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
-    tapCandidate = pointers.size === 1 ? {x: e.clientX, y: e.clientY, t: performance.now()} : null;
+    tapCandidate = pointers.size === 1 ? {x: e.clientX, y: e.clientY, t: performance.now(), slop: e.pointerType === 'mouse' ? 6 : 16} : null;
   });
   canvas.addEventListener('pointermove', e=>{
     const p = pointers.get(e.pointerId); if(!p) return;
     const dx = e.clientX - p.x, dy = e.clientY - p.y;
-    if(tapCandidate && Math.hypot(e.clientX - tapCandidate.x, e.clientY - tapCandidate.y) > 9) tapCandidate = null;
+    if(tapCandidate && Math.hypot(e.clientX - tapCandidate.x, e.clientY - tapCandidate.y) > tapCandidate.slop) tapCandidate = null;
     if(pointers.size === 1 && !tapCandidate){
       camGoal = null; userAdjusted = true;
       orbit.theta -= dx*0.008;
@@ -439,7 +443,7 @@ export function mountMatch3D(container, handlers){
     }
   });
   const endPointer = e=>{
-    const wasTap = tapCandidate && pointers.size === 1 && performance.now() - tapCandidate.t < 600;
+    const wasTap = tapCandidate && pointers.size === 1 && performance.now() - tapCandidate.t < 700;
     pointers.delete(e.pointerId);
     if(pointers.size < 2) pinchDist = 0;
     if(wasTap && e.type === 'pointerup') handleTap(e.clientX, e.clientY);
@@ -448,8 +452,20 @@ export function mountMatch3D(container, handlers){
   canvas.addEventListener('pointerup', endPointer);
   canvas.addEventListener('pointercancel', endPointer);
   canvas.addEventListener('wheel', e=>{
-    e.preventDefault(); camGoal = null; userAdjusted = true; orbit.radius *= e.deltaY > 0 ? 1.08 : 0.93;
+    e.preventDefault(); camGoal = null; userAdjusted = true;
+    const px = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+    const k = e.ctrlKey ? 0.01 : 0.0025; // ctrl = pellizco en el trackpad
+    orbit.radius *= Math.exp(Math.max(-0.25, Math.min(0.25, px * k)));
   }, {passive: false});
+  // Safari: gestos de pellizco propios (trackpad del Mac y zoom de página en iPhone)
+  let gestureBase = 0;
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(type=> container.addEventListener(type, e=>{
+    e.preventDefault();
+    if(pointers.size >= 2) return; // en el iPhone el pellizco ya llega por los dedos (pointer events)
+    if(type === 'gesturestart'){ gestureBase = orbit.radius; return; }
+    if(type === 'gesturechange' && gestureBase && e.scale){ camGoal = null; userAdjusted = true; orbit.radius = gestureBase / e.scale; }
+    if(type === 'gestureend') gestureBase = 0;
+  }, {passive: false}));
 
   function handleTap(clientX, clientY){
     const r = canvas.getBoundingClientRect();
@@ -735,7 +751,7 @@ export function mountMatch3D(container, handlers){
       renderer.setSize(w, h, false);
       camera.aspect = w/h; camera.updateProjectionMatrix();
       // En pantallas estrechas se aleja un poco para que quepa el campo entero
-      const fit = w/h < 1.2 ? 1.25 : 1;
+      const ar = w/h, fit = lastFit > 1 ? (ar > 1.3 ? 1 : 1.25) : (ar < 1.1 ? 1.25 : 1); // con margen: la barra de Safari no lo hace saltar
       CAMS.side.radius = 15.5*fit; CAMS.top.radius = 15.5*fit*1.05;
       // Solo al girar el móvil (cambia el encuadre necesario) y si el usuario no ha tocado la cámara;
       // los pequeños cambios de tamaño (barra del navegador) no deshacen el zoom
