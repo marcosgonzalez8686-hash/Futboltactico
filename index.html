@@ -457,6 +457,12 @@
   .pp-form > span{color:#cfe8d8;} .pp-form > b{text-align:right;}
   .pp-form-note{font-size:11.5px; color:#9fd4b8; margin:3px 0 6px;}
   .tp-form{display:block; font-size:9.5px; font-weight:bold; line-height:1.1;}
+  .nm-train{display:block; width:100%; margin-top:8px; background:none; border:1px dashed #2f5c46; border-radius:9px; color:#9fd4b8; font:inherit; font-size:12px; padding:6px 8px; cursor:pointer; text-align:left;}
+  .train-opt{display:flex; gap:10px; align-items:flex-start; width:100%; text-align:left; background:#0e2118; border:1.5px solid #2f5c46; color:var(--chalk); border-radius:12px; padding:9px 10px; margin:6px 0; cursor:pointer; font:inherit;}
+  .train-opt.active{border-color:var(--gold); background:rgba(255,210,63,.1);}
+  .train-ico{font-size:24px; line-height:1;}
+  .train-txt{display:flex; flex-direction:column; gap:2px;} .train-txt b{font-size:13.5px;} .train-txt small{font-size:11.5px; color:#9fd4b8;}
+  .train-tags{display:flex; flex-wrap:wrap; gap:4px; margin-top:3px;} .train-tags i{font-style:normal; font-size:10px; background:#1c4433; border-radius:6px; padding:1px 6px; color:#cfe8d8;}
   .pp-progress{display:flex; flex-direction:column; gap:2px; margin:6px 0 2px; font-size:12px;}
   .pp-progress small{color:#9fd4b8; font-size:11px;}
   .pp-contract{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin:8px 0 4px; padding:7px 10px; border-radius:10px; background:rgba(0,0,0,.18); border:1px solid #2f5c46; font-size:12px;}
@@ -1135,6 +1141,7 @@
     <div class="hub-list">
       <button class="hub-item" id="btnGoRoster"><span class="hi-ico">👕</span><span class="hi-txt"><b>Primer equipo</b><small id="hubSubRoster"></small></span><span class="hi-arrow">›</span></button>
       <button class="hub-item" id="btnHubYouth"><span class="hi-ico">🌱</span><span class="hi-txt"><b>Cantera</b><small id="hubSubYouth"></small></span><span class="hi-arrow">›</span></button>
+      <button class="hub-item" id="btnGoTraining"><span class="hi-ico">🏋️</span><span class="hi-txt"><b>Entrenamiento</b><small id="hubSubTraining"></small></span><span class="hi-arrow">›</span></button>
       <button class="hub-item" id="btnGoStaff"><span class="hi-ico">🧑‍💼</span><span class="hi-txt"><b>Personal</b><small id="hubSubStaff"></small></span><span class="hi-arrow">›</span></button>
     </div>
   </div>
@@ -1258,6 +1265,12 @@
     <button class="mode-btn" id="btnBackFinance">« Volver</button>
   </div>
 
+  <div class="screen" id="careerTrainingScreen" hidden>
+    <h2>🏋️ Entrenamiento</h2>
+    <div class="card"><div id="careerTrainingList"></div></div>
+    <button class="mode-btn" id="btnBackTraining">« Volver</button>
+  </div>
+
   <div class="screen" id="careerCupScreen" hidden>
     <h2>🏆 Copa</h2>
     <div class="card"><div id="careerCupList"></div></div>
@@ -1356,7 +1369,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=43"></script>
+<script src="sound.js?v=44"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1671,7 +1684,7 @@
 
   // ---------- Navegación de pantallas ----------
   function showScreen(name, fromHistory){
-    ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerTabSquad','careerTabComp','careerTabClub','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerCalendarScreen','careerCupScreen','careerFinanceScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen','careerFacilitiesScreen','careerAllFacilitiesScreen','careerFriendlyScreen','careerLineupScreen','gameScreen'].forEach(id=>{
+    ['menuScreen','careerSelectScreen','careerCreateScreen','careerScreen','careerTabSquad','careerTabComp','careerTabClub','careerStandingsScreen','careerRosterScreen','careerHistoryScreen','careerCalendarScreen','careerCupScreen','careerTrainingScreen','careerFinanceScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen','careerFacilitiesScreen','careerAllFacilitiesScreen','careerFriendlyScreen','careerLineupScreen','gameScreen'].forEach(id=>{
       document.getElementById(id).hidden = (id !== name);
     });
     document.getElementById('scoreboard').hidden = (name !== 'gameScreen');
@@ -1696,6 +1709,7 @@
     if(name==='careerHistoryScreen') renderCareerHistory();
     if(name==='careerCalendarScreen') renderCareerCalendar();
     if(name==='careerCupScreen') renderCareerCup();
+    if(name==='careerTrainingScreen') renderCareerTraining();
     if(name==='careerFinanceScreen'){ financeView = {mode: financeView.mode, season: career.season||1, week: null}; renderFinanceScreen(); }
     if(name==='careerLineupScreen') renderLineupScreen();
     if(!fromHistory){
@@ -1743,6 +1757,8 @@
   document.getElementById('btnGoMarket').addEventListener('click', ()=>showScreen('careerMarketScreen'));
   document.getElementById('btnBackMarket').addEventListener('click', ()=>showScreen('careerTabClub'));
   document.getElementById('btnGoStaff').addEventListener('click', ()=>showScreen('careerStaffScreen'));
+  document.getElementById('btnGoTraining').addEventListener('click', ()=>showScreen('careerTrainingScreen'));
+  document.getElementById('btnBackTraining').addEventListener('click', ()=>showScreen('careerTabSquad'));
   document.getElementById('btnBackStaff').addEventListener('click', ()=>showScreen('careerTabSquad'));
   document.getElementById('btnBackAllFacilities').addEventListener('click', ()=>showScreen('careerScreen'));
   document.getElementById('btnGoCalendar').addEventListener('click', ()=>showScreen('careerCalendarScreen'));
@@ -2320,7 +2336,7 @@
       const sum = ps.reduce((s,p)=> s + ATTRS.reduce((s2,a)=>s2+p[a.key],0)/ATTRS.length * (1 - (p.tired||0)/100*0.3), 0);
       return sum/ps.length;
     };
-    const oh=overallOf(homeLineup), oa=overallOf(awayLineup);
+    const oh=overallOf(homeLineup) * (home.isUser ? trainingMatchBoost() : 1), oa=overallOf(awayLineup) * (away.isUser ? trainingMatchBoost() : 1);
     addMatchLoad(homeLineup); addMatchLoad(awayLineup);
     // Si juega el usuario, la dificultad de los partidos inclina un poco la simulación
     const bias = {easy:0.35, normal:0, hard:-0.35}[careerDifficulty().match];
@@ -2465,6 +2481,37 @@
     persistCareers();
   }
 
+  // ---------- Entrenamiento semanal (tu plantilla) ----------
+  const TRAINING_PLANS = {
+    balanced: {icon:'⚖️', label:'Equilibrado', growth:1,   keep:1,   desc:'Mejoran los atributos de su puesto. Recuperación normal.'},
+    physical: {icon:'💪', label:'Físico',      growth:1,   keep:1,   weights:{speed:0.4, stamina:0.35, strength:0.25}, desc:'Sobre todo velocidad, resistencia y fuerza (más turnos extra, aguantan más y llegan más lejos al tirar y pasar).'},
+    technical:{icon:'🎯', label:'Técnico',     growth:1,   keep:1,   weights:{pass:0.3, dribble:0.3, shot:0.25, goalkeeping:0.15}, desc:'Sobre todo pase, regate, tiro y portería.'},
+    tactical: {icon:'📋', label:'Táctico',     growth:0.6, keep:1,   matchBoost:1.04, desc:'Mejoran menos, pero el equipo rinde un 4 % más en los partidos de la semana.'},
+    rest:     {icon:'🛌', label:'Descanso',    growth:0.3, keep:0.5, desc:'Apenas mejoran, pero recuperan el cansancio mucho más rápido. Ideal en semanas de dos partidos.'},
+    intense:  {icon:'🔥', label:'Intenso',     growth:1.5, keep:1.3, injury:0.01, desc:'Mejoran un 50 % más, pero recuperan peor el cansancio y alguno se puede lesionar entrenando.'},
+  };
+  function trainingPlan(){ return TRAINING_PLANS[(career && career.training) || 'balanced'] || TRAINING_PLANS.balanced; }
+  function isUserPlayer(p){ const ut = career.teams.find(t=>t.isUser); return !!(ut && ut.slots.includes(p.id)); }
+  // pesos de mejora: mitad su puesto, mitad el enfoque del entrenamiento (si lo hay)
+  function growthWeightsFor(p){
+    const role = roleWeightsOf(p), plan = isUserPlayer(p) ? trainingPlan() : null;
+    if(!plan || !plan.weights) return role;
+    const w = {}; Object.keys(role).forEach(k=> w[k] = (w[k]||0) + role[k]*0.5); Object.keys(plan.weights).forEach(k=> w[k] = (w[k]||0) + plan.weights[k]*0.5);
+    return w;
+  }
+  function trainingMatchBoost(){ return (career && career.training==='tactical') ? TRAINING_PLANS.tactical.matchBoost : 1; }
+  function renderCareerTraining(){
+    const el = document.getElementById('careerTrainingList');
+    const cur = (career.training || 'balanced'), ut = career.teams.find(t=>t.isUser);
+    const lvl = (ut.facilities && ut.facilities.training) || 1;
+    let h = `<p class="hint" style="margin-top:0;">Elige cómo entrena tu plantilla. Se aplica cada semana hasta que lo cambies. Tus instalaciones de entrenamiento (nivel ${lvl}) multiplican la mejora ×${trainingBoostFor(ut).toFixed(2).replace('.',',')}. Los que juegan mejoran además en cada partido.</p>`;
+    Object.entries(TRAINING_PLANS).forEach(([k, pl])=>{
+      const tags = [pl.growth!==1 ? `Mejora ×${String(pl.growth).replace('.',',')}` : 'Mejora normal', pl.keep<1 ? 'Recuperación rápida' : pl.keep>1 ? 'Recuperación lenta' : 'Recuperación normal', pl.injury ? 'Riesgo de lesión' : '', pl.matchBoost ? '+4 % en partido' : ''].filter(Boolean);
+      h += `<button class="train-opt ${k===cur?'active':''}" data-train="${k}"><span class="train-ico">${pl.icon}</span><span class="train-txt"><b>${pl.label}${k===cur?' · actual':''}</b><small>${pl.desc}</small><span class="train-tags">${tags.map(t=>`<i>${t}</i>`).join('')}</span></span></button>`;
+    });
+    el.innerHTML = h;
+    el.querySelectorAll('[data-train]').forEach(b=> b.addEventListener('click', ()=>{ career.training = b.dataset.train; persistCareers(); renderCareerTraining(); }));
+  }
   // ---------- Progresión: crecimiento hacia el potencial y declive con la edad ----------
   // Fracción del margen hasta su techo que gana en una temporada, según la edad
   function growthRate(age){ return age<=20 ? 0.22 : age<=23 ? 0.15 : age<=26 ? 0.09 : age<=28 ? 0.04 : 0; }
@@ -2476,13 +2523,13 @@
   // Mejora: se reparte entre los atributos de su puesto según lo que pesan (la valoración sube lo acumulado)
   function applyGrowth(p, amount){
     if(!(amount > 0)) return;
-    const w = roleWeightsOf(p);
+    const w = growthWeightsFor(p);
     p.grow = (p.grow||0) + amount;
     let guard = 0;
     while(p.grow >= 0.12 && guard++ < 60){
       const key = pickWeighted(w);
       if(p[key] >= 99) { p.grow -= 0.12; continue; }
-      p[key]++; p.grow -= Math.max(0.05, w[key]);
+      p[key]++; p.grow -= Math.max(0.05, roleWeightsOf(p)[key] || 0); // la valoración sube lo que pesa ese atributo en su puesto
     }
   }
   // Declive: primero lo físico (velocidad, resistencia, fuerza)
@@ -2510,12 +2557,15 @@
     if(!career) return;
     const teamOf = {};
     career.teams.forEach(t=> t.slots.forEach(id=> teamOf[id] = t));
+    const plan = trainingPlan(), hurt = [];
     career.players.forEach(p=>{
       if(p.seasonStart === undefined) p.seasonStart = Math.round(bestRoleOf(p).v*10)/10;
-      const t = teamOf[p.id];
-      applyGrowth(p, growthUnit(p) * 0.5 * trainingBoostFor(t));
+      const t = teamOf[p.id], mine = !!(t && t.isUser);
+      applyGrowth(p, growthUnit(p) * 0.5 * trainingBoostFor(t) * (mine ? plan.growth : 1));
       applyDecline(p, declinePerSeason(p.age) / TOTAL_SEASON_WEEKS);
+      if(mine && plan.injury && !(p.injuryMatchesLeft>0) && Math.random() < plan.injury){ p.injuryMatchesLeft = randInt(1,2); hurt.push(p.name); }
     });
+    return hurt;
   }
   function trainYouthPlayers(){
     if(!career || !career.youthPlayers) return;
@@ -2540,7 +2590,8 @@
   function weeklyRecovery(p){ return Math.round((p.tired||0) * (1 - restKeep(p))); }
   function recoverFitness(){
     if(!career) return;
-    career.players.forEach(p=>{ if(p.tired>0){ p.tired = Math.round(p.tired * restKeep(p)); if(p.tired < 3) delete p.tired; } });
+    const ut = career.teams.find(t=>t.isUser), mineSet = new Set(ut ? ut.slots : []), k = trainingPlan().keep;
+    career.players.forEach(p=>{ if(p.tired>0){ p.tired = Math.round(p.tired * Math.min(0.75, restKeep(p) * (mineSet.has(p.id) ? k : 1))); if(p.tired < 3) delete p.tired; } });
   }
   // Desgaste estimado de un partido simulado (sin jugarlo): unos 35-48 puntos
   function simulatedMatchLoad(p){ return 48 - Math.round((p.stamina||50)/8); }
@@ -2868,7 +2919,7 @@
       ensureJornadaSimulated();
     }
     trainYouthPlayers();
-    weeklyProgress();
+    const trainingHurt = weeklyProgress() || [];
     progressInjuries();
     recoverFitness();
     progressScouting();
@@ -2903,6 +2954,7 @@
 
     const events = [];
     if(forcedSale) events.push(`⚠️ ${career.financialAlert}`);
+    trainingHurt.forEach(n=> events.push(`🔥 ${escapeHtml(n)} se ha lesionado en el entrenamiento intenso.`));
     newOffers.forEach(o=> events.push(`💰 <b>${escapeHtml(o.buyerName)}</b> ofrece ${formatMoney(o.amount)} por ${escapeHtml(o.playerName)}. Responde desde la bandeja de entrada de Inicio.`));
     if(!seasonEnded && phaseAfter.label!==phase.label){ events.push(`📅 Ahora: <b>${phaseAfter.label}</b>`); }
     if(seasonEnded){ events.push(`📅 Empieza la Temporada ${career.season} — pretemporada.`); }
@@ -3075,10 +3127,10 @@
 
   // ---------- Inicio del Modo Carrera (estilo manager) ----------
   const CAREER_CHROME_SCREENS = ['careerScreen','careerTabSquad','careerTabComp','careerTabClub','careerStandingsScreen','careerRosterScreen',
-    'careerHistoryScreen','careerCalendarScreen','careerCupScreen','careerFinanceScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen',
+    'careerHistoryScreen','careerCalendarScreen','careerCupScreen','careerTrainingScreen','careerFinanceScreen','careerYouthScreen','careerMarketScreen','careerStaffScreen',
     'careerFacilitiesScreen','careerAllFacilitiesScreen','careerFriendlyScreen'];
   const TAB_OF_SCREEN = {careerScreen:'careerScreen', careerFriendlyScreen:'careerScreen', careerAllFacilitiesScreen:'careerScreen',
-    careerTabSquad:'careerTabSquad', careerRosterScreen:'careerTabSquad', careerYouthScreen:'careerTabSquad', careerStaffScreen:'careerTabSquad',
+    careerTabSquad:'careerTabSquad', careerRosterScreen:'careerTabSquad', careerYouthScreen:'careerTabSquad', careerStaffScreen:'careerTabSquad', careerTrainingScreen:'careerTabSquad',
     careerTabComp:'careerTabComp', careerStandingsScreen:'careerTabComp', careerCalendarScreen:'careerTabComp', careerCupScreen:'careerTabComp', careerHistoryScreen:'careerTabComp',
     careerTabClub:'careerTabClub', careerFacilitiesScreen:'careerTabClub', careerFinanceScreen:'careerTabClub', careerMarketScreen:'careerTabClub'};
   let currentScreenName = 'menuScreen';
@@ -3273,7 +3325,9 @@
       if(u2.length > 1) dbl = `<div class="nm-double">📅 La semana ${fxWeek(upcoming)} tienes 2 partidos (Copa y Liga).</div>`;
     }
     el.innerHTML = `<div class="nm-head"><b class="card-title">${next.played?'RESULTADO':'PRÓXIMO PARTIDO'}</b><span>${isKO(next) ? fxLabel(next) : `J${next.jornada}`} · ${userHome?'🏠 En casa':'✈️ Fuera'} · ${when}</span></div>
-      <div class="nm-row">${side(home, next.homeIdx)}${score}${side(away, next.awayIdx)}</div>${dbl}<div class="nm-actions"></div>`;
+      <div class="nm-row">${side(home, next.homeIdx)}${score}${side(away, next.awayIdx)}</div>${dbl}<div class="nm-actions"></div>
+      <button class="nm-train" data-go-train>🏋️ Entrenamiento esta semana: <b>${trainingPlan().icon} ${trainingPlan().label}</b> · cambiar ›</button>`;
+    { const gt = el.querySelector('[data-go-train]'); if(gt) gt.addEventListener('click', ()=> showScreen('careerTrainingScreen')); }
     if(thisWeek && !next.played){
       const acts = el.querySelector('.nm-actions');
       const play = document.createElement('button'); play.className='mode-btn primary'; play.textContent = next.cup ? '🏆 Alineación y jugar la Copa' : next.playoff ? '🔼 Alineación y jugar el play-off' : '⚽ Alineación y jugar';
@@ -3319,6 +3373,7 @@
     const injured = team.slots.map(id=>career.players.find(p=>p.id===id)).filter(p=>p && p.injuryMatchesLeft>0).length;
     document.getElementById('hubSubRoster').textContent = `${team.slots.length}/${MAX_SQUAD_SIZE} jugadores${injured?` · ${injured} lesionado${injured>1?'s':''}`:''}`;
     document.getElementById('hubSubYouth').textContent = `${(career.youthPlayers||[]).length}/${youthCapacity(team)} canteranos · ${formatMoney(youthWeeklyCost(team))}/semana${career.youthReviewPending?' · ⚠️ revisión pendiente':''}`;
+    { const pl = trainingPlan(); document.getElementById('hubSubTraining').textContent = `${pl.icon} ${pl.label}`; }
     document.getElementById('hubSubStaff').textContent = `${(career.staff||[]).length} ojeador${(career.staff||[]).length===1?'':'es'}${career.youthDirector?' · director de cantera':''} · ${formatMoney(calcStaffWageBill())}/semana`;
   }
   function renderHubComp(){
@@ -4613,7 +4668,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=43').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=44').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -5767,7 +5822,8 @@
   }
   function fatiguedAttr(piece, key){
     // Contra la máquina, su equipo (B) rinde un 10 % menos en Fácil y un 10 % más en Difícil
-    const lvl = (mode==='ai' && piece.team==='B') ? ({easy:0.9, normal:1, hard:1.1}[aiLevel]||1) : 1;
+    const lvl = (mode==='ai' && piece.team==='B') ? ({easy:0.9, normal:1, hard:1.1}[aiLevel]||1)
+      : (piece.team==='A' && matchContext && matchContext.type && career) ? trainingMatchBoost() : 1; // entrenamiento táctico
     return Math.max(1, Math.round(piece[key] * fatiguePenaltyFactor(piece) * lvl));
   }
   function afterStep(piece, wasMove, forceEnd){
@@ -6291,7 +6347,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=43').then(m=>{
+      import('./match3d.js?v=44').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
