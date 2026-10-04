@@ -1,4 +1,4 @@
-const CACHE_NAME = 'futbol-tactico-v46';
+const CACHE_NAME = 'futbol-tactico-v47';
 const ASSETS = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png', './sound.js', './stadium3d.js', './match3d.js', './vendor/three.module.min.js'];
 
 self.addEventListener('install', (event) => {

@@ -1391,7 +1391,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=46"></script>
+<script src="sound.js?v=47"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -4790,7 +4790,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=46').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=47').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -6469,7 +6469,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=46').then(m=>{
+      import('./match3d.js?v=47').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
