@@ -467,6 +467,11 @@
   .pp-progress small{color:#9fd4b8; font-size:11px;}
   .pp-contract{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin:8px 0 4px; padding:7px 10px; border-radius:10px; background:rgba(0,0,0,.18); border:1px solid #2f5c46; font-size:12px;}
   .pp-contract .mode-btn{width:auto; margin:0; padding:6px 12px;}
+  .search-card{padding:10px;}
+  .search-q{width:100%; box-sizing:border-box; padding:9px 10px; border-radius:9px; border:1.5px solid #2f5c46; background:#0e2118; color:var(--chalk); font-size:14px; margin-bottom:6px;}
+  .rep-act.primary{background:var(--gold); color:#1b2a12;}
+  .rep-act:disabled{opacity:.45; cursor:default;}
+  .rep-side .pending{color:#f4d03f; font-weight:bold;}
   .follow-bar{padding:6px 10px; border-radius:10px; background:rgba(244,208,63,.1); color:#f4d03f; font-size:12px; margin:4px 0 6px;}
   .follow-bar.full{background:rgba(231,76,60,.14); color:#ffb1a8;}
   .follow-msg{padding:6px 10px; border-radius:10px; background:rgba(231,76,60,.18); color:#ffd2cc; font-size:12px; margin:0 0 6px;}
@@ -1369,7 +1374,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=44"></script>
+<script src="sound.js?v=45"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -3933,6 +3938,17 @@
     const sc = scoutingState();
     const newThisWeek = [];
     const ut = career.teams.find(t=>t.isUser), uIdx = career.teams.indexOf(ut);
+    // primero, los informes que has pedido desde el buscador
+    sc.requests = (sc.requests||[]).filter(pid=> findPlayerAnywhere(pid) && !sc.knowledge[pid]);
+    const usedBy = {};
+    (career.staff||[]).forEach(s=>{
+      usedBy[s.id] = 0;
+      while(usedBy[s.id] < reportsPerWeek(s) && sc.requests.length){
+        const pid = sc.requests.shift();
+        sc.knowledge[pid] = {k: Math.round(20 + s.skill*0.25), n1: Math.random()*2-1, n2: Math.random()*2-1, w: career.week, s: career.season, by: s.name, isNew: true, requested: true};
+        newThisWeek.push(pid); usedBy[s.id]++;
+      }
+    });
     (career.staff||[]).forEach(s=>{
       const m = sc.missions[s.id]; if(!m) return;
       const pool = [];
@@ -3941,7 +3957,7 @@
       const fits = pool.filter(p=> p.age<=m.maxAge && (m.role==='any' || bestRoleOf(p).r===m.role));
       // primero los que aún no conoce; luego mejora los informes que ya tiene
       const fresh = fits.filter(p=>!sc.knowledge[p.id]).sort(()=>Math.random()-0.5);
-      const reports = 1 + (s.skill>=55?1:0) + (s.skill>=80?1:0);
+      const reports = Math.max(0, reportsPerWeek(s) - (usedBy[s.id]||0));
       fresh.slice(0, reports).forEach(p=>{
         sc.knowledge[p.id] = {k: Math.round(20 + s.skill*0.25), n1: Math.random()*2-1, n2: Math.random()*2-1, w: career.week, s: career.season, by: s.name, isNew: true};
         newThisWeek.push(p.id);
@@ -4220,15 +4236,87 @@
     const newCount = known.filter(pid=>sc.knowledge[pid].isNew && !sc.knowledge[pid].archived).length;
     const archCount = known.filter(pid=>sc.knowledge[pid].archived).length, activeCount = known.length - archCount;
     const negOpen = sc.negotiations.filter(n=>!['closed','signed'].includes(n.stage));
-    const tabs = [['scouts','🔎 Ojeo',''],['reports','📋 Informes', newCount?`<i class="tab-badge">${newCount}</i>`:(activeCount?`<i class="tab-badge muted">${activeCount}</i>`:'')],['short','⭐ Seguimiento', `<i class="tab-badge muted">${sc.shortlist.length}/${followCapacity()}</i>`],['arch','🗂️ Ojeados', archCount?`<i class="tab-badge muted">${archCount}</i>`:''],['deals','📝 Negociaciones', negOpen.some(n=>n.unread)?`<i class="tab-badge">!</i>`:'']];
+    const nReq = (sc.requests||[]).length;
+    const tabs = [['scouts','🔎 Ojeo',''],['search','🔍 Buscar', nReq?`<i class="tab-badge muted">${nReq}</i>`:''],['reports','📋 Informes', newCount?`<i class="tab-badge">${newCount}</i>`:(activeCount?`<i class="tab-badge muted">${activeCount}</i>`:'')],['short','⭐ Seguimiento', `<i class="tab-badge muted">${sc.shortlist.length}/${followCapacity()}</i>`],['arch','🗂️ Ojeados', archCount?`<i class="tab-badge muted">${archCount}</i>`:''],['deals','📝 Negociaciones', negOpen.some(n=>n.unread)?`<i class="tab-badge">!</i>`:'']];
     document.getElementById('marketTabs').innerHTML = tabs.map(([k,l,b])=>`<button data-mtab="${k}" class="${marketTab===k?'active':''}">${l}${b}</button>`).join('');
     document.querySelectorAll('#marketTabs [data-mtab]').forEach(b=> b.addEventListener('click', ()=>{ marketTab = b.dataset.mtab; renderCareerMarketScreen(); }));
     const el = document.getElementById('careerMarketList');
     if(marketTab==='reports' && sc.inboxNew && !sc.inboxNew.read){ sc.inboxNew.read = true; persistCareers(); }
     if(marketTab==='scouts') el.innerHTML = renderMissionsHTML();
+    else if(marketTab==='search'){ el.innerHTML = renderSearchHTML(); wireSearch(el); return; }
     else if(marketTab==='deals') el.innerHTML = renderDealsHTML();
     else el.innerHTML = renderReportsHTML(marketTab);
     wireMarket(el);
+  }
+  // ---------- Buscador de jugadores (datos públicos) y peticiones de informe ----------
+  function reportsPerWeek(s){ return 1 + (s.skill>=55?1:0) + (s.skill>=80?1:0); }
+  function requestCapacity(){ return (career.staff||[]).reduce((t,s)=> t + reportsPerWeek(s), 0) * 2; }
+  var searchFilters = {role:'any', maxAge:99, divs:[3,4,5], free:true, q:'', sort:'value'};
+  function searchPool(){
+    const sc = scoutingState(), ut = career.teams.find(t=>t.isUser), F = searchFilters, q = F.q.trim().toLowerCase();
+    let rows = [];
+    career.teams.forEach((t,ti)=>{ if(t===ut || !F.divs.includes(t.division)) return; t.slots.forEach(id=>{ const p = career.players.find(x=>x.id===id); if(p) rows.push({p, team:t, teamIdx:ti}); }); });
+    if(F.free) sc.freeAgents.forEach(p=> rows.push({p, team:null, teamIdx:-1}));
+    rows = rows.filter(r=> r.p.age <= F.maxAge && (F.role==='any' || bestRoleOf(r.p).r===F.role) && (!q || r.p.name.toLowerCase().includes(q) || (r.team && r.team.name.toLowerCase().includes(q))));
+    const key = {value:r=>-calcMarketValue(r.p), age:r=>r.p.age, div:r=>(r.team?r.team.division:6)}[F.sort] || (r=>0);
+    return rows.sort((a,b)=> key(a)-key(b));
+  }
+  function approxMoney(v){ const step = v>=100000 ? 10000 : v>=10000 ? 1000 : 500; return '≈ ' + shortMoney(Math.round(v/step)*step) + ' €'; }
+  function requestReport(pid){
+    const sc = scoutingState(); sc.requests = sc.requests || [];
+    if(!(career.staff||[]).length || sc.requests.includes(pid) || sc.requests.length >= requestCapacity()) return;
+    sc.requests.push(pid); persistCareers();
+  }
+  function cancelRequest(pid){ const sc = scoutingState(); sc.requests = (sc.requests||[]).filter(x=>x!==pid); persistCareers(); }
+  function renderSearchHTML(){
+    const F = searchFilters, sc = scoutingState(), nScouts = (career.staff||[]).length;
+    const chip = (k, v, label, on)=> `<button data-sf="${k}" data-sv="${v}" class="${on?'active':''}">${label}</button>`;
+    let h = `<div class="card search-card">
+      <input type="search" id="searchQ" class="search-q" placeholder="Buscar por nombre o club…" value="${escapeHtml(F.q)}">
+      <div class="mc-row"><span>Puesto</span><div class="chip-row">${chip('role','any','Todos',F.role==='any')}${['GK','DF','MF','FW'].map(r=>chip('role',r,ROLE_SHORT[r],F.role===r)).join('')}</div></div>
+      <div class="mc-row"><span>Edad máx.</span><div class="chip-row">${[[21,'21'],[24,'24'],[28,'28'],[99,'Todas']].map(([v,l])=>chip('maxAge',v,l,F.maxAge===v)).join('')}</div></div>
+      <div class="mc-row"><span>Divisiones</span><div class="chip-row">${[1,2,3,4,5].map(d=>chip('div',d,'D'+d,F.divs.includes(d))).join('')}${chip('free',1,'Libres',F.free)}</div></div>
+      <div class="mc-row"><span>Ordenar</span><div class="chip-row">${chip('sort','value','Valor',F.sort==='value')}${chip('sort','age','Edad',F.sort==='age')}${chip('sort','div','División',F.sort==='div')}</div></div>
+    </div>`;
+    const req = sc.requests || [], cap = requestCapacity();
+    h += `<div class="follow-bar ${nScouts && req.length>=cap?'full':''}">📋 Informes pedidos: <b>${req.length}/${cap}</b> · ${nScouts ? 'llegan la semana que viene (cada ojeador hace sus informes semanales; lo que le sobre lo dedica a su misión)' : 'necesitas ojeadores para pedir informes (Plantilla → Personal)'}</div>`;
+    h += `<div id="searchResults">${renderSearchResults()}</div>`;
+    return h;
+  }
+  function renderSearchResults(){
+    const sc = scoutingState(), rows = searchPool(), req = sc.requests || [], cap = requestCapacity(), nScouts = (career.staff||[]).length;
+    if(!rows.length) return `<div class="card"><p class="hint">Ningún jugador cumple esos filtros.</p></div>`;
+    const shown = rows.slice(0, 40);
+    return `<p class="hint" style="margin:4px 2px;">${rows.length} jugador${rows.length===1?'':'es'}${rows.length>40?' · se muestran los 40 primeros, afina la búsqueda':''}. Sin informe solo se ven los datos públicos.</p><div class="card sq-card">` + shown.map(r=>{
+      const p = r.p, kn = sc.knowledge[p.id], role = bestRoleOf(p).r, pending = req.includes(p.id);
+      let right;
+      if(kn) right = `<button class="rep-act" data-sopen="${p.id}">📄 Ver informe</button>${kn.archived?'<small>descartado</small>':''}`;
+      else if(pending) right = `<small class="pending">⏳ Pedido</small><button class="rep-act" data-scancel="${p.id}">Anular</button>`;
+      else right = `<button class="rep-act primary" data-sreq="${p.id}" ${!nScouts || req.length>=cap ? 'disabled' : ''}>📋 Pedir informe</button>`;
+      const quality = kn ? `<small>Calidad ${starRangeHTML(scoutEstimate(p, kn).cur)}</small>` : '';
+      return `<div class="rep-row"><span class="rep-star">${kn ? '📄' : '❔'}</span>
+        <div class="rep-main"><b>${escapeHtml(p.name)}</b>
+          <small>${r.team ? `${teamBadgeHTML(r.team)}${escapeHtml(r.team.name)} · D${r.team.division}` : '🆓 Libre'} · ${p.age} años · <span class="role-tag r-${role}">${ROLE_SHORT[role]}</span></small>${quality}</div>
+        <div class="rep-side"><b>${r.team ? approxMoney(calcMarketValue(p)) : 'Libre'}</b>${right}</div></div>`;
+    }).join('') + `</div>`;
+  }
+  function wireSearch(el){
+    const F = searchFilters;
+    const refreshList = ()=>{ const box = el.querySelector('#searchResults'); if(box){ box.innerHTML = renderSearchResults(); wireSearchResults(box); } };
+    el.querySelectorAll('[data-sf]').forEach(b=> b.addEventListener('click', ()=>{
+      const k = b.dataset.sf, v = b.dataset.sv;
+      if(k==='role') F.role = v; if(k==='maxAge') F.maxAge = Number(v); if(k==='sort') F.sort = v;
+      if(k==='div'){ const d = Number(v); F.divs = F.divs.includes(d) ? F.divs.filter(x=>x!==d) : [...F.divs, d].sort(); if(!F.divs.length) F.divs = [d]; }
+      if(k==='free') F.free = !F.free;
+      renderCareerMarketScreen();
+    }));
+    const qi = el.querySelector('#searchQ'); if(qi) qi.addEventListener('input', ()=>{ F.q = qi.value; refreshList(); });
+    wireSearchResults(el);
+  }
+  function wireSearchResults(root){
+    root.querySelectorAll('[data-sreq]').forEach(b=> b.addEventListener('click', ()=>{ requestReport(b.dataset.sreq); renderCareerMarketScreen(); }));
+    root.querySelectorAll('[data-scancel]').forEach(b=> b.addEventListener('click', ()=>{ cancelRequest(b.dataset.scancel); renderCareerMarketScreen(); }));
+    root.querySelectorAll('[data-sopen]').forEach(b=> b.addEventListener('click', ()=> openReport(b.dataset.sopen)));
   }
   function renderMissionsHTML(){
     const sc = scoutingState();
@@ -4668,7 +4756,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=44').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=45').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -6347,7 +6435,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=44').then(m=>{
+      import('./match3d.js?v=45').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
