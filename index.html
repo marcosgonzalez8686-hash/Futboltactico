@@ -457,6 +457,8 @@
   .pp-form > span{color:#cfe8d8;} .pp-form > b{text-align:right;}
   .pp-form-note{font-size:11.5px; color:#9fd4b8; margin:3px 0 6px;}
   .tp-form{display:block; font-size:9.5px; font-weight:bold; line-height:1.1;}
+  .pp-progress{display:flex; flex-direction:column; gap:2px; margin:6px 0 2px; font-size:12px;}
+  .pp-progress small{color:#9fd4b8; font-size:11px;}
   .pp-contract{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin:8px 0 4px; padding:7px 10px; border-radius:10px; background:rgba(0,0,0,.18); border:1px solid #2f5c46; font-size:12px;}
   .pp-contract .mode-btn{width:auto; margin:0; padding:6px 12px;}
   .follow-bar{padding:6px 10px; border-radius:10px; background:rgba(244,208,63,.1); color:#f4d03f; font-size:12px; margin:4px 0 6px;}
@@ -1354,7 +1356,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=41"></script>
+<script src="sound.js?v=42"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1545,14 +1547,16 @@
   }
 
   // ---------- Posición oculta (heurística automática) ----------
+  // Peso de cada atributo en cada puesto (lo que usa el partido: paradas, pases, robos, tiros, alcance, turnos extra, cansancio)
+  const ROLE_WEIGHTS = {
+    GK: {goalkeeping:0.70, pass:0.15, strength:0.10, dribble:0.05},
+    DF: {defense:0.40, strength:0.22, speed:0.14, pass:0.12, stamina:0.12},
+    MF: {pass:0.40, dribble:0.22, defense:0.14, speed:0.12, stamina:0.12},
+    FW: {shot:0.40, speed:0.22, dribble:0.14, strength:0.12, stamina:0.12},
+  };
+  function roleRating(attrs, role){ const w = ROLE_WEIGHTS[role]; let v = 0; for(const k in w) v += (attrs[k]||0) * w[k]; return v; }
   function computeHiddenPosition(attrs){
-    const scores = {
-      GK: attrs.goalkeeping,
-      DF: (attrs.defense + attrs.strength) / 2,
-      MF: (attrs.pass + attrs.dribble) / 2,
-      FW: (attrs.shot + attrs.speed) / 2,
-    };
-    return Object.keys(scores).reduce((a,b)=> scores[a] >= scores[b] ? a : b);
+    return ['GK','DF','MF','FW'].reduce((a,b)=> roleRating(attrs,a) >= roleRating(attrs,b) ? a : b);
   }
 
   const POSITION_TIERS = {
@@ -1592,12 +1596,8 @@
   const SQUAD_TARGETS = ['GK','GK','DF','DF','DF','DF','MF','MF','MF','MF','FW','FW']; // 12 jugadores por club
   function generateSquad(divisionLevel){ return SQUAD_TARGETS.map((role,i)=>{ const p=generateRandomPlayer(role, divisionLevel); p.squadNumber=i+1; return p; }); }
 
-  function slotScore(p, role){
-    if(role==='GK') return p.goalkeeping;
-    if(role==='DF') return (p.defense + p.strength) / 2;
-    if(role==='MF') return (p.pass + p.dribble) / 2;
-    return (p.shot + p.speed) / 2; // FW
-  }
+  // Valoración en un puesto: media ponderada de los atributos que importan en él
+  function slotScore(p, role){ return roleRating(p, role); }
   function autoPickLineup(squadIds, formationKey){
     const roles = slotRolesForFormation(formationKey || DEFAULT_FORMATION);
     const pool = squadIds.map(pid=>career.players.find(p=>p.id===pid)).filter(p=>p && !(p.injuryMatchesLeft>0));
@@ -2269,7 +2269,7 @@
     return Object.keys(weights)[0];
   }
   function levelUpAttribute(player){
-    const weights = LEVEL_UP_WEIGHTS[player.hiddenPos] || LEVEL_UP_WEIGHTS.MF;
+    const weights = ROLE_WEIGHTS[player.hiddenPos] || ROLE_WEIGHTS.MF;
     const key = pickWeighted(weights);
     player[key] = Math.min(99, player[key]+1);
   }
@@ -2289,10 +2289,10 @@
       const player = career.players.find(p=>p.id===pid);
       if(!player) return;
       const before = {}; ATTRS.forEach(a=>{ before[a.key]=player[a.key]; });
-      const base = 15 + 5*((goalsMap && goalsMap[pid]) || 0);
-      const xp = Math.round(base * growthFactorFor(player) * ageFactorFor(player) * mult);
-      player.hiddenExp += xp;
-      while(player.hiddenExp >= 100){ player.hiddenExp -= 100; levelUpAttribute(player); }
+      const goals = (goalsMap && goalsMap[pid]) || 0;
+      const gain = growthUnit(player) * 0.5 * mult * (1 + 0.15*goals);
+      applyGrowth(player, gain);
+      const xp = Math.round(gain*100);
       const changes = ATTRS.filter(a=> player[a.key]!==before[a.key]).map(a=>({short:a.short, before:before[a.key], after:player[a.key]}));
       summary.push({name:player.name, xp, changes});
     });
@@ -2418,6 +2418,7 @@
     });
 
     (career.youthPlayers||[]).forEach(p=>{ p.age = (p.age||16) + 1; });
+    career.players.forEach(p=>{ p.seasonStart = Math.round(bestRoleOf(p).v*10)/10; });
 
     // 3. Guardar los espectadores de los partidos en casa antes de rehacer el calendario
     if(!career.attendanceHistory) career.attendanceHistory = [];
@@ -2459,6 +2460,58 @@
     persistCareers();
   }
 
+  // ---------- Progresión: crecimiento hacia el potencial y declive con la edad ----------
+  // Fracción del margen hasta su techo que gana en una temporada, según la edad
+  function growthRate(age){ return age<=20 ? 0.22 : age<=23 ? 0.15 : age<=26 ? 0.09 : age<=28 ? 0.04 : 0; }
+  // Puntos de valoración que pierde por temporada a partir de los 30
+  function declinePerSeason(age){ return age<30 ? 0 : Math.min(7, (age-29)*1.2); }
+  // Techo del jugador (fijo): se calcula una vez a partir de su edad y su potencial oculto
+  function ensurePotential(p){ if(p.potential===undefined) p.potential = Math.round(potentialRatingRaw(p)); return p.potential; }
+  function roleWeightsOf(p){ return ROLE_WEIGHTS[p.hiddenPos] || ROLE_WEIGHTS[bestRoleOf(p).r]; }
+  // Mejora: se reparte entre los atributos de su puesto según lo que pesan (la valoración sube lo acumulado)
+  function applyGrowth(p, amount){
+    if(!(amount > 0)) return;
+    const w = roleWeightsOf(p);
+    p.grow = (p.grow||0) + amount;
+    let guard = 0;
+    while(p.grow >= 0.12 && guard++ < 60){
+      const key = pickWeighted(w);
+      if(p[key] >= 99) { p.grow -= 0.12; continue; }
+      p[key]++; p.grow -= Math.max(0.05, w[key]);
+    }
+  }
+  // Declive: primero lo físico (velocidad, resistencia, fuerza)
+  const DECLINE_WEIGHTS = {speed:0.32, stamina:0.28, strength:0.15, dribble:0.08, defense:0.06, shot:0.05, pass:0.03, goalkeeping:0.03};
+  function applyDecline(p, amount){
+    if(!(amount > 0)) return;
+    const w = roleWeightsOf(p);
+    p.decl = (p.decl||0) + amount;
+    let guard = 0;
+    while(p.decl >= 0.12 && guard++ < 60){
+      const key = pickWeighted(DECLINE_WEIGHTS);
+      if(p[key] <= 1){ p.decl -= 0.12; continue; }
+      p[key]--; p.decl -= Math.max(0.06, w[key]||0);
+    }
+  }
+  // Ritmo base por "sesión": la temporada tiene unas 19 sesiones efectivas (entrenamiento + partidos)
+  function growthUnit(p){
+    const cur = bestRoleOf(p).v, gap = ensurePotential(p) - cur;
+    if(gap <= 0) return 0;
+    const pers = (PERSONALITIES[p.personality] || PERSONALITIES.normal).xp;
+    return gap * growthRate(p.age) / 19 * pers;
+  }
+  // Entrenamiento semanal: todos los jugadores de todos los clubes (los que juegan suman además el partido)
+  function weeklyProgress(){
+    if(!career) return;
+    const teamOf = {};
+    career.teams.forEach(t=> t.slots.forEach(id=> teamOf[id] = t));
+    career.players.forEach(p=>{
+      if(p.seasonStart === undefined) p.seasonStart = Math.round(bestRoleOf(p).v*10)/10;
+      const t = teamOf[p.id];
+      applyGrowth(p, growthUnit(p) * 0.5 * trainingBoostFor(t));
+      applyDecline(p, declinePerSeason(p.age) / TOTAL_SEASON_WEEKS);
+    });
+  }
   function trainYouthPlayers(){
     if(!career || !career.youthPlayers) return;
     const userTeam = career.teams.find(t=>t.isUser);
@@ -2467,9 +2520,7 @@
     career.youthPlayers.forEach(p=>{
       ensureYouthMeta(p);
       const pers = PERSONALITIES[p.personality] || PERSONALITIES.normal;
-      const xp = Math.round(8 * growthFactorFor(p) * ageFactorFor(p) * mult * pers.xp * dirBoost);
-      p.hiddenExp = (p.hiddenExp||0) + xp;
-      while(p.hiddenExp >= 100){ p.hiddenExp -= 100; levelUpAttribute(p); }
+      applyGrowth(p, growthUnit(p) * 0.85 * mult * dirBoost); // growthUnit ya incluye el carácter
       // evolución: se apunta la valoración cada 4 semanas
       if(youthWeeksIn(p) > 0 && youthWeeksIn(p) % 4 === 0){ p.yHist.push(Math.round(bestRoleOf(p).v)); if(p.yHist.length > 16) p.yHist.shift(); }
     });
@@ -2812,6 +2863,7 @@
       ensureJornadaSimulated();
     }
     trainYouthPlayers();
+    weeklyProgress();
     progressInjuries();
     recoverFitness();
     progressScouting();
@@ -3436,6 +3488,15 @@
   var profilePid = null; var saleDraft = {}, profileMsg = ''; // var: showScreen lo consulta y puede ejecutarse antes de llegar aquí
   function openPlayerProfile(pid){ profilePid = pid; if(renewOpenPid !== pid) renewOpenPid = null; renderPlayerProfile(); document.getElementById('playerProfileModal').hidden = false; }
   function closePlayerProfile(){ document.getElementById('playerProfileModal').hidden = true; profilePid = null; }
+  // Progreso de la temporada y valoración del cuerpo técnico sobre su margen
+  function progressHTML(p){
+    const cur = bestRoleOf(p).v, gap = ensurePotential(p) - cur;
+    const d = p.seasonStart===undefined ? 0 : Math.round((cur - p.seasonStart)*10)/10;
+    const note = p.age>=30 ? '📉 Empieza a declinar: cada temporada pierde algo, sobre todo velocidad y resistencia.'
+      : gap>=12 ? '🚀 Todavía puede mejorar mucho.' : gap>=5 ? '📈 Aún tiene margen de mejora.' : gap>0.5 ? '🙂 Está cerca de su techo.' : '⭐ Está en su mejor momento.';
+    const dTxt = d>0 ? `<b style="color:#5ee08f">+${String(d).replace('.',',')}</b>` : d<0 ? `<b style="color:#ff8b80">${String(d).replace('.',',')}</b>` : '<b>=</b>';
+    return `<div class="pp-progress"><span>Progreso esta temporada: ${dTxt}</span><small>Cuerpo técnico: ${note} Los que juegan mejoran bastante más que los que solo entrenan.</small></div>`;
+  }
   function renderPlayerProfile(){
     const p = career.players.find(x=>x.id===profilePid);
     const body = document.getElementById('playerProfileBody');
@@ -3454,6 +3515,7 @@
       <div class="pp-money"><div><span>Valor</span><b>${formatMoney(calcMarketValue(p))}</b></div><div><span>Sueldo</span><b>${formatMoney(calcWage(p))}/sem</b></div><div><span>Valoración</span><b style="color:${divColor(br.v,'rating')}">${Math.round(br.v)}</b></div></div>
       <div class="pp-form"><span>Forma física</span><div class="pp-fit-track"><div style="width:${playerForm(p)}%; background:${formColor(playerForm(p))}"></div></div>${formHTML(p)}</div>
       <div class="pp-form-note">${playerForm(p)>=100 ? 'Descansado: rinde al 100 %.' : `Cansancio ${100-playerForm(p)} % (rinde un ${Math.round((100-playerForm(p))*0.3)} % menos). Antes del próximo partido recuperará unos ${weeklyRecovery(p)} puntos.`}</div>
+      ${progressHTML(p)}
       <div class="pp-contract"><span>📝 Contrato: <b style="color:${contractColor(p)}">${(p.contractYears||0)<=1 ? 'último año' : `${p.contractYears} temporadas`}</b> (hasta el final de T${contractEndSeason(p)}) · ${formatMoney(calcWage(p))}/sem</span>
         ${renewOpenPid===p.id ? '' : `<button class="mode-btn small" id="ppRenew">✍️ Renovar</button>`}</div>
       ${renewOpenPid===p.id ? renewPanelHTML(p) : ''}
@@ -3759,11 +3821,13 @@
   }
   // Estrellas: escala absoluta de la liga (≈25 → 1★ … ≈85 → 5★)
   function starsFromRating(r){ return clamp(Math.round(((r-10)/15)*2)/2, 0.5, 5); }
-  function potentialRating(p){
+  function potentialRatingRaw(p){
     const room = p.age<=19 ? 32 : p.age<=21 ? 26 : p.age<=24 ? 17 : p.age<=27 ? 8 : 2;
     const g = (p.hiddenGrowth!==undefined ? p.hiddenGrowth : 50)/99;
     return bestRoleOf(p).v + room * (0.3 + g*0.9);
   }
+  // Techo del jugador: fijo desde que se conoce (si ya lo ha alcanzado o declina, su valoración actual)
+  function potentialRating(p){ return Math.max(bestRoleOf(p).v, ensurePotential(p)); }
   function knowledgeOf(pid){ return scoutingState().knowledge[pid] || null; }
   // Valoración estimada por el ojeador: cuanto menos se le conoce, más error y más amplia la horquilla
   function scoutEstimate(p, kn){
@@ -4544,7 +4608,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=41').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=42').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -6222,7 +6286,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=41').then(m=>{
+      import('./match3d.js?v=42').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
