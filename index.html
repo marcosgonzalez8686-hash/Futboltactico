@@ -759,7 +759,7 @@
     body.in-match .score-team{font-size:13px !important; padding:4px 10px !important;}
     body.in-match .score-num{font-size:22px !important;}
     body.in-match .turn-indicator{font-size:14px !important;}
-    body.in-match #selectedPlayerInfo{width:190px !important; top:58px !important;}
+    body.in-match #selectedPlayerInfo{width:190px !important; top:84px !important;}
     body.in-match .pc-head b{font-size:14px !important;}
     body.in-match .pc-attr b{font-size:17px !important;}
     body.in-match .pc-attr span{font-size:12px !important;}
@@ -791,6 +791,7 @@
       position:fixed; top:6px; left:50%; transform:translateX(-50%); z-index:40;
       display:flex; align-items:center; gap:10px; padding:4px 10px; border:none; border-radius:14px;
       background:rgba(8,20,14,.82); box-shadow:0 4px 14px rgba(0,0,0,.5); white-space:nowrap;
+      max-width:calc(100vw - 120px); flex-wrap:wrap; justify-content:center; row-gap:2px;
     }
     body.in-match header.scoreboard h1{display:none;}
     body.in-match .score-row{gap:6px;}
@@ -799,13 +800,14 @@
     body.in-match .score-sep{font-size:16px;}
     body.in-match .turn-indicator{margin:0; font-size:11px;}
     /* Botones de vista arriba a la izquierda */
-    body.in-match .view-toggle-row{position:fixed; top:6px; left:6px; z-index:40; margin:0; gap:5px; justify-content:flex-start;}
+    body.in-match .view-toggle-row{position:fixed; bottom:8px; left:8px; top:auto; z-index:40; margin:0; gap:5px; justify-content:flex-start;}
+    body.in-match.view-3d .view-toggle-row{bottom:42px;}
     body.in-match .view-toggle{padding:4px 9px; font-size:11px; background:rgba(8,20,14,.82);}
     body.in-match .view-toggle .lbl{display:none;}
     body.in-match .view-toggle .lbl-s{display:inline;}
     /* Ficha del jugador en el lateral izquierdo */
     body.in-match #selectedPlayerInfo{
-      position:fixed; left:6px; top:44px; z-index:35; width:142px; max-height:calc(100dvh - 90px); overflow:auto;
+      position:fixed; left:6px; top:76px; z-index:35; width:142px; max-height:calc(100dvh - 160px); overflow:auto;
     }
     body.in-match .pcard{background:rgba(8,20,14,.84); padding:6px 8px;}
     body.in-match .pc-head{display:block;}
@@ -822,8 +824,8 @@
     body.in-match .action-btn{padding:9px 14px; font-size:13px; box-shadow:0 3px 10px rgba(0,0,0,.5); min-width:96px;}
     /* Mensaje abajo en el centro */
     body.in-match #message{
-      position:fixed; bottom:8px; left:50%; transform:translateX(-50%); z-index:35; min-height:0;
-      max-width:60vw; background:rgba(8,20,14,.8); border-radius:12px; padding:3px 12px; font-size:12px;
+      position:fixed; bottom:8px; left:auto; right:8px; transform:none; z-index:35; min-height:0;
+      max-width:calc(100vw - 260px); background:rgba(8,20,14,.8); border-radius:12px; padding:3px 12px; font-size:12px; text-align:center;
     }
     body.in-match #message:empty{display:none;}
     body.in-match .action-toast{top:22% !important;}
@@ -865,7 +867,7 @@
   .message.m-good{color:#5ee08f;}
   .message.m-bad{color:#ffa45c;}
   .message.m-foul, .message.m-card{color:#ffd23f;}
-  .message.m-danger{color:#ff6b5e;}
+  .message.m-danger, .message.m-injury{color:#ff6b5e;}
   .message.m-info{color:#8ecbff;}
   .message.m-pop{animation:msgPop .45s ease-out;}
   @keyframes msgPop{ 0%{transform:scale(.85); opacity:.3;} 60%{transform:scale(1.08); opacity:1;} 100%{transform:scale(1);} }
@@ -1320,7 +1322,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=35"></script>
+<script src="sound.js?v=36"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -4393,7 +4395,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=35').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=36').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -6027,6 +6029,7 @@
     btn.innerHTML = view3dOn ? '🗺️<span class="lbl"> Ver tablero 2D</span><span class="lbl-s"> 2D</span>' : '🎥<span class="lbl"> Ver en 3D</span><span class="lbl-s"> 3D</span>';
     document.getElementById('boardWrap').hidden = view3dOn;
     document.getElementById('match3d').hidden = !view3dOn;
+    document.body.classList.toggle('view-3d', !!view3dOn);
   }
   function set3DMode(on){
     if(on && !webglAvailable()){
@@ -6037,7 +6040,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=35').then(m=>{
+      import('./match3d.js?v=36').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
@@ -6223,7 +6226,8 @@
   // ---------- Resultado de la acción destacado ----------
   function classifyMessage(m){
     if(/GOOOL/.test(m)) return 'goal';
-    if(/ROJA|lesionad/.test(m)) return 'danger';
+    if(/ROJA/.test(m)) return 'danger';
+    if(/lesionad/.test(m)) return 'injury';
     if(/amarilla/i.test(m)) return 'card';
     if(/Falta/.test(m)) return 'foul';
     if(/Descanso|Final del partido|Tiempo añadido|simulado|Cambio:/.test(m)) return 'info';
@@ -6237,6 +6241,7 @@
     foul:   {icon:'⚠️', color:'#f1c40f', ms:2200},
     card:   {icon:'🟨', color:'#f4d03f', ms:2600},
     danger: {icon:'🟥', color:'#e74c3c', ms:3200},
+    injury: {icon:'🚑', color:'#e74c3c', ms:3200},
     info:   {icon:'⏱️', color:'#5dade2', ms:2200},
   };
   function showToast(html, cls, color, ms){
@@ -6272,7 +6277,9 @@
     const st = TOAST_STYLE[level];
     if(!st) return; // movimientos normales y goles (ya tienen su celebración) no sacan aviso
     const who = actingTeam && level !== 'info' ? `<span class="t-sub">${escapeHtml(teamName(actingTeam))}</span>` : '';
-    showToast(`<span class="t-icon">${st.icon}</span>${escapeHtml(base)}${who}`, '', level==='good' || level==='bad' ? (teamColor || st.color) : st.color, st.ms);
+    // varias cosas en la misma jugada (p. ej. amarilla y lesión): un icono por cada una
+    const icon = level==='injury' && /amarilla/i.test(base) ? '🟨🚑' : level==='danger' && /lesionad/.test(base) ? '🟥🚑' : st.icon;
+    showToast(`<span class="t-icon">${icon}</span>${escapeHtml(base)}${who}`, '', level==='good' || level==='bad' ? (teamColor || st.color) : st.color, st.ms);
   }
 
   function renderSelectedPlayerInfo(){
