@@ -460,6 +460,22 @@
   .follow-bar.full{background:rgba(231,76,60,.14); color:#ffb1a8;}
   .follow-msg{padding:6px 10px; border-radius:10px; background:rgba(231,76,60,.18); color:#ffd2cc; font-size:12px; margin:0 0 6px;}
   .rep-act{margin-top:4px; background:#1c4433; color:var(--chalk); border:none; border-radius:7px; padding:4px 7px; font-size:10.5px; font-weight:bold; cursor:pointer; white-space:nowrap;}
+  .subs-card{padding:10px;}
+  .subs-head{display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;}
+  .subs-x{background:#1c4433; color:var(--chalk); border:none; border-radius:8px; padding:4px 10px; font-size:14px; cursor:pointer;}
+  .subs-forced{background:rgba(231,76,60,.2); border:1px solid #e74c3c; color:#ffd2cc; border-radius:10px; padding:7px 10px; font-size:12.5px; margin-bottom:6px;}
+  .subs-sec{font-size:11px; color:#9fd4b8; font-weight:bold; margin:8px 0 4px; letter-spacing:.3px;}
+  .subs-list{display:flex; flex-direction:column; gap:4px;}
+  .subs-row{display:grid; grid-template-columns:26px 1fr 64px 44px; align-items:center; gap:6px; text-align:left; background:#0e2118; border:1.5px solid #2f5c46; color:var(--chalk); border-radius:9px; padding:5px 7px; cursor:pointer; font:inherit;}
+  .subs-row:disabled{opacity:.45; cursor:default;}
+  .subs-row.sel.out{border-color:#e74c3c; background:rgba(231,76,60,.14);}
+  .subs-row.sel.in{border-color:#2ecc71; background:rgba(46,204,113,.14);}
+  .subs-num{font-weight:bold; text-align:center; color:var(--gold);}
+  .subs-name{display:flex; flex-direction:column; min-width:0;} .subs-name b{font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;} .subs-name small{font-size:10.5px; color:#9fd4b8;}
+  .subs-fat{height:7px; background:#1c3a2c; border-radius:4px; overflow:hidden;} .subs-fat i{display:block; height:100%;}
+  .subs-val{text-align:right; font-size:12px; font-weight:bold;} .subs-val small{color:#9fd4b8; font-weight:normal; font-size:10px;}
+  .subs-best{font-style:normal; font-size:9.5px; background:rgba(46,204,113,.2); color:#5ee08f; border-radius:5px; padding:0 5px; margin-left:4px;}
+  .subs-card > .mode-btn{margin-top:8px;}
   .cup-status{padding:8px 10px; border-radius:10px; background:rgba(244,208,63,.12); color:#f4d03f; font-weight:bold; font-size:13px; margin:6px 0 10px;}
   .cup-round{margin:8px 0; padding:8px; border-radius:10px; background:rgba(0,0,0,.16); border:1px solid #2f5c46;}
   .cup-rhead{display:flex; justify-content:space-between; align-items:baseline; gap:6px; flex-wrap:wrap;}
@@ -849,8 +865,14 @@
       position:fixed; z-index:42; top:40px; left:50%; transform:translateX(-50%); width:min(560px, 80vw);
       max-height:calc(100dvh - 60px); overflow:auto; box-shadow:0 8px 24px rgba(0,0,0,.6);
     }
+    body.in-match .subs-cols{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+    body.in-match .subs-row{padding:3px 6px; grid-template-columns:22px 1fr 40px 38px;}
+    body.in-match .subs-name b{font-size:11.5px;} body.in-match .subs-name small{font-size:9.5px;}
+    body.in-match .subs-sec{margin:4px 0 3px;}
+    body.in-match .subs-card > .mode-btn{padding:9px; font-size:14px; position:sticky; bottom:0; box-shadow:0 -6px 14px rgba(0,0,0,.45);}
+    body.in-match .subs-forced{padding:5px 9px; font-size:12px;}
     body.in-match #subsWindow:not([hidden]){
-      position:fixed; z-index:42; top:40px; left:50%; transform:translateX(-50%); width:min(520px, 80vw);
+      position:fixed; z-index:42; top:40px; left:50%; transform:translateX(-50%); width:min(760px, 94vw);
       max-height:calc(100dvh - 60px); overflow:auto; background:var(--panel); border-radius:10px; padding:8px;
       box-shadow:0 8px 24px rgba(0,0,0,.6);
     }
@@ -1326,7 +1348,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=39"></script>
+<script src="sound.js?v=40"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -4436,7 +4458,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=39').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=40').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -5151,8 +5173,12 @@
   let freeKickPieceId = null; // pieza que debe sacar de falta: solo puede chutar o pasar, no moverse
   let chainReceiverPieceId = null; // pieza que acaba de recibir un pase este turno: puede volver a pasar/chutar/regatear, no solo moverse
   let tackleRetryAllowed = false; // ya no se usa: un robo fallido gasta la acción del turno
-  let matchSubsUsed = 0;
+  let matchSubsUsed = 0, matchSubsUsedB = 0;
   let subWindowOpen = false;
+  let forcedSubPieceId = null;   // ficha lesionada que hay que cambiar antes de seguir
+  let pendingInjuries = [];      // lesiones de la última jugada
+  let subOutPid = null, subInPid = null;
+  let subbedOff = {A:new Set(), B:new Set()}; // los que ya han salido no pueden volver
   const MAX_SUBS = 3;
   function resetFormation(kickoffTeam, rosterA, rosterB){
     pieces = [...baseFormation('A', rosterA, currentFormationA), ...baseFormation('B', rosterB, currentFormationB)];
@@ -5289,6 +5315,7 @@
           const matches = randInt(1,4);
           injPlayer.injuryMatchesLeft = Math.max(injPlayer.injuryMatchesLeft||0, matches);
           message += ` ¡${carrier.name||carrier.role} se ha lesionado! Baja para ${matches} partido(s).`;
+          pendingInjuries.push(carrier.id);
         }
       }
     }
@@ -5403,6 +5430,7 @@
             const matches = randInt(1,4);
             injPlayer.injuryMatchesLeft = Math.max(injPlayer.injuryMatchesLeft||0, matches);
             message += ` ¡${carrier.name||carrier.role} se ha lesionado! Baja para ${matches} partido(s).`;
+            pendingInjuries.push(carrier.id);
           }
         }
       }
@@ -5482,7 +5510,7 @@
     score.A += addA; score.B += addB;
     pieces.forEach(p=>{ p.fatigue = clamp(Math.round((p.fatigue||0) + (48 - (p.stamina||50)/8)*fraction), 0, 100); });
     matchEnded = true;
-    selected = null; actionMode = null; subWindowOpen = false;
+    selected = null; actionMode = null; subWindowOpen = false; forcedSubPieceId = null;
     message = `¡Partido simulado hasta el final! ${teamName('A')} ${score.A} - ${score.B} ${teamName('B')}`;
     maybeCupPenalties();
     triggerFulltimeCelebration();
@@ -5589,6 +5617,7 @@
   }
   function afterStep(piece, wasMove, forceEnd){
     piece.fatigue = clamp((piece.fatigue||0) + fatigueIncrement(piece), 0, 100);
+    if(pendingInjuries.length) handleInjuries();
     if(freeKickPieceId===piece.id) freeKickPieceId = null;
     if(chainReceiverPieceId===piece.id) chainReceiverPieceId = null;
     selected=null; actionMode=null;
@@ -5858,6 +5887,8 @@
 
   function aiTakeTurn(){
     if(matchEnded) return;
+    if(forcedSubPieceId) return; // primero el cambio obligatorio del rival
+    aiMaybeSub();
     if(aiLevel==='hard'){ if(aiStepHard()) return; }
     else if(aiLevel==='easy'){ if(aiStepEasy()) return; }
     const aiTeam='B';
@@ -5913,6 +5944,7 @@
 
   function selectPiece(piece){
     if(matchEnded) return;
+    if(forcedSubPieceId){ subWindowOpen = true; renderSubsWindow(); return; }
     if(actionMode==='pass'){
       const cells = passTargetCells(selected);
       if(cells.some(c=>c.col===piece.col && c.row===piece.row)){
@@ -5934,6 +5966,7 @@
   }
   function clickCell(col,row){
     if(matchEnded) return;
+    if(forcedSubPieceId){ subWindowOpen = true; renderSubsWindow(); return; }
     if(actionMode==='move'){
       const valid = validMoveCells(selected).some(c=>c.col===col && c.row===row);
       if(valid){ const piece=selected; doMove(piece,col,row); afterStep(piece, true); return; }
@@ -6103,7 +6136,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=39').then(m=>{
+      import('./match3d.js?v=40').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
@@ -6283,7 +6316,7 @@
     renderSubsWindow();
     document.getElementById('btnFinishSave').hidden = !matchContext;
     document.getElementById('btnSimRest').hidden = matchEnded;
-    document.getElementById('btnOpenSubs').hidden = !(matchContext && matchContext.type==='career') || matchEnded;
+    { const bs = document.getElementById('btnOpenSubs'); bs.hidden = !subsAllowed() || matchEnded; bs.textContent = `🔁 Cambios ${matchSubsUsed}/${MAX_SUBS}`; }
     renderPanel();
   }
   // ---------- Resultado de la acción destacado ----------
@@ -6368,76 +6401,132 @@
     Object.keys(matchOutFatigue).forEach(pid=> set(pid, matchOutFatigue[pid]));
     pieces.forEach(p=> set(p.pid, p.fatigue||0));
   }
+  // ---------- Cambios ----------
+  function subsAllowed(){ return !!(career && matchContext && (matchContext.type==='career' || matchContext.type==='career_friendly')); }
+  function subsUsed(team){ return team==='A' ? matchSubsUsed : matchSubsUsedB; }
+  // Club rival del partido de carrera (para su banquillo)
+  function matchOppTeam(){
+    if(!subsAllowed()) return null;
+    if(matchContext.type==='career_friendly') return career.teams[matchContext.opponentIdx] || null;
+    const f = career.fixtures.find(x=>x.id===matchContext.fixtureId); if(!f) return null;
+    return career.teams[matchContext.userIsHome ? f.awayIdx : f.homeIdx] || null;
+  }
+  function benchFor(team){
+    const club = team==='A' ? career.teams.find(t=>t.isUser) : matchOppTeam();
+    if(!club) return [];
+    const onPitch = new Set(pieces.filter(p=>p.team===team && p.pid).map(p=>p.pid));
+    return club.slots.map(id=>career.players.find(p=>p.id===id))
+      .filter(p=> p && !onPitch.has(p.id) && !(p.injuryMatchesLeft>0) && !subbedOff[team].has(p.id));
+  }
+  function benchScore(p, role){ return slotScore(p, role) * (1 - (p.tired||0)/100*0.3); }
+  function canSubstitute(team){ return subsAllowed() && subsUsed(team) < MAX_SUBS && benchFor(team).length > 0; }
+  // Sustitución de una ficha (sirve para los dos equipos)
+  function doSub(team, piece, benchPlayer){
+    if(piece.pid){ matchOutFatigue[piece.pid] = piece.fatigue||0; subbedOff[team].add(piece.pid); }
+    const outName = piece.name || piece.role;
+    piece.pid = benchPlayer.id; piece.name = benchPlayer.name; piece.number = benchPlayer.squadNumber || null;
+    ATTRS.forEach(a=> piece[a.key] = benchPlayer[a.key]);
+    piece.fatigue = clamp(Math.round(benchPlayer.tired||0), 0, 100);
+    delete piece.injured;
+    if(!matchParticipants[team].includes(benchPlayer.id)) matchParticipants[team].push(benchPlayer.id);
+    if(team==='A') matchSubsUsed++; else matchSubsUsedB++;
+    message = `Cambio: entra ${benchPlayer.name} por ${outName}${team==='B' ? ` (${teamName('B')})` : ''}.`;
+    actionSeq++; actingTeam = team;
+    if(forcedSubPieceId===piece.id){
+      forcedSubPieceId = null;
+      if(mode==='ai' && turn==='B' && !matchEnded) setTimeout(aiTakeTurn, 700);
+    }
+  }
+  // Lesionado sin cambios disponibles: sale y el equipo se queda con uno menos
+  function removeInjured(piece){
+    if(piece.pid) matchOutFatigue[piece.pid] = piece.fatigue||0;
+    sentOffSlots[piece.team].add(parseInt(piece.id.slice(1), 10));
+    const idx = pieces.findIndex(p=>p.id===piece.id); if(idx>=0) pieces.splice(idx,1);
+    if(freeKickPieceId===piece.id) freeKickPieceId = null;
+    message += ` Sin cambios disponibles: ${teamName(piece.team)} juega con uno menos.`;
+  }
+  function aiSubFor(piece){
+    const bench = benchFor('B').sort((a,b)=> benchScore(b, piece.role) - benchScore(a, piece.role));
+    if(!bench.length || matchSubsUsedB >= MAX_SUBS) return false;
+    doSub('B', piece, bench[0]); return true;
+  }
+  // Tras cada jugada: los lesionados no pueden seguir
+  function handleInjuries(){
+    const list = pendingInjuries; pendingInjuries = [];
+    list.forEach(id=>{
+      const piece = pieces.find(p=>p.id===id); if(!piece) return;
+      piece.injured = true;
+      const note = message;
+      if(piece.team==='B' && mode==='ai'){
+        if(!aiSubFor(piece)) removeInjured(piece);
+        else message = note + ' ' + message;
+      } else if(canSubstitute(piece.team)){
+        forcedSubPieceId = piece.id; subOutPid = piece.pid; subInPid = null; subWindowOpen = true;
+      } else removeInjured(piece);
+    });
+  }
+  // La máquina cambia a sus jugadores muy cansados en la segunda parte
+  function aiMaybeSub(){
+    if(!subsAllowed() || half!==2 || matchSubsUsedB >= MAX_SUBS) return;
+    const tired = pieces.filter(p=>p.team==='B' && p.pid && (p.fatigue||0) >= 65).sort((a,b)=>(b.fatigue||0)-(a.fatigue||0))[0];
+    if(tired) aiSubFor(tired);
+  }
   function performSubstitution(outPid, inPid){
     const piece = pieces.find(p=>p.pid===outPid && p.team==='A');
     const benchPlayer = career.players.find(p=>p.id===inPid);
-    if(!piece || !benchPlayer) return;
-    matchOutFatigue[piece.pid] = piece.fatigue||0;
-    piece.pid = benchPlayer.id;
-    piece.name = benchPlayer.name;
-    piece.number = benchPlayer.squadNumber || null;
-    ATTRS.forEach(a=> piece[a.key] = benchPlayer[a.key]);
-    piece.fatigue = clamp(Math.round(benchPlayer.tired||0), 0, 100);
-    if(!matchParticipants.A.includes(benchPlayer.id)) matchParticipants.A.push(benchPlayer.id);
-    matchSubsUsed++;
-    message = `Cambio: entra ${benchPlayer.name}.`;
+    if(!piece || !benchPlayer || !canSubstitute('A')) return;
+    doSub('A', piece, benchPlayer);
+    subOutPid = null; subInPid = null;
+    if(!forcedSubPieceId) subWindowOpen = false;
     render();
   }
   function renderSubsWindow(){
     const el = document.getElementById('subsWindow');
-    if(!subWindowOpen || !(matchContext && matchContext.type==='career') || matchEnded){
-      el.hidden = true; el.innerHTML=''; return;
-    }
+    if(!subWindowOpen || !subsAllowed() || matchEnded){ el.hidden = true; el.innerHTML=''; return; }
     el.hidden = false;
-    el.innerHTML = '';
-    const card=document.createElement('div'); card.className='card';
-    const title=document.createElement('b'); title.className='card-title';
-    title.textContent = `CAMBIOS (${matchSubsUsed}/${MAX_SUBS} usados)`;
-    card.appendChild(title);
-
-    if(matchSubsUsed >= MAX_SUBS){
-      const p=document.createElement('p'); p.className='hint'; p.textContent='Ya has usado tus 3 cambios.';
-      card.appendChild(p);
-    } else {
-      const userTeam = career.teams.find(t=>t.isUser);
-      const onPitchA = pieces.filter(p=>p.team==='A' && p.pid);
-      const onPitchPids = new Set(onPitchA.map(p=>p.pid));
-      const bench = userTeam.slots
-        .filter(pid=>!onPitchPids.has(pid))
-        .map(pid=>career.players.find(p=>p.id===pid))
-        .filter(p=>p && !(p.injuryMatchesLeft>0));
-      if(!onPitchA.length || !bench.length){
-        const p=document.createElement('p'); p.className='hint';
-        p.textContent = !bench.length ? 'No tienes suplentes disponibles ahora mismo.' : '';
-        card.appendChild(p);
-      } else {
-        const outSel=document.createElement('select');
-        outSel.style.cssText='width:100%; padding:8px; margin-bottom:6px; border-radius:6px; border:1px solid #2f5c46; background:#0e2118; color:var(--chalk); font-size:13px;';
-        onPitchA.forEach(p=>{
-          const opt=document.createElement('option'); opt.value=p.pid;
-          opt.textContent = `Sale: ${p.name||p.role} (${p.role}) · cansancio ${p.fatigue||0}%`;
-          outSel.appendChild(opt);
-        });
-        const inSel=document.createElement('select');
-        inSel.style.cssText='width:100%; padding:8px; margin-bottom:6px; border-radius:6px; border:1px solid #2f5c46; background:#0e2118; color:var(--chalk); font-size:13px;';
-        bench.forEach(p=>{
-          const opt=document.createElement('option'); opt.value=p.id;
-          opt.textContent = `Entra: ${p.name} (${overallRating(p)}) · forma ${playerForm(p)}%`;
-          inSel.appendChild(opt);
-        });
-        const btn=document.createElement('button'); btn.className='mode-btn small primary'; btn.textContent='Confirmar cambio';
-        btn.addEventListener('click', ()=>{ performSubstitution(outSel.value, inSel.value); });
-        card.appendChild(outSel); card.appendChild(inSel); card.appendChild(btn);
-      }
+    const forced = forcedSubPieceId ? pieces.find(p=>p.id===forcedSubPieceId) : null;
+    const onPitch = pieces.filter(p=>p.team==='A' && p.pid);
+    const bench = benchFor('A');
+    const left = MAX_SUBS - matchSubsUsed;
+    // por defecto: sale el lesionado o el más cansado; entra el mejor para ese puesto
+    if(!subOutPid || !onPitch.some(p=>p.pid===subOutPid)) subOutPid = (forced || onPitch.slice().sort((a,b)=>(b.fatigue||0)-(a.fatigue||0))[0] || {}).pid || null;
+    const outPiece = onPitch.find(p=>p.pid===subOutPid);
+    const sorted = outPiece ? bench.slice().sort((a,b)=> benchScore(b, outPiece.role) - benchScore(a, outPiece.role)) : bench;
+    if(!subInPid || !bench.some(p=>p.id===subInPid)) subInPid = (sorted[0] || {}).id || null;
+    const fatColor = v=> v>=70 ? '#e74c3c' : v>=35 ? '#f4d03f' : '#2ecc71';
+    let h = `<div class="card subs-card"><div class="subs-head"><b>🔁 CAMBIOS · te quedan ${left} de ${MAX_SUBS}</b>${forced ? '' : '<button class="subs-x" data-subs-close>✕</button>'}</div>`;
+    if(forced) h += `<div class="subs-forced">🚑 <b>${escapeHtml(forced.name||forced.role)}</b> se ha lesionado y no puede seguir. Elige quién entra en su lugar.</div>`;
+    if(left<=0) h += `<p class="hint">Ya has hecho los ${MAX_SUBS} cambios.</p>`;
+    else if(!bench.length) h += `<p class="hint">No te quedan suplentes disponibles.</p>`;
+    else {
+      h += `<div class="subs-cols"><div class="subs-col"><div class="subs-sec">EN EL CAMPO · ${forced ? 'sale el lesionado' : 'toca quién sale'}</div><div class="subs-list">`;
+      onPitch.forEach(p=>{
+        const f = p.fatigue||0, yc = yellowCardsByPid[cardKey(p)]>=1;
+        h += `<button class="subs-row ${p.pid===subOutPid?'sel out':''}" data-sub-out="${p.pid}" ${forced && p.id!==forced.id ? 'disabled' : ''}>
+          <span class="subs-num">${p.number||'–'}</span><span class="subs-name"><b>${escapeHtml(p.name||p.role)}</b><small>${ROLE_SHORT[p.role]}${p.injured?' · 🚑 lesionado':''}${yc?' · 🟨':''}</small></span>
+          <span class="subs-fat"><i style="width:${f}%; background:${fatColor(f)}"></i></span><span class="subs-val" style="color:${fatColor(f)}">${f}%</span></button>`;
+      });
+      h += `</div></div><div class="subs-col"><div class="subs-sec">BANQUILLO · toca quién entra${outPiece ? ` (para ${ROLE_NAME[outPiece.role]})` : ''}</div><div class="subs-list">`;
+      sorted.forEach((p,i)=>{
+        const v = outPiece ? Math.round(slotScore(p, outPiece.role)) : Math.round(bestRoleOf(p).v), fm = playerForm(p);
+        h += `<button class="subs-row ${p.id===subInPid?'sel in':''}" data-sub-in="${p.id}">
+          <span class="subs-num">${p.squadNumber||'–'}</span><span class="subs-name"><b>${escapeHtml(p.name)}${i===0?' <i class="subs-best">recomendado</i>':''}</b><small>mejor puesto ${ROLE_SHORT[bestRoleOf(p).r]} · forma <span style="color:${formColor(fm)}">${fm}%</span></small></span>
+          <span class="subs-val"><small>${outPiece?ROLE_SHORT[outPiece.role]:'Val.'}</small> <b>${v}</b></span></button>`;
+      });
+      const inP = bench.find(p=>p.id===subInPid);
+      h += `</div></div></div><button class="mode-btn primary" data-sub-do ${outPiece && inP ? '' : 'disabled'}>${outPiece && inP ? `🔁 Sale ${escapeHtml(outPiece.name||outPiece.role)} · entra ${escapeHtml(inP.name)}` : 'Elige quién sale y quién entra'}</button>`;
     }
-    const closeBtn=document.createElement('button'); closeBtn.className='mode-btn small'; closeBtn.textContent='Cerrar'; closeBtn.style.marginTop='8px';
-    closeBtn.addEventListener('click', ()=>{ subWindowOpen=false; renderSubsWindow(); });
-    card.appendChild(closeBtn);
-    el.appendChild(card);
+    el.innerHTML = h + `</div>`;
+    const on = (sel, fn)=> el.querySelectorAll(sel).forEach(b=> b.addEventListener('click', ()=> fn(b)));
+    on('[data-subs-close]', ()=>{ subWindowOpen = false; renderSubsWindow(); });
+    on('[data-sub-out]', b=>{ subOutPid = b.dataset.subOut; subInPid = null; renderSubsWindow(); });
+    on('[data-sub-in]', b=>{ subInPid = b.dataset.subIn; renderSubsWindow(); });
+    on('[data-sub-do]', ()=> performSubstitution(subOutPid, subInPid));
   }
   function renderPanel(){
     panelEl.innerHTML='';
     if(matchEnded) return;
+    if(forcedSubPieceId){ addBtn('🚑 Hacer el cambio', ()=>{ subWindowOpen = true; renderSubsWindow(); }); return; }
     if(!selected) return;
     if(mode==='ai' && selected.team==='B') return;
     const isGK = selected.role==='GK';
@@ -6474,7 +6563,7 @@
 
   function startMatch(m, rosterA, rosterB, formationA, formationB){
     mode=m; score={A:0,B:0}; matchStats={}; yellowCardsByPid={}; sentOffSlots={A:new Set(), B:new Set()};
-    matchSubsUsed=0; subWindowOpen=false;
+    matchSubsUsed=0; matchSubsUsedB=0; subWindowOpen=false; forcedSubPieceId=null; pendingInjuries=[]; subOutPid=null; subInPid=null; subbedOff={A:new Set(), B:new Set()};
     currentFormationA = formationA || DEFAULT_FORMATION;
     currentFormationB = formationB || DEFAULT_FORMATION;
     halfSeconds=0; half=1; stoppageHalf1=randInt(1,6); stoppageHalf2=randInt(1,6); matchEnded=false; matchPens=null; resetTurnState();
