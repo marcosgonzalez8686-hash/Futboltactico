@@ -107,6 +107,7 @@
   table.standings tr.releg td{ box-shadow: inset 3px 0 0 #c0392b; }
   table.standings tr.poz td{ box-shadow: inset 3px 0 0 #3498db; }
   .po-dot{display:inline-block; width:8px; height:8px; border-radius:50%; background:#3498db; margin-right:5px;}
+  .standings-prizes{font-size:11px; color:#f4d03f; margin-top:8px;}
   .standings-legend{display:flex; flex-wrap:wrap; gap:4px 12px; font-size:11px; color:#9fd4b8; margin-top:8px;}
   .division-tabs{display:flex; gap:4px; flex-wrap:wrap; margin-bottom:8px;}
   .division-tabs button{
@@ -1188,6 +1189,7 @@
     <h2>Clasificación</h2>
     <div class="division-tabs" id="divisionTabs"></div>
     <div class="card"><table class="standings" id="careerStandingsTable"></table>
+      <div class="standings-prizes" id="standingsPrizes"></div>
       <div class="standings-legend"><span><span class="promo-dot"></span>1º-2º ascienden</span><span><span class="po-dot"></span>3º-6º play-off de ascenso (semanas 21-22)</span><span><span class="releg-dot"></span>3 últimos descienden</span></div></div>
     <button class="mode-btn" id="btnBackStandings">« Volver</button>
   </div>
@@ -1866,6 +1868,8 @@
   let viewingDivision = null;
   function renderDivisionStandingsScreen(){
     if(viewingDivision===null) viewingDivision = userDivision();
+    { const pe = document.getElementById('standingsPrizes'); if(pe){ const n = TEAMS_PER_DIVISION, r = divisionEconomyRates(viewingDivision);
+      pe.innerHTML = `💶 Premios de fin de temporada: 1º ${shortMoney(positionPrize(viewingDivision,0,n))} € · 3º ${shortMoney(positionPrize(viewingDivision,2,n))} € · 8º ${shortMoney(positionPrize(viewingDivision,7,n))} € · último ${shortMoney(positionPrize(viewingDivision,n-1,n))} €${viewingDivision>1 ? ` · ascenso +${shortMoney(r.promoBonus)} €` : ''}`; } }
     const tabsEl = document.getElementById('divisionTabs');
     tabsEl.innerHTML='';
     for(let d=1; d<=DIVISIONS; d++){
@@ -2047,7 +2051,8 @@
       initialBudget: Math.round(80000 * f),
       tv: Math.round(1900 * f), // 12 jugadores por club: algo más de TV para compensar los sueldos
       gate: Math.round(500 * f),
-      prizeBase: Math.round(4000 * f),
+      prizeBase: Math.round(24000 * f), // premio del campeón (el resto según la posición)
+      promoBonus: Math.round(6000 * f),
     };
   }
   function calcWage(p){
@@ -2219,14 +2224,26 @@
       }
     });
   }
+  // Premio por posición final: el campeón cobra el premio completo y el último un 15 %
+  function positionPrize(division, i, n){
+    const frac = 0.15 + 0.85 * Math.pow((n-1-i)/Math.max(1,n-1), 1.6);
+    return Math.round(divisionEconomyRates(division).prizeBase * frac / 100) * 100;
+  }
   function awardSeasonPrizesForDivision(division, standings){
-    const rates = divisionEconomyRates(division);
+    let userPrize = null;
     standings.forEach((s,i)=>{
       const team = career.teams[s.idx];
-      const prize = Math.round(rates.prizeBase * (1 - (i/standings.length)*0.8));
-      if(team.isUser) userMoney('prizes', prize);
+      const prize = positionPrize(division, i, standings.length);
+      if(team.isUser){ userMoney('prizes', prize); userPrize = {pos:i+1, prize}; }
       else team.budget = (team.budget||0) + prize;
     });
+    return userPrize;
+  }
+  // Prima por ascender (directo o por play-off)
+  function awardPromotionBonus(teamIdx, fromDivision){
+    const bonus = divisionEconomyRates(fromDivision).promoBonus, team = career.teams[teamIdx];
+    if(team.isUser) userMoney('prizes', bonus); else team.budget = (team.budget||0) + bonus;
+    return bonus;
   }
   function enforceBudgetDiscipline(){
     const team = career.teams.find(t=>t.isUser);
@@ -2414,10 +2431,10 @@
     // 1. Ascensos y descensos (calculados antes de tocar nada) + premios de temporada
     const moves = []; // {idx, to}
     const uIdx = userTeamIdx();
-    let userSeasonEntry = null;
+    let userSeasonEntry = null, userPrizeInfo = null, userPromoBonus = 0;
     for(let div=1; div<=DIVISIONS; div++){
       const st = computeStandingsForDivision(div);
-      awardSeasonPrizesForDivision(div, st);
+      { const up = awardSeasonPrizesForDivision(div, st); if(up) userPrizeInfo = up; }
       const userPos = st.findIndex(s=>s.idx===uIdx);
       if(userPos>=0){
         userSeasonEntry = { season:career.season, division:div, position:userPos+1, teamsInDivision:st.length, points:st[userPos].pts, champion:(userPos===0) };
@@ -2431,6 +2448,7 @@
     const divisionBefore = career.teams[uIdx].division;
     moves.forEach(m=>{
       const t = career.teams[m.idx];
+      if(m.to < t.division){ const b = awardPromotionBonus(m.idx, t.division); if(t.isUser) userPromoBonus = b; }
       changeFanMood(t, m.to < t.division ? 15 : -12);
       t.division = m.to;
     });
@@ -2495,7 +2513,7 @@
       divisionBefore, divisionAfter,
       promoted: divisionAfter < divisionBefore,
       relegated: divisionAfter > divisionBefore,
-      retired: retiredNames, arrived: arrivedNames, cupLine, leftFree: contractsEnd.left, urgent: contractsEnd.urgent,
+      retired: retiredNames, arrived: arrivedNames, cupLine, prize: userPrizeInfo, promoBonus: userPromoBonus, leftFree: contractsEnd.left, urgent: contractsEnd.urgent,
     };
     career.youthReviewPending = true;
     persistCareers();
@@ -3252,6 +3270,7 @@
         const sm = career.seasonSummary;
         let body = sm.promoted ? `<span class="promo-dot"></span>¡Ascenso! Pasas a la División ${sm.divisionAfter}.`
           : sm.relegated ? `<span class="releg-dot"></span>Descenso a la División ${sm.divisionAfter}.` : `Sigues en la División ${sm.divisionAfter}.`;
+        if(sm.prize) body += `<br>💶 Premio por acabar ${sm.prize.pos}º: <b>${formatMoney(sm.prize.prize)}</b>${sm.promoBonus ? ` + prima de ascenso <b>${formatMoney(sm.promoBonus)}</b>` : ''}`;
         if(sm.cupLine) body += `<br>${escapeHtml(sm.cupLine)}`;
         if(sm.leftFree && sm.leftFree.length) body += `<br>📝 Acaban contrato y se van libres: ${sm.leftFree.map(escapeHtml).join(', ')}`;
         if(sm.urgent && sm.urgent.length) body += `<br>🆘 Fichados de urgencia para completar la plantilla: ${sm.urgent.map(escapeHtml).join(', ')}`;
