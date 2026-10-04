@@ -456,6 +456,10 @@
   .tp-form{display:block; font-size:9.5px; font-weight:bold; line-height:1.1;}
   .pp-contract{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin:8px 0 4px; padding:7px 10px; border-radius:10px; background:rgba(0,0,0,.18); border:1px solid #2f5c46; font-size:12px;}
   .pp-contract .mode-btn{width:auto; margin:0; padding:6px 12px;}
+  .follow-bar{padding:6px 10px; border-radius:10px; background:rgba(244,208,63,.1); color:#f4d03f; font-size:12px; margin:4px 0 6px;}
+  .follow-bar.full{background:rgba(231,76,60,.14); color:#ffb1a8;}
+  .follow-msg{padding:6px 10px; border-radius:10px; background:rgba(231,76,60,.18); color:#ffd2cc; font-size:12px; margin:0 0 6px;}
+  .rep-act{margin-top:4px; background:#1c4433; color:var(--chalk); border:none; border-radius:7px; padding:4px 7px; font-size:10.5px; font-weight:bold; cursor:pointer; white-space:nowrap;}
   .cup-status{padding:8px 10px; border-radius:10px; background:rgba(244,208,63,.12); color:#f4d03f; font-weight:bold; font-size:13px; margin:6px 0 10px;}
   .cup-round{margin:8px 0; padding:8px; border-radius:10px; background:rgba(0,0,0,.16); border:1px solid #2f5c46;}
   .cup-rhead{display:flex; justify-content:space-between; align-items:baseline; gap:6px; flex-wrap:wrap;}
@@ -1322,7 +1326,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=36"></script>
+<script src="sound.js?v=37"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -3709,7 +3713,7 @@
         newThisWeek.push(p.id);
       });
       // y un poco más de conocimiento de los jugadores marcados de su misión
-      sc.shortlist.forEach(pid=>{
+      sc.shortlist.slice(0, followCapacity()).forEach(pid=>{
         const kn = sc.knowledge[pid], f = findPlayerAnywhere(pid);
         if(!kn || !f) return;
         if(m.role==='any' || bestRoleOf(f.p).r===m.role) kn.k = clamp(kn.k + Math.round(scoutProgressIncrement(s)*0.8), 0, 100);
@@ -3932,7 +3936,7 @@
     if(f.free){ sc.negotiations.push({id:uid(), pid, stage:'contract', fee:0, free:true, note:'Jugador libre: sin traspaso. Ofrécele un contrato.', respWeek:career.week}); }
     else sc.negotiations.push({id:uid(), pid, stage:'offer', fee, installments:!!installments, patience:CLUB_PATIENCE, rounds:0,
       note:`Oferta enviada: ${formatMoney(fee)}${installments?' en dos plazos':''}. Respuesta la semana que viene.`, week:career.week});
-    if(!sc.shortlist.includes(pid)) sc.shortlist.push(pid);
+    if(!sc.shortlist.includes(pid) && sc.shortlist.length < followCapacity()) sc.shortlist.push(pid);
     persistCareers();
   }
   function improveOffer(n, fee, installments){
@@ -3979,16 +3983,17 @@
     document.getElementById('marketHint').innerHTML = `💰 ${formatMoney(ut.budget||0)} · 👥 ${ut.slots.length}/${MAX_SQUAD_SIZE} · ⭐ Reputación ${clubReputation(ut)} · `+
       (phase.transfers ? '<span class="fin-pos">Mercado abierto</span>' : '<span class="fin-neg">Mercado cerrado</span> <small>(abre en pretemporada y en el parón)</small>');
     const known = Object.keys(sc.knowledge).filter(pid=>findPlayerAnywhere(pid));
-    const newCount = known.filter(pid=>sc.knowledge[pid].isNew).length;
+    const newCount = known.filter(pid=>sc.knowledge[pid].isNew && !sc.knowledge[pid].archived).length;
+    const archCount = known.filter(pid=>sc.knowledge[pid].archived).length, activeCount = known.length - archCount;
     const negOpen = sc.negotiations.filter(n=>!['closed','signed'].includes(n.stage));
-    const tabs = [['scouts','🔎 Ojeo',''],['reports','📋 Informes', newCount?`<i class="tab-badge">${newCount}</i>`:''],['short','⭐ Seguimiento', sc.shortlist.length?`<i class="tab-badge muted">${sc.shortlist.length}</i>`:''],['deals','📝 Negociaciones', negOpen.some(n=>n.unread)?`<i class="tab-badge">!</i>`:'']];
+    const tabs = [['scouts','🔎 Ojeo',''],['reports','📋 Informes', newCount?`<i class="tab-badge">${newCount}</i>`:(activeCount?`<i class="tab-badge muted">${activeCount}</i>`:'')],['short','⭐ Seguimiento', `<i class="tab-badge muted">${sc.shortlist.length}/${followCapacity()}</i>`],['arch','🗂️ Ojeados', archCount?`<i class="tab-badge muted">${archCount}</i>`:''],['deals','📝 Negociaciones', negOpen.some(n=>n.unread)?`<i class="tab-badge">!</i>`:'']];
     document.getElementById('marketTabs').innerHTML = tabs.map(([k,l,b])=>`<button data-mtab="${k}" class="${marketTab===k?'active':''}">${l}${b}</button>`).join('');
     document.querySelectorAll('#marketTabs [data-mtab]').forEach(b=> b.addEventListener('click', ()=>{ marketTab = b.dataset.mtab; renderCareerMarketScreen(); }));
     const el = document.getElementById('careerMarketList');
     if(marketTab==='reports' && sc.inboxNew && !sc.inboxNew.read){ sc.inboxNew.read = true; persistCareers(); }
     if(marketTab==='scouts') el.innerHTML = renderMissionsHTML();
     else if(marketTab==='deals') el.innerHTML = renderDealsHTML();
-    else el.innerHTML = renderReportsHTML(marketTab==='short');
+    else el.innerHTML = renderReportsHTML(marketTab);
     wireMarket(el);
   }
   function renderMissionsHTML(){
@@ -3999,7 +4004,7 @@
       const chip = (attr, val, label, on)=> `<button data-mission="${s.id}" data-k="${attr}" data-v="${val}" class="${on?'active':''}">${label}</button>`;
       const mm = m || defaultMission();
       return `<div class="card mission-card">
-        <div class="mc-head"><b>🕵️ ${escapeHtml(s.name)}</b><span>Habilidad ${starsHTML(starsFromRating(10 + s.skill*0.75))} · ${1 + (s.skill>=55?1:0) + (s.skill>=80?1:0)} informe(s)/semana</span></div>
+        <div class="mc-head"><b>🕵️ ${escapeHtml(s.name)}</b><span>Habilidad ${starsHTML(starsFromRating(10 + s.skill*0.75))} · ${1 + (s.skill>=55?1:0) + (s.skill>=80?1:0)} informe(s)/semana · sigue a ${followCapacityOf(s)}</span></div>
         ${m ? `<div class="mc-now">Buscando: <b>${m.role==='any'?'cualquier puesto':ROLE_NAME[m.role]}</b>${m.maxAge<99?`, hasta ${m.maxAge} años`:''}, en ${m.divs.map(d=>'D'+d).join(' ')}${m.free?' + libres':''}</div>` : `<div class="mc-now fin-neg">Sin misión: no está buscando a nadie.</div>`}
         <div class="mc-row"><span>Puesto</span><div class="chip-row">${chip('role','any','Cualquiera',mm.role==='any')}${['GK','DF','MF','FW'].map(r=>chip('role',r,ROLE_SHORT[r],mm.role===r)).join('')}</div></div>
         <div class="mc-row"><span>Edad máx.</span><div class="chip-row">${[[21,'21'],[24,'24'],[28,'28'],[99,'Sin límite']].map(([v,l])=>chip('maxAge',v,l,mm.maxAge===v)).join('')}</div></div>
@@ -4008,10 +4013,12 @@
       </div>`;
     }).join('') + `<p class="hint">Cada semana, al pulsar Continuar, los ojeadores traen informes nuevos y mejoran los de los jugadores que sigues ⭐.</p>`;
   }
-  function reportRows(onlyShort){
+  function reportRows(mode){
     const sc = scoutingState();
     let ids = Object.keys(sc.knowledge).filter(pid=>findPlayerAnywhere(pid));
-    if(onlyShort) ids = sc.shortlist.filter(pid=>sc.knowledge[pid] && findPlayerAnywhere(pid));
+    if(mode===true || mode==='short') ids = sc.shortlist.filter(pid=>sc.knowledge[pid] && findPlayerAnywhere(pid));
+    else if(mode==='arch') ids = ids.filter(pid=>sc.knowledge[pid].archived);
+    else ids = ids.filter(pid=>!sc.knowledge[pid].archived);
     let rows = ids.map(pid=>{
       const f = findPlayerAnywhere(pid), kn = sc.knowledge[pid], e = scoutEstimate(f.p, kn);
       return {pid, f, kn, e, role: bestRoleOf(f.p).r, team: f.teamIdx>=0 ? career.teams[f.teamIdx] : null, deal: sc.negotiations.find(n=>n.pid===pid && !['closed'].includes(n.stage))};
@@ -4021,21 +4028,24 @@
     rows.sort((a,b)=>key(a)-key(b));
     return rows;
   }
-  function renderReportsHTML(onlyShort){
-    const rows = reportRows(onlyShort);
+  function renderReportsHTML(mode){
+    const onlyShort = mode===true || mode==='short', arch = mode==='arch';
+    const rows = reportRows(mode);
     const filters = `<div class="chip-row" id="repRole">${[['any','Todos'],['GK','POR'],['DF','DEF'],['MF','MED'],['FW','DEL']].map(([k,l])=>`<button data-rrole="${k}" class="${reportFilterRole===k?'active':''}">${l}</button>`).join('')}</div>
       <div class="chip-row" id="repSort"><span>Ordenar:</span>${[['cur','Calidad'],['pot','Potencial'],['age','Edad'],['value','Valor'],['know','Conocimiento']].map(([k,l])=>`<button data-rsort="${k}" class="${reportSort===k?'active':''}">${l}</button>`).join('')}</div>`;
-    if(!rows.length) return filters + `<div class="card"><p class="hint">${onlyShort ? 'Aún no sigues a ningún jugador. Pulsa ☆ en un informe para seguirlo.' : 'Todavía no hay informes. Da una misión a tus ojeadores y pulsa Continuar.'}</p></div>`;
-    return filters + `<div class="card sq-card">` + rows.map(r=>{
+    const top = arch ? `<p class="hint">Jugadores que has descartado. Tus ojeadores no vuelven a traerlos. Pulsa <b>↩️ Volver a ojear</b> para recuperar su informe.</p>` : followBarHTML();
+    if(!rows.length) return top + filters + `<div class="card"><p class="hint">${arch ? 'No has descartado a ningún jugador.' : onlyShort ? 'Aún no sigues a ningún jugador. Pulsa ☆ en un informe para seguirlo.' : 'Todavía no hay informes. Da una misión a tus ojeadores y pulsa Continuar.'}</p></div>`;
+    return top + filters + `<div class="card sq-card">` + rows.map(r=>{
       const p = r.f.p, rec = recommendationFor(p, r.e.cur.c), sl = scoutingState().shortlist.includes(r.pid);
       const dealTag = r.deal ? `<span class="deal-tag">📝 ${dealStageLabel(r.deal)}</span>` : '';
       return `<div class="rep-row" data-report="${r.pid}">
-        <button class="rep-star ${sl?'on':''}" data-shortlist="${r.pid}" aria-label="Seguir">${sl?'★':'☆'}</button>
+        ${arch ? '<span class="rep-star">🗂️</span>' : `<button class="rep-star ${sl?'on':''}" data-shortlist="${r.pid}" aria-label="Seguir">${sl?'★':'☆'}</button>`}
         <div class="rep-main"><b>${escapeHtml(p.name)}${r.kn.isNew?' <i class="new-dot">NUEVO</i>':''}</b>
           <small>${r.team ? `${teamBadgeHTML(r.team)}${escapeHtml(r.team.name)} · D${r.team.division}` : '🆓 Libre'} · ${p.age} años · <span class="role-tag r-${r.role}">${ROLE_SHORT[r.role]}</span></small>
           <small>Calidad ${starRangeHTML(r.e.cur)} · Potencial ${starRangeHTML(r.e.pot)}</small>
           <small><span class="rec ${rec.cls}">${rec.txt}</span> ${dealTag}</small></div>
-        <div class="rep-side"><b>${r.team ? shortMoney(calcMarketValue(p))+' €' : 'Libre'}</b><small>${r.kn.k}% conocido</small></div>
+        <div class="rep-side"><b>${r.team ? shortMoney(calcMarketValue(p))+' €' : 'Libre'}</b><small>${r.kn.k}% conocido</small>
+          ${arch ? `<button class="rep-act" data-unarchive="${r.pid}">↩️ Volver a ojear</button>` : r.deal ? '' : `<button class="rep-act" data-archive="${r.pid}" title="Descartar">🗂️ Descartar</button>`}</div>
       </div>`;
     }).join('') + `</div>`;
   }
@@ -4126,16 +4136,42 @@
     on('[data-rrole]', b=>{ reportFilterRole = b.dataset.rrole; renderCareerMarketScreen(); });
     on('[data-rsort]', b=>{ reportSort = b.dataset.rsort; renderCareerMarketScreen(); });
     on('[data-shortlist]', b=>{ toggleShortlist(b.dataset.shortlist); renderCareerMarketScreen(); });
+    on('[data-archive]', b=>{ archiveReport(b.dataset.archive); renderCareerMarketScreen(); });
+    on('[data-unarchive]', b=>{ unarchiveReport(b.dataset.unarchive); renderCareerMarketScreen(); });
     el.querySelectorAll('[data-report]').forEach(r=> r.addEventListener('click', ()=> openReport(r.dataset.report)));
     on('[data-report-open]', b=> openReport(b.dataset.reportOpen));
     on('[data-deal-cancel]', b=>{ sc.negotiations = sc.negotiations.filter(x=>x.id!==b.dataset.dealCancel); persistCareers(); renderCareerMarketScreen(); });
     el.querySelectorAll('.deal-card.unread').forEach(c=>{ const n = sc.negotiations.find(x=>x.id===c.dataset.deal); if(n) n.unread = false; });
     if(marketTab==='deals') persistCareers();
   }
+  // Seguimiento limitado: el cuerpo técnico sigue a 2 jugadores y cada ojeador a unos pocos más según su habilidad
+  function followCapacityOf(s){ return 2 + Math.floor((s.skill||0)/20); } // habilidad 20 → 3 · 60 → 5 · 90 → 6
+  function followCapacity(){ return 2 + (career.staff||[]).reduce((t,s)=> t + followCapacityOf(s), 0); }
+  var scoutMsg = '';
   function toggleShortlist(pid){
     const sc = scoutingState();
-    sc.shortlist = sc.shortlist.includes(pid) ? sc.shortlist.filter(x=>x!==pid) : [...sc.shortlist, pid];
+    if(sc.shortlist.includes(pid)){ sc.shortlist = sc.shortlist.filter(x=>x!==pid); scoutMsg = ''; persistCareers(); return true; }
+    if(sc.shortlist.length >= followCapacity()){
+      scoutMsg = `Ya sigues a ${sc.shortlist.length} de ${followCapacity()} jugadores posibles. Deja de seguir a alguno o contrata ojeadores (o mejores) para seguir a más.`;
+      return false;
+    }
+    const kn = sc.knowledge[pid]; if(kn) delete kn.archived;
+    sc.shortlist = [...sc.shortlist, pid]; scoutMsg = '';
+    persistCareers(); return true;
+  }
+  // Descartar un informe: sale de la lista y pasa a "Ojeados"; los ojeadores no vuelven a traerlo
+  function archiveReport(pid){
+    const sc = scoutingState(), kn = sc.knowledge[pid]; if(!kn) return;
+    kn.archived = true; kn.isNew = false;
+    sc.shortlist = sc.shortlist.filter(x=>x!==pid);
+    if(sc.inboxNew) sc.inboxNew.pids = sc.inboxNew.pids.filter(x=>x!==pid);
     persistCareers();
+  }
+  function unarchiveReport(pid){ const kn = scoutingState().knowledge[pid]; if(kn){ delete kn.archived; persistCareers(); } }
+  function followBarHTML(){
+    const sc = scoutingState(), cap = followCapacity(), n = sc.shortlist.length;
+    return `<div class="follow-bar ${n>=cap?'full':''}">⭐ Siguiendo <b>${n}/${cap}</b> · ${(career.staff||[]).length ? `tus ojeadores permiten seguir a ${cap-2} y el cuerpo técnico a 2` : 'sin ojeadores solo puedes seguir a 2'}${n>cap?' · <b>por encima del límite: solo se avanza con los primeros</b>':''}</div>`
+      + (scoutMsg && n>=cap ? `<div class="follow-msg">${escapeHtml(scoutMsg)}</div>` : '');
   }
 
   // ---------- Informe del ojeador (ventana) ----------
@@ -4185,10 +4221,13 @@
     } else {
       h += `<button class="mode-btn primary" id="rpFree" ${!open?'disabled':''}>Negociar contrato (jugador libre)</button>${!open?'<p class="hint">El mercado está cerrado.</p>':''}`;
     }
-    h += `<div class="btn-row" style="margin:8px 0 12px;"><button class="mode-btn small" id="rpShort">${sl?'★ Dejar de seguir':'☆ Seguir'}</button></div></div>`;
+    const knr = knowledgeOf(p.id), isArch = !!(knr && knr.archived);
+    h += `<div class="btn-row" style="margin:8px 0 4px;"><button class="mode-btn small" id="rpShort">${sl?'★ Dejar de seguir':'☆ Seguir'}</button>${deal ? '' : `<button class="mode-btn small" id="rpArch">${isArch?'↩️ Volver a ojear':'🗂️ Descartar'}</button>`}</div>
+      <p class="hint" style="text-align:center; margin:0 0 12px;">Siguiendo ${scoutingState().shortlist.length}/${followCapacity()}${scoutMsg && scoutingState().shortlist.length>=followCapacity()?` · ${escapeHtml(scoutMsg)}`:''}</p></div>`;
     body.innerHTML = h;
     body.querySelector('#rpClose').addEventListener('click', closeReport);
     body.querySelector('#rpShort').addEventListener('click', ()=>{ toggleShortlist(p.id); renderReport(); });
+    { const ab = body.querySelector('#rpArch'); if(ab) ab.addEventListener('click', ()=>{ const kn = knowledgeOf(p.id); if(kn && kn.archived){ unarchiveReport(p.id); renderReport(); } else { archiveReport(p.id); closeReport(); } }); }
     body.querySelectorAll('[data-od]').forEach(b=> b.addEventListener('click', ()=>{ offerDraft.fee = Math.max(250, offerDraft.fee + Number(b.dataset.od)); renderReport(); }));
     const oi = body.querySelector('#odInst'); if(oi) oi.addEventListener('change', ()=>{ offerDraft.inst = oi.checked; renderReport(); });
     const ob = body.querySelector('#rpOffer'); if(ob) ob.addEventListener('click', ()=>{ makeOffer(p.id, offerDraft.fee, offerDraft.inst); marketTab = 'deals'; renderReport(); });
@@ -4251,7 +4290,7 @@
     career.staff.forEach(s=>{
       const row=document.createElement('div'); row.className='player-item';
       const busy = !!(career.scouting && career.scouting.missions[s.id]);
-      row.innerHTML = `<div class="player-info"><b>${escapeHtml(s.name)}</b><span>Habilidad ${s.skill} · Salario ${formatMoney(s.wage)}/jornada · ${busy?'En una misión de ojeo':'Sin misión'}</span></div>`;
+      row.innerHTML = `<div class="player-info"><b>${escapeHtml(s.name)}</b><span>Habilidad ${s.skill} · Salario ${formatMoney(s.wage)}/jornada · sigue a ${followCapacityOf(s)} · ${busy?'En una misión de ojeo':'Sin misión'}</span></div>`;
       const actions=document.createElement('div'); actions.className='player-actions';
       const isPending = pendingFireScoutId===s.id;
       const fireBtn=document.createElement('button'); fireBtn.className='icon-btn danger';
@@ -4279,7 +4318,7 @@
     candEl.innerHTML='';
     career.staffCandidates.forEach(c=>{
       const row=document.createElement('div'); row.className='player-item';
-      row.innerHTML = `<div class="player-info"><b>${escapeHtml(c.name)}</b><span>Habilidad ${c.skill} · Salario ${formatMoney(c.wage)}/jornada</span></div>`;
+      row.innerHTML = `<div class="player-info"><b>${escapeHtml(c.name)}</b><span>Habilidad ${c.skill} · Salario ${formatMoney(c.wage)}/jornada · ${1 + (c.skill>=55?1:0) + (c.skill>=80?1:0)} informe(s)/semana · sigue a ${followCapacityOf(c)}</span></div>`;
       const hireBtn=document.createElement('button'); hireBtn.className='icon-btn'; hireBtn.textContent='Contratar';
       if(career.staff.length>=SCOUT_LIMIT) hireBtn.disabled=true;
       hireBtn.addEventListener('click', ()=>hireScout(c.id));
@@ -4395,7 +4434,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=36').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=37').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -6040,7 +6079,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=36').then(m=>{
+      import('./match3d.js?v=37').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
