@@ -1428,7 +1428,7 @@
   </div>
 </div>
 
-<script src="sound.js?v=50"></script>
+<script src="sound.js?v=51"></script>
 <script>
 (function(){
   const COLS_TOTAL = 14;
@@ -1994,8 +1994,20 @@
   // Filial inicial: deja sitio para la primera hornada de la captación
   function generateYouthSquad(divisionLevel, facilityLevel, directorSkill){
     const n = Math.max(1, youthSquadSize(facilityLevel) - youthIntakeSize(facilityLevel));
-    const roles = []; for(let i=0;i<n;i++) roles.push(SQUAD_TARGETS[i % SQUAD_TARGETS.length]);
-    return roles.map(role=>generateYouthPlayer(role, divisionLevel, facilityLevel, directorSkill));
+    const squad = [];
+    for(let i=0;i<n;i++) squad.push(generateYouthPlayer(youthRoleFor(squad), divisionLevel, facilityLevel, directorSkill));
+    return squad;
+  }
+  // Puesto del próximo juvenil: más probable lo que falta en el filial (pocos porteros)
+  const YOUTH_ROLE_BASE = {GK:0.8, DF:2, MF:2, FW:1.6};
+  function youthRoleFor(existing){
+    const count = {GK:0, DF:0, MF:0, FW:0};
+    (existing||[]).forEach(q=>{ const r = q.hiddenPos || bestRoleOf(q).r; if(count[r]!==undefined) count[r]++; });
+    const w = {}; Object.keys(YOUTH_ROLE_BASE).forEach(r=> w[r] = YOUTH_ROLE_BASE[r] / Math.pow(1 + count[r], 1.5));
+    if(count.GK >= 1) w.GK *= 0.25;
+    const tot = Object.values(w).reduce((a,b)=>a+b,0);
+    Object.keys(w).forEach(r=> w[r] /= tot);
+    return pickWeighted(w);
   }
   // Coste semanal de un canterano: 20 € × división, y un 15 % más por cada nivel de instalaciones
   function youthWageEach(team){
@@ -3797,7 +3809,7 @@
     const n = Math.max(0, Math.min(youthIntakeSize(lvl), free));
     const arrived = [];
     for(let i=0;i<n;i++){
-      const p = generateYouthPlayer(SQUAD_TARGETS[randInt(0, SQUAD_TARGETS.length-1)], ut.division, lvl, youthDirectorSkill());
+      const p = generateYouthPlayer(youthRoleFor(career.youthPlayers), ut.division, lvl, youthDirectorSkill());
       career.youthPlayers.push(p); arrived.push(p.id);
     }
     career.youthIntake = {season: career.season, pids: arrived, full: n===0, read: false};
@@ -4856,7 +4868,7 @@
       }
     };
     if(stadium3dModule){ apply(); return; }
-    import('./stadium3d.js?v=50').then(m=>{ stadium3dModule = m; apply(); })
+    import('./stadium3d.js?v=51').then(m=>{ stadium3dModule = m; apply(); })
       .catch(()=>{ stadium3dFailed = true; el.hidden = true; if(fallbackEl) fallbackEl.hidden = false; });
   }
 
@@ -6540,7 +6552,7 @@
       match3dLoading = true;
       const btn = document.getElementById('btnToggle3D');
       btn.disabled = true; btn.textContent = 'Cargando 3D…';
-      import('./match3d.js?v=50').then(m=>{
+      import('./match3d.js?v=51').then(m=>{
         match3dView = m.mountMatch3D(document.getElementById('match3d'), {
           onPiece: id=>{ const p = pieces.find(x=>x.id===id); if(p) selectPiece(p); },
           onCell: (c,r)=> clickCell(c,r),
