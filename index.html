@@ -1595,7 +1595,9 @@
   let matchNames = {A:'Ámbar', B:'Azul'};
   let matchContext = null; // {type:'career', fixtureId, userIsHome?}
   let matchStats = {};      // pid -> goles marcados en el partido actual
-  let yellowCardsByPid = {}; // pid -> tarjetas amarillas en el partido actual
+  let yellowCardsByPid = {}; // jugador -> tarjetas amarillas en el partido actual
+  // clave de tarjetas: el jugador si tiene nombre (carrera) o la ficha (partido rápido)
+  function cardKey(p){ return p.pid || ('pc:' + p.id); }
   let sentOffSlots = {A:new Set(), B:new Set()}; // slots (0-5) expulsados por el resto del partido
   let matchParticipants = {A:[], B:[]};
   let matchOutFatigue = {}; // cansancio de los que salen del campo (cambio o expulsión)
@@ -5148,7 +5150,7 @@
   let currentFormationA = DEFAULT_FORMATION, currentFormationB = DEFAULT_FORMATION;
   let freeKickPieceId = null; // pieza que debe sacar de falta: solo puede chutar o pasar, no moverse
   let chainReceiverPieceId = null; // pieza que acaba de recibir un pase este turno: puede volver a pasar/chutar/regatear, no solo moverse
-  let tackleRetryAllowed = false; // tras un robo fallado (sin falta), otro jugador cercano puede intentarlo también
+  let tackleRetryAllowed = false; // ya no se usa: un robo fallido gasta la acción del turno
   let matchSubsUsed = 0;
   let subWindowOpen = false;
   const MAX_SUBS = 3;
@@ -5266,15 +5268,18 @@
     fx3d({type:'fall', id:carrier.id});
     pushApart(defender, carrier);
     freeKickPieceId = carrier.id;
-    const pid = defender.pid;
     const who = defender.name || `el ${defender.role}`;
-    const cardCount = pid ? (yellowCardsByPid[pid] = (yellowCardsByPid[pid]||0) + 1) : 1;
-    fx3d({type:'card', id:defender.id});
-    if(cardCount>=2){
-      message = `¡Falta en el regate y segunda amarilla, ROJA para ${who}! Expulsado el resto del partido.`;
-      sendOffPiece(defender);
+    if(Math.random() < 0.5){
+      const ck = cardKey(defender), cardCount = (yellowCardsByPid[ck] = (yellowCardsByPid[ck]||0) + 1);
+      fx3d({type:'card', id:defender.id});
+      if(cardCount>=2){
+        message = `¡Falta en el regate y segunda amarilla, ROJA para ${who}! Expulsado el resto del partido.`;
+        sendOffPiece(defender);
+      } else {
+        message = `¡Falta sobre el regateador! Tarjeta amarilla para ${who}.`;
+      }
     } else {
-      message = `¡Falta sobre el regateador! Tarjeta amarilla para ${who}.`;
+      message = `¡Falta sobre el regateador! El árbitro avisa a ${who}.`;
     }
     if(career && carrier.pid){
       const injuryChance = 0.06 * (1 + (carrier.fatigue||0)/100);
@@ -5302,7 +5307,7 @@
   function canShoot(piece){
     const penalty = shootRowPenalty(piece.row);
     if(!isFinite(penalty)) return false;
-    return shootDistance(piece) <= (rangeFromStrength(fatiguedAttr(piece,'strength')) - penalty);
+    return shootDistance(piece) <= (rangeFromStrength(fatiguedAttr(piece,'strength')) + 1 - penalty); // +1: se puede tirar de más lejos
   }
 
   function findFreeCellNear(col,row){
@@ -5361,7 +5366,9 @@
   }
   function doTackle(defender, carrier){
     fx3d({type:'tackle', id:defender.id, targetId:carrier.id});
-    const chance = clamp(0.45 + normalize(fatiguedAttr(defender,'defense'))*0.25 + normalize(fatiguedAttr(defender,'strength'))*0.1 - normalize(fatiguedAttr(carrier,'dribble'))*0.25, 0.1, 0.9);
+    const behindTry = isTackleFromBehind(defender, carrier);
+    // por detrás es más difícil quitarle el balón limpiamente
+    const chance = clamp(0.45 + normalize(fatiguedAttr(defender,'defense'))*0.25 + normalize(fatiguedAttr(defender,'strength'))*0.1 - normalize(fatiguedAttr(carrier,'dribble'))*0.25 - (behindTry ? 0.1 : 0), 0.1, 0.9);
     if(Math.random() < chance){
       ball.col = defender.col; ball.row = defender.row;
       message = '¡Robo exitoso!';
@@ -5373,10 +5380,9 @@
       fx3d({type:'fall', id:carrier.id});
       pushApart(defender, carrier);
       freeKickPieceId = carrier.id;
-      if(fromBehind){
-        const pid = defender.pid;
+      if(fromBehind && Math.random() < 0.5){
         const who = defender.name || `el ${defender.role}`;
-        const cardCount = pid ? (yellowCardsByPid[pid] = (yellowCardsByPid[pid]||0) + 1) : 1;
+        const ck = cardKey(defender), cardCount = (yellowCardsByPid[ck] = (yellowCardsByPid[ck]||0) + 1);
         fx3d({type:'card', id:defender.id});
         if(cardCount>=2){
           message = `¡Segunda amarilla, ROJA para ${who}! Expulsado el resto del partido.`;
@@ -5384,6 +5390,8 @@
         } else {
           message = `¡Falta por detrás! Tarjeta amarilla para ${who}.`;
         }
+      } else if(fromBehind){
+        message = '¡Falta por detrás! El árbitro avisa, sin tarjeta.';
       } else {
         message = '¡Falta! El árbitro corta el juego.';
       }
@@ -5400,7 +5408,7 @@
       }
       return {foul:true, failed:false};
     } else {
-      message = 'Robo fallido. ¡Puedes intentarlo con otro jugador que también esté cerca!';
+      message = 'Robo fallido: el rival sigue con el balón.';
     }
     return {foul:false, failed:true};
   }
@@ -5480,14 +5488,17 @@
     triggerFulltimeCelebration();
     render();
   }
-  function doShoot(shooter){
+  // Probabilidad de gol: baja con la distancia; el tiro del delantero suma y el portero resta
+  function shotChance(shooter){
     const dist = shootDistance(shooter);
-    let chance = 0.75 - 0.09*(dist-1) + normalize(fatiguedAttr(shooter,'shot'))*0.25;
+    let chance = 0.62 - 0.11*(dist-1) + normalize(fatiguedAttr(shooter,'shot'))*0.25;
     const oppGK = pieces.find(p=>p.team!==shooter.team && p.role==='GK');
-    if(oppGK){
-      chance -= normalize(oppGK.goalkeeping)*0.3;
-    }
-    chance = clamp(chance, 0.08, 0.85);
+    if(oppGK) chance -= 0.04 + normalize(oppGK.goalkeeping)*0.3;
+    return clamp(chance, 0.05, 0.8);
+  }
+  function doShoot(shooter){
+    const oppGK = pieces.find(p=>p.team!==shooter.team && p.role==='GK');
+    const chance = shotChance(shooter);
     if(Math.random() < chance){
       if(shooter.pid) matchStats[shooter.pid] = (matchStats[shooter.pid]||0)+1;
       score[shooter.team]++;
@@ -5683,12 +5694,13 @@
         }
         afterStep(piece, false); return;
       }
+      if(aiTryDribble(piece, aiLevel==='easy' ? 0.25 : 0.45, 0.3)) return;
       const moves = sortMovesTowardGoal(validMoveCells(piece), piece);
       if(moves.length){ doMove(piece, moves[0].col, moves[0].row); afterStep(piece, true); return; }
     } else if(piece.role!=='GK') {
       if(!turnActionUsed || tackleRetryAllowed){
         const tackleTarget = canTackle(piece);
-        if(tackleTarget){ turnActionUsed=true; tackleRetryAllowed=false; const r=doTackle(piece, tackleTarget); tackleRetryAllowed=r.failed; afterStep(piece, false, r.foul); return; }
+        if(tackleTarget){ turnActionUsed=true; tackleRetryAllowed=false; const r=doTackle(piece, tackleTarget); tackleRetryAllowed=false; /* un robo fallido gasta la acción */ afterStep(piece, false, r.foul); return; }
       }
       const targetPos = carrier || ball;
       const moves = validMoveCells(piece).sort((a,b)=>chebyshev(a,targetPos)-chebyshev(b,targetPos));
@@ -5704,12 +5716,22 @@
   // Fácil: comete errores (movimientos al azar, menos tiros y entradas). Normal: la IA de siempre.
   // Difícil: elige tiros con buena probabilidad, pases a compañeros desmarcados, evita a los rivales al avanzar,
   // presiona al portador, marca al delantero más peligroso y evita las entradas por detrás.
-  function estShotChance(shooter){
-    const dist = shootDistance(shooter);
-    let chance = 0.75 - 0.09*(dist-1) + normalize(fatiguedAttr(shooter,'shot'))*0.25;
-    const oppGK = pieces.find(p=>p.team!==shooter.team && p.role==='GK');
-    if(oppGK) chance -= normalize(oppGK.goalkeeping)*0.3;
-    return clamp(chance, 0.08, 0.85);
+  function estShotChance(shooter){ return shotChance(shooter); }
+  function estDribbleChance(carrier, defender){
+    return clamp(0.5 + normalize(fatiguedAttr(carrier,'dribble'))*0.3 - normalize(fatiguedAttr(defender,'defense'))*0.2 - normalize(fatiguedAttr(defender,'strength'))*0.05, 0.1, 0.9);
+  }
+  // 4) Regate de la máquina: si un rival le tapa el camino y hay hueco por delante
+  function aiTryDribble(piece, prob, minChance){
+    if(turnActionUsed && chainReceiverPieceId!==piece.id) return false;
+    if(freeKickPieceId===piece.id || piece.role==='GK') return false;
+    const def = adjacentOpponent(piece); if(!def) return false;
+    const goalCol = piece.team==='A' ? 13 : 0;
+    const blocking = Math.abs(def.col-goalCol) <= Math.abs(piece.col-goalCol);
+    if(!blocking || estDribbleChance(piece, def) < minChance || Math.random() >= prob) return false;
+    const cells = dribbleTargetCells(piece).filter(c=> Math.abs(c.col-goalCol) < Math.abs(piece.col-goalCol)).sort((a,b)=>attackCellScore(piece,b)-attackCellScore(piece,a));
+    if(!cells.length) return false;
+    turnActionUsed = true; doDribble(piece, def, cells[0].col, cells[0].row); afterStep(piece, false);
+    return true;
   }
   function estPassChance(passer, dest){
     return clamp(0.85 - 0.05*chebyshev(passer, dest) + normalize(fatiguedAttr(passer,'pass'))*0.25, 0.3, 0.95);
@@ -5739,7 +5761,7 @@
       if(!turnActionUsed || tackleRetryAllowed){
         const adj = field.filter(p=>chebyshev(p,carrier)===1)
           .sort((a,b)=> (isTackleFromBehind(a,carrier)?1:0)-(isTackleFromBehind(b,carrier)?1:0) || fatiguedAttr(b,'defense')-fatiguedAttr(a,'defense'));
-        if(adj.length){ const d=adj[0]; turnActionUsed=true; tackleRetryAllowed=false; const r=doTackle(d, carrier); tackleRetryAllowed=r.failed; afterStep(d, false, r.foul); return true; }
+        if(adj.length){ const d=adj[0]; turnActionUsed=true; tackleRetryAllowed=false; const r=doTackle(d, carrier); tackleRetryAllowed=false; /* un robo fallido gasta la acción */ afterStep(d, false, r.foul); return true; }
       }
       // 2) Presión: hasta dos jugadores van a por el portador, colocándose por el lado de nuestra portería
       const pressingNow = pieces.filter(p=>p.team===aiTeam && p.role!=='GK' && chebyshev(p,carrier)===1).length;
@@ -5808,6 +5830,7 @@
       if(canAct && any.length){ turnActionUsed=true; doPass(piece, {col:any[0].col,row:any[0].row}); afterStep(piece, false); return true; }
       afterStep(piece, false); return true;
     }
+    if(aiTryDribble(piece, 0.8, 0.45)) return true;
     // Conducir hacia la portería evitando quedar pegado a rivales
     const moves = validMoveCells(piece).sort((a,b)=>attackCellScore(piece,b)-attackCellScore(piece,a));
     if(moves.length){ doMove(piece, moves[0].col, moves[0].row); afterStep(piece, true); return true; }
@@ -5863,12 +5886,13 @@
           turnActionUsed=true; doPass(carrier, {col:targets[0].col,row:targets[0].row}); afterStep(carrier, false); return;
         }
       }
+      if(aiTryDribble(carrier, aiLevel==='easy' ? 0.25 : 0.45, 0.3)) return;
       const moves = sortMovesTowardGoal(validMoveCells(carrier), carrier);
       if(moves.length){ doMove(carrier, moves[0].col, moves[0].row); afterStep(carrier, true); return; }
     } else if(carrier && carrier.team!==aiTeam){
       if(!turnActionUsed || tackleRetryAllowed){
         const adjacent = movablePieces.find(p=>chebyshev(p,carrier)===1);
-        if(adjacent){ turnActionUsed=true; tackleRetryAllowed=false; const r=doTackle(adjacent, carrier); tackleRetryAllowed=r.failed; afterStep(adjacent, false, r.foul); return; }
+        if(adjacent){ turnActionUsed=true; tackleRetryAllowed=false; const r=doTackle(adjacent, carrier); tackleRetryAllowed=false; /* un robo fallido gasta la acción */ afterStep(adjacent, false, r.foul); return; }
       }
       if(movablePieces.length){
         const nearest = movablePieces.reduce((a,b)=>chebyshev(a,carrier)<chebyshev(b,carrier)?a:b);
@@ -6058,7 +6082,7 @@
           idle: !matchEnded && p.team!==turn,
           // ya ha jugado en este turno y no se puede volver a usar: sin círculo en el suelo
           spent: !matchEnded && p.team===turn && (turnBonusPieceId ? p.id!==turnBonusPieceId : turnUsedPieceIds.has(p.id)),
-          yellow: !!(p.pid && yellowCardsByPid[p.pid]>=1),
+          yellow: yellowCardsByPid[cardKey(p)]>=1,
         };
       }),
     });
@@ -6212,7 +6236,7 @@
         el.style.color = textColorFor(matchKitColors[p.team]);
       }
       if(selected && selected.id===p.id) el.classList.add('selected');
-      if(p.pid && yellowCardsByPid[p.pid]>=1){
+      if(yellowCardsByPid[cardKey(p)]>=1){
         const card=document.createElement('span'); card.className='card-badge';
         el.appendChild(card);
       }
@@ -6433,7 +6457,7 @@
       }
       if(!isGK && !hasBall && (!turnActionUsed || tackleRetryAllowed)){
         const tackleTarget = canTackle(selected);
-        if(tackleTarget) addBtn('Robar', ()=>{ turnActionUsed=true; tackleRetryAllowed=false; const r=doTackle(selected, tackleTarget); tackleRetryAllowed=r.failed; afterStep(selected, false, r.foul); });
+        if(tackleTarget) addBtn('Robar', ()=>{ turnActionUsed=true; tackleRetryAllowed=false; const r=doTackle(selected, tackleTarget); tackleRetryAllowed=false; /* un robo fallido gasta la acción */ afterStep(selected, false, r.foul); });
       }
       addBtn('Cancelar', ()=>{ selected=null; render(); }, 'secondary');
     } else {
