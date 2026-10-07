@@ -1381,6 +1381,7 @@
       • <b>Turno extra</b>: si uno de esos pasos fue un movimiento, hay una probabilidad igual a la mitad de su Velocidad (VEL 100 ≈ 50 %) de dar un 3er paso, esta vez repitiendo <b>esa misma ficha</b>.<br>
       • <b>Mover</b>: 1 casilla en cualquier dirección, destino vacío.<br>
       • <b>Pasar</b> (con balón): envía el balón a cualquier casilla dentro de tu rango (según tu Fuerza: 2 a 5 casillas, 3 con Fuerza 50). Si hay un compañero ahí, la recibe; si no, queda suelta. Un rival en el camino bloquea esa dirección (y todo lo que quede detrás).<br>
+      • <b>Despejar</b> (solo el portero con balón): manda el balón a una casilla al azar del centro del campo. Si cae donde hay un jugador, se la queda él, sea compañero o rival; si no, queda suelta.<br>
       • <b>Chutar</b> (con balón, dentro de tu rango según Fuerza): probabilidad según distancia, tiro y portero rival.<br>
       • <b>Robar</b>: si estás junto al rival con balón, según tu defensa y su regate. Si falla, puede pitarse <b>falta</b> — si entraste por detrás, es más probable y te llevas <b>tarjeta amarilla</b> (la 2ª amarilla es roja: expulsión el resto del partido, tu equipo juega con uno menos). Una falta corta el turno de tu equipo al momento y separa a los dos jugadores implicados; el jugador que sufre la falta queda junto al balón y en su siguiente turno solo podrá <b>chutar</b> o <b>pasar</b> (no moverse), como un saque de falta directo.<br>
       • <b>Regatear</b>: si llevas el balón y tienes un rival pegado, puedes intentar regatearlo eligiendo a qué casilla junto a él te mueves. Puede salir bien (avanzas), puedes perder el balón (se lo queda el rival), o puede que el rival cometa falta sobre ti.<br>
@@ -5786,6 +5787,29 @@
       return { success:false, receiver:null };
     }
   }
+  // Despeje del portero: el balón cae en una casilla al azar del centro del campo (columnas 5-8).
+  // Si cae donde hay un jugador, se la queda él (compañero o rival); si no, queda suelto.
+  function doClear(gk){
+    fx3d({type:'kick', id:gk.id});
+    const col = randInt(5, 8), row = randInt(1, ROWS-2);
+    ball.col = col; ball.row = row;
+    chainReceiverPieceId = null;
+    const who = getPieceAt(col, row);
+    message = !who ? '¡Despeje del portero! Balón suelto en el centro del campo.'
+      : who.team===gk.team ? `¡Despeje del portero! La recoge ${who.role}.`
+      : `¡Despeje del portero! La recoge el rival (${who.role}).`;
+    return { receiver: who };
+  }
+  // IA: el portero pasa si tiene un compañero libre con buen pase; si no, despeja
+  function aiGoalkeeperPlay(gk, hard){
+    const opts = aiPassTargets(gk).filter(t=> opponentsNear(t, gk.team) === 0 && estPassChance(gk, t) >= (hard ? 0.65 : 0.55));
+    turnActionUsed = true;
+    if(opts.length){
+      opts.sort((a,b)=> hard ? (estPassChance(gk,b)-estPassChance(gk,a)) || (Math.abs(b.col-gk.col)-Math.abs(a.col-gk.col)) : chebyshev(a,gk)-chebyshev(b,gk));
+      doPass(gk, {col:opts[0].col, row:opts[0].row});
+    } else doClear(gk);
+    afterStep(gk, false);
+  }
   function isTackleFromBehind(defender, carrier){
     // "por detrás" = el defensor está en el lado que el portador ya ha dejado atrás según su dirección de ataque
     return carrier.team==='A' ? (defender.col < carrier.col) : (defender.col > carrier.col);
@@ -6114,14 +6138,7 @@
     const isFreeKick = freeKickPieceId===piece.id;
     const hasBall = (carrier && carrier.id===piece.id) || isFreeKick;
     if(hasBall){
-      if(piece.role==='GK'){
-        const targets = aiPassTargets(piece);
-        if(targets.length){
-          targets.sort((a,b)=>chebyshev(a,piece)-chebyshev(b,piece));
-          doPass(piece, {col:targets[0].col,row:targets[0].row}); afterStep(piece, false); return;
-        }
-        afterStep(piece, false); return;
-      }
+      if(piece.role==='GK'){ aiGoalkeeperPlay(piece, false); return; }
       if(!turnActionUsed && canShoot(piece) && Math.random()<(shootDistance(piece)<=3 ? 0.65 : 0.3)){ turnActionUsed=true; doShoot(piece); afterStep(piece, false); return; }
       if(!turnActionUsed){
         const targets = aiPassTargets(piece).filter(t=>t.col < piece.col);
@@ -6251,9 +6268,7 @@
     const canAct = !turnActionUsed || chainReceiverPieceId===piece.id;
     // Portero: pase al compañero más libre
     if(piece.role==='GK'){
-      const t = aiPassTargets(piece).sort((a,b)=> opponentsNear(a,'B')-opponentsNear(b,'B') || chebyshev(a,piece)-chebyshev(b,piece));
-      if(t.length){ doPass(piece, {col:t[0].col,row:t[0].row}); afterStep(piece, false); return true; }
-      message='El portero no tiene a quién pasar.'; afterStep(piece, false); return true;
+      aiGoalkeeperPlay(piece, true); return true;
     }
     if(canAct && canShoot(piece)){
       const sc = estShotChance(piece);
@@ -6318,14 +6333,7 @@
     const movablePieces = myPieces.filter(p=>p.role!=='GK');
     const carrier = getCarrier();
     if(carrier && carrier.team===aiTeam && !turnUsedPieceIds.has(carrier.id)){
-      if(carrier.role==='GK'){
-        const targets = aiPassTargets(carrier);
-        if(targets.length){
-          targets.sort((a,b)=>chebyshev(a,carrier)-chebyshev(b,carrier));
-          doPass(carrier, {col:targets[0].col,row:targets[0].row}); afterStep(carrier, false); return;
-        }
-        message='El portero no tiene a quién pasar.'; afterStep(carrier, false); return;
-      }
+      if(carrier.role==='GK'){ aiGoalkeeperPlay(carrier, false); return; }
       if(!turnActionUsed && canShoot(carrier) && Math.random()<(aiLevel==='easy'?0.35:(shootDistance(carrier)<=3 ? 0.65 : 0.3))){ turnActionUsed=true; doShoot(carrier); afterStep(carrier, false); return; }
       if(!turnActionUsed){
         const targets = aiPassTargets(carrier).filter(t=>t.col < carrier.col);
@@ -7007,6 +7015,7 @@
       const hasBall = (carrier && carrier.id===selected.id) || isFreeKick;
       if(hasBall && (!turnActionUsed || isChainReceiver)){
         addBtn('Pasar', ()=>setActionMode('pass'));
+        if(isGK) addBtn('Despejar', ()=>{ turnActionUsed=true; doClear(selected); afterStep(selected, false); });
         if(!isGK && canShoot(selected)) addBtn('Chutar', ()=>{ turnActionUsed=true; doShoot(selected); afterStep(selected, false); });
         if(!isGK && !isFreeKick){
           const dribbleTarget = adjacentOpponent(selected);
